@@ -50,7 +50,7 @@ function makeDb(uid){
 }
 
 const gate=document.getElementById("sd-gate");
-const showGate=(msg)=>{gate.hidden=false;const m=document.getElementById("sd-gate-msg");if(m)m.textContent=msg||""};
+const showGate=(msg)=>{gate.hidden=false;gate.classList.remove("opening");const m=document.getElementById("sd-gate-msg");if(m)m.textContent=msg||""};
 let started=false;
 window.__sdAuth={signOut:async()=>{await signOut(auth);location.reload()}};
 document.getElementById("sd-signin").addEventListener("click",async()=>{

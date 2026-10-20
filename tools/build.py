@@ -36,15 +36,18 @@ head='''<!doctype html>
 #sd-gate h1{margin:0;font-family:var(--f-display,system-ui);font-size:1.8rem;color:var(--ink,#1B2A21)}
 #sd-gate p{margin:0;color:var(--muted,#5B6A5F)}
 #sd-signin{font:inherit;font-weight:600;background:var(--accent,#2F5A44);color:var(--accent-ink,#F3F8F3);border:0;border-radius:12px;padding:12px 20px;cursor:pointer}
+#sd-gate.opening .when-out{visibility:hidden}
 </style>
 </head><body>
 ''' % (stamp,stamp)
 gate='''
-<div id="sd-gate" hidden><div class="box"><img src="icons/icon-192.png" alt=""><h1>Steady Days</h1><p>A calm place for your day. Sign in to open your journal.</p>
-<button type="button" id="sd-signin">Sign in with Google</button><p id="sd-gate-msg" class="small" role="status"></p></div></div>
+<div id="sd-gate" class="opening"><div class="box"><img src="icons/icon-192.png" alt=""><h1>Steady Days</h1><p class="when-out">A calm place for your day. Sign in to open your journal.</p>
+<button type="button" id="sd-signin" class="when-out">Sign in with Google</button><p id="sd-gate-msg" class="small" role="status"></p></div></div>
+<script>/* if the sign-in code can't load at all (e.g. first visit offline), say so instead of waiting forever */
+setTimeout(function(){var g=document.getElementById("sd-gate");if(g&&g.classList.contains("opening")){g.classList.remove("opening");var m=document.getElementById("sd-gate-msg");if(m)m.textContent="Still opening… If this stays, check your connection and reload."}},12000);</script>
 </body></html>
 '''
-(root/"index.html").write_text(head+src+gate)
+(root/"index.html").write_text(head+gate.replace("</body></html>","")+src+"\n</body></html>\n")
 for f in ["shim.js","boot.js","tasks.js","manifest.webmanifest"]:shutil.copy(root/"web"/f,root/f)
 (root/"sw.js").write_text((root/"web/sw.js").read_text().replace("__BUILD__",stamp))
 (root/".nojekyll").write_text("")
