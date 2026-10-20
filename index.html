@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261020210341"></script>
-<script type="module" src="boot.js?v=20261020210341"></script>
+<script src="shim.js?v=20261020211157"></script>
+<script type="module" src="boot.js?v=20261020211157"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -32,7 +32,7 @@ setTimeout(function(){var g=document.getElementById("sd-gate");if(g&&g.classList
 /* Layout: one calm column under a faint tree line (a forest edge), sticky tab strip; Today is the home view */
 :root{
   --bg:#EEF1EA; --surface:#F9FBF7; --ink:#1B2A21; --muted:#5B6A5F; --line:#D5DDD3;
-  --accent:#2F5A44; --accent-ink:#F3F8F3; --accent-soft:#DCE8DE; --warm:#93652B; --warm-soft:#F1E7D4;
+  --accent:#2F5A44; --accent-ink:#F3F8F3; --accent-soft:#DCE8DE; --warm:#93652B; --warm-soft:#F1E7D4; --plum:#7B5EA7; --plum-soft:#ECE5F5;
   --danger:#A2453A;
   --m1:#8A6A5A; --m2:#6F8199; --m3:#9AA08E; --m4:#4E8A62; --m5:#C99A3A;
   --f-display:"Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
@@ -41,12 +41,12 @@ setTimeout(function(){var g=document.getElementById("sd-gate");if(g&&g.classList
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0F1712; --surface:#16211A; --ink:#E1E9E1; --muted:#93A396; --line:#25332A;
-  --accent:#8CC4A0; --accent-ink:#0D1610; --accent-soft:#1F3427; --warm:#D9A65E; --warm-soft:#33291B;
+  --accent:#8CC4A0; --accent-ink:#0D1610; --accent-soft:#1F3427; --warm:#D9A65E; --warm-soft:#33291B; --plum:#B9A0E3; --plum-soft:#2C2438;
   --danger:#E08A7E;
   --m1:#B99482; --m2:#9DAFC7; --m3:#AEB4A2; --m4:#8CC4A0; --m5:#E2B866; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0F1712; --surface:#16211A; --ink:#E1E9E1; --muted:#93A396; --line:#25332A;
-  --accent:#8CC4A0; --accent-ink:#0D1610; --accent-soft:#1F3427; --warm:#D9A65E; --warm-soft:#33291B;
+  --accent:#8CC4A0; --accent-ink:#0D1610; --accent-soft:#1F3427; --warm:#D9A65E; --warm-soft:#33291B; --plum:#B9A0E3; --plum-soft:#2C2438;
   --danger:#E08A7E;
   --m1:#B99482; --m2:#9DAFC7; --m3:#AEB4A2; --m4:#8CC4A0; --m5:#E2B866; color-scheme:dark}
 
@@ -337,6 +337,10 @@ li.mrow{align-items:flex-start}
 .pickbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .starbtn{background:none;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:1rem;line-height:1;color:var(--muted);padding:5px 8px}
 .starbtn[aria-pressed="true"]{color:var(--warm);border-color:var(--warm);background:var(--warm-soft)}
+.maybebtn{background:none;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:.9rem;line-height:1;color:var(--muted);padding:5px 8px;margin-right:6px}
+.maybebtn[aria-pressed="true"]{color:var(--plum);border-color:var(--plum);background:var(--plum-soft)}
+.maybe-eb{color:var(--plum)}
+.maybegrp{border-top:1px dashed var(--line);padding-top:8px}
 .donerow .tmain span{color:var(--muted);text-decoration:line-through}
 .donechk{display:grid;place-items:center;background:var(--accent);border-color:var(--accent)!important}
 .donechk::after{content:"";width:6px;height:11px;border:solid var(--accent-ink);border-width:0 2px 2px 0;transform:rotate(45deg) translate(-1px,-1px)}
@@ -752,6 +756,7 @@ async function runUndo(uidv){
     }else if(u.kind==="tt"){
       await call("update_task",{task_id:u.tid,task:{id:u.tid,projectId:u.pid,status:0},client_timezone:TZ});
       if((getDay(today()).top3||[]).some(x=>x.id===u.tid))editDay(today(),d=>{d.top3=d.top3.map(x=>x.id===u.tid?{...x,done:false}:x)},{silent:true});
+      if((getDay(today()).maybe||[]).some(x=>x.id===u.tid))editDay(today(),d=>{d.maybe=d.maybe.map(x=>x.id===u.tid?{...x,done:false}:x)},{silent:true});
       if(u.buy)editDay(u.buy.date,d=>{d.purchases=d.purchases.filter(p=>p.id!==u.buy.id)});
       toast(`Restored “${u.title}”`);
       ttLoadLists();ttLoadToday();
@@ -836,6 +841,17 @@ async function ttLoadTomorrow(){
 }
 const tmKey=()=>addDays(today(),1);
 async function setDue(t,k){await call("update_task",{task_id:t.id,task:{id:t.id,projectId:t.pid,dueDate:dueISO(k),startDate:dueISO(k),isAllDay:true,timeZone:TZ},client_timezone:TZ})}
+const maybeBtn=(id,on,act)=>`<button class="maybebtn" data-act="${act}" data-id="${id}" aria-pressed="${on}" aria-label="${on?"Remove from Maybe today":"Add to Maybe today"}" title="${on?"Maybe today":"Maybe today, if there's time"}">${on?"◆":"◇"}</button>`;
+async function toggleTomorrowMaybe(id){
+  const tk=tmKey();const cur=getDay(tk).maybe||[];const entry=cur.find(x=>x.id===id);
+  if(entry){editDay(tk,d=>{d.maybe=(d.maybe||[]).filter(x=>x.id!==id)});
+    if(entry.moved){try{await setDue({id,pid:entry.pid},today());toast(`Moved “${entry.title}” back to today`)}catch(e){toast(ttErrToast(e))}ttLoadToday();ttLoadTomorrow()}return}
+  const fromTm=(S.tt.tomorrow||[]).find(x=>x.id===id),fromToday=S.tt.today.find(x=>x.id===id);const t=fromTm||fromToday;if(!t)return;
+  if(!fromTm){try{await setDue(t,tk)}catch(e){toast(ttErrToast(e));return}
+    editDay(today(),d=>{if(d.top3)d.top3=d.top3.filter(x=>x.id!==id);if(d.maybe)d.maybe=d.maybe.filter(x=>x.id!==id)});toast(`Moved “${plainTitle(t.title)}” to tomorrow`)}
+  editDay(tk,d=>{d.top3=(d.top3||[]).filter(x=>x.id!==id);d.maybe=[...(d.maybe||[]),{id:t.id,title:plainTitle(t.title),pid:t.pid,moved:!fromTm}]});
+  if(!fromTm){ttLoadToday();ttLoadTomorrow()}
+}
 async function toggleTomorrowTop(id){
   const tk=tmKey();const cur=getDay(tk).top3||[];const entry=cur.find(x=>x.id===id);
   if(entry){
@@ -850,7 +866,7 @@ async function toggleTomorrowTop(id){
     editDay(today(),d=>{if(d.top3)d.top3=d.top3.filter(x=>x.id!==id)});
     toast(`Moved “${plainTitle(t.title)}” to tomorrow`);
   }
-  editDay(tk,d=>{d.top3=[...(d.top3||[]),{id:t.id,title:plainTitle(t.title),pid:t.pid,moved:!fromTm}]});
+  editDay(tk,d=>{d.top3=[...(d.top3||[]),{id:t.id,title:plainTitle(t.title),pid:t.pid,moved:!fromTm}];d.maybe=(d.maybe||[]).filter(x=>x.id!==id)});
   if(!fromTm){ttLoadToday();ttLoadTomorrow()}
 }
 async function addTomorrowTask(title){
@@ -866,9 +882,11 @@ async function addTomorrowTask(title){
 function planPanel(){
   const tk=tmKey();const top=getDay(tk).top3||[];const ids=top.map(x=>x.id);
   const tm=S.tt.tomorrow||[];const td=S.tt.today.filter(t=>!tm.some(x=>x.id===t.id));
-  const row=(t,from)=>{const on=ids.includes(t.id);return `<li class="trow"><button class="starbtn" data-act="top3tm" data-id="${t.id}" aria-pressed="${on}" aria-label="${on?"Remove from tomorrow's Top 3":"Add to tomorrow's Top 3"}">${on?"★":"☆"}</button><div class="tmain"><span>${esc(plainTitle(t.title))}</span>${from==="today"?`<div class="tmeta"><span class="pill soft">still open today</span></div>`:""}</div></li>`};
+  const mids=(getDay(tk).maybe||[]).map(x=>x.id);
+  const row=(t,from)=>{const on=ids.includes(t.id);return `<li class="trow">${maybeBtn(t.id,mids.includes(t.id),"maybetm")}<button class="starbtn" data-act="top3tm" data-id="${t.id}" aria-pressed="${on}" aria-label="${on?"Remove from tomorrow's Top 3":"Add to tomorrow's Top 3"}">${on?"★":"☆"}</button><div class="tmain"><span>${esc(plainTitle(t.title))}</span>${from==="today"?`<div class="tmeta"><span class="pill soft">still open today</span></div>`:""}</div></li>`};
   return `<div class="plan">
     <div class="head"><h3>Tomorrow's ${topLabel(tk)}</h3><span class="topmeta"><span class="mono muted">${top.length}/${topMax(tk)} · ${fmtDay(tk,{weekday:"long"})}</span>${sizeBtn(tk)}</span></div>
+    ${(getDay(tk).maybe||[]).length?`<p class="small" style="margin:0"><span class="maybe-eb">◆ Maybe:</span> ${esc((getDay(tk).maybe||[]).map(x=>x.title).join(" · "))}</p>`:""}
     ${top.length?`<ol class="planpicks">${top.map(x=>`<li>${esc(x.title)}${x.moved?` <span class="muted small">(from today)</span>`:""}</li>`).join("")}</ol>`:`<p class="muted small">Star up to ${topMax(tk)} tasks for tomorrow. Picking one of today's open tasks moves it to tomorrow.</p>`}
     ${S.tt.tmErr?ttErrBox(S.tt.tmErr):S.tt.tomorrow==null?`<p class="empty">Loading tomorrow…</p>`:`
     ${tm.length?`<span class="eyebrow">Due tomorrow</span><ul class="list">${tm.map(t=>row(t,"tomorrow")).join("")}</ul>`:""}
@@ -906,7 +924,7 @@ async function completeTask(tid,pid,msg,extra){
   const snap=JSON.stringify({l:S.tt.lists,t:S.tt.today});
   for(const k in S.tt.lists)S.tt.lists[k].tasks=S.tt.lists[k].tasks.filter(t=>t.id!==tid);
   S.tt.today=S.tt.today.filter(t=>t.id!==tid);render(true);
-  try{await call("complete_task",{project_id:realPid,task_id:tid});if((getDay(today()).top3||[]).some(x=>x.id===tid))editDay(today(),d=>{d.top3=d.top3.map(x=>x.id===tid?{...x,done:true}:x)},{silent:true});if(msg)toast(msg);pushUndo({kind:"tt",tid,pid:realPid,title,...(extra||{})})}
+  try{await call("complete_task",{project_id:realPid,task_id:tid});if((getDay(today()).top3||[]).some(x=>x.id===tid))editDay(today(),d=>{d.top3=d.top3.map(x=>x.id===tid?{...x,done:true}:x)},{silent:true});if((getDay(today()).maybe||[]).some(x=>x.id===tid))editDay(today(),d=>{d.maybe=d.maybe.map(x=>x.id===tid?{...x,done:true}:x)},{silent:true});if(msg)toast(msg);pushUndo({kind:"tt",tid,pid:realPid,title,...(extra||{})})}
   catch(e){const o=JSON.parse(snap);S.tt.lists=o.l;S.tt.today=o.t;render(true);toast(ttErrToast(e))}
 }
 async function moveTask(tid,colId){
@@ -1174,15 +1192,19 @@ function todayTasks(){
     const doneTop=top.filter(x=>!ts.some(t=>t.id===x.id));
     const core=top.filter(x=>!x.bonus),coreDone=core.filter(x=>!ts.some(t=>t.id===x.id));
     const bonusDone=top.filter(x=>x.bonus&&!ts.some(t=>t.id===x.id)).length;const allDone=top.length>0&&doneTop.length===top.length;
-    const rest=ts.filter(t=>!topIds.includes(t.id));
-    const row=t=>ttTaskLi(t,`${top.some(x=>x.id===t.id&&x.bonus)?`<span class="pill soft">bonus</span>`:""}${S.rolled.ids.includes(t.id)?`<span class="pill soft">from yesterday</span>`:""}<button class="starbtn" data-act="top3" data-id="${t.id}" aria-pressed="${topIds.includes(t.id)}" aria-label="${topIds.includes(t.id)?"Remove from Top 3":S.bonusPick?"Add as a bonus":"Add to Top 3"}" title="${topIds.includes(t.id)?"In your Top 3":"Add to Top 3"}">${topIds.includes(t.id)?"★":"☆"}</button><button class="btn ghost sm tdiscard" data-act="discard" data-id="${t.id}" data-pid="${esc(t.pid)}" title="Mark as won't do">Discard</button>`,true);
+    const maybe=getDay(today()).maybe||[];const maybeIds=maybe.map(x=>x.id).filter(id=>!topIds.includes(id));
+    const openMaybe=maybeIds.map(id=>ts.find(t=>t.id===id)).filter(Boolean),doneMaybe=maybe.filter(x=>x.done&&!topIds.includes(x.id));
+    const rest=ts.filter(t=>!topIds.includes(t.id)&&!maybeIds.includes(t.id));
+    const row=t=>ttTaskLi(t,`${top.some(x=>x.id===t.id&&x.bonus)?`<span class="pill soft">bonus</span>`:""}${S.rolled.ids.includes(t.id)?`<span class="pill soft">from yesterday</span>`:""}${maybeBtn(t.id,maybeIds.includes(t.id),"maybe")}<button class="starbtn" data-act="top3" data-id="${t.id}" aria-pressed="${topIds.includes(t.id)}" aria-label="${topIds.includes(t.id)?"Remove from Top 3":S.bonusPick?"Add as a bonus":"Add to Top 3"}" title="${topIds.includes(t.id)?"In your Top 3":"Add to Top 3"}">${topIds.includes(t.id)?"★":"☆"}</button><button class="btn ghost sm tdiscard" data-act="discard" data-id="${t.id}" data-pid="${esc(t.pid)}" title="Mark as won't do">Discard</button>`,true);
     const dayD=getDay(today());const picking=!top.length;const mx=topMax(today());const choosing=top.length>0&&top.length<mx&&!dayD.topDone;const showRest=picking||choosing||S.showMoreToday||(allDone&&S.bonusPick);
     return `<section class="block card">
       <div class="head"><h2>${picking?"Today":topLabel(today())}</h2>${picking?`<button class="btn ghost" data-go="todo">All to-dos</button>`:`<span class="topmeta"><span class="mono muted">${coreDone.length}/${core.length} done${bonusDone?` · +${bonusDone} bonus`:""}</span>${top.some(x=>x.bonus)?"":sizeBtn(today())}</span>`}</div>
-      ${picking&&ts.length?`<p class="muted small">Star up to ${mx} that matter most. The rest will tuck away. ${sizeBtn(today())}</p>`:""}
+      ${picking&&ts.length?`<p class="muted small">Star ★ up to ${mx} that matter most. Mark ◆ for “maybe today” if there's time. The rest will tuck away. ${sizeBtn(today())}</p>`:""}
       ${choosing&&rest.length?`<div class="pickbar"><span class="muted small">Pick ${mx-top.length} more, or stop here.</span><button class="btn ghost sm" data-act="topdone">That's enough</button></div>`:""}
       ${!picking?`<ul class="list">${openTop.map(row).join("")}${doneTop.map(x=>`<li class="trow donerow"><span class="check donechk" aria-hidden="true"></span><div class="tmain"><span>${esc(plainTitle(x.title))}${x.bonus?` <span class="pill soft">bonus</span>`:""}</span></div></li>`).join("")}</ul>
-      ${allDone?`<div class="gentle"><p class="small" style="margin:0">${doneLine(bonusDone)}</p>${rest.length?(S.bonusPick?`<div class="pickbar"><span class="muted small">Star one task below.</span><button type="button" class="linkbtn subtle" data-act="bonuspick">Never mind</button></div>`:`<button type="button" class="linkbtn" data-act="bonuspick">Add one more</button>`):""}</div>`:""}`:""}
+      ${allDone?`<div class="gentle"><p class="small" style="margin:0">${doneLine(bonusDone)}</p>${rest.length||openMaybe.length?(S.bonusPick?`<div class="pickbar"><span class="muted small">Star one task below.</span><button type="button" class="linkbtn subtle" data-act="bonuspick">Never mind</button></div>`:`<button type="button" class="linkbtn" data-act="bonuspick">Add one more</button>`):""}</div>`:""}`:""}
+      ${openMaybe.length||doneMaybe.length?`<div class="maybegrp"><div class="head"><span class="eyebrow maybe-eb">◆ Maybe today${allDone&&S.bonusPick?" · star one to make it a bonus":""}</span><span class="mono muted small">${doneMaybe.length}/${openMaybe.length+doneMaybe.length}</span></div>
+        <ul class="list">${openMaybe.map(row).join("")}${doneMaybe.map(x=>`<li class="trow donerow"><span class="check donechk" aria-hidden="true"></span><div class="tmain"><span>${esc(plainTitle(x.title))}</span></div></li>`).join("")}</ul></div>`:""}
       ${S.tt.state==="error"?ttErrBox(S.tt.err):S.tt.todayErr?ttErrBox(S.tt.todayErr):S.tt.state==="loading"&&!ts.length?`<p class="empty">Loading today's tasks…</p>`:
         !ts.length&&!top.length?`<p class="empty">Nothing due today. Enjoy the space, or pick one thing that matters.</p>`:
         !rest.length?"":showRest?`${!picking?`<div class="head"><span class="eyebrow">Everything else today</span>${choosing?"":`<button class="btn ghost sm" data-act="moretoday">Hide</button>`}</div>`:""}<ul class="list">${rest.map(row).join("")}</ul>`:
@@ -1891,7 +1913,7 @@ function recapCard(){
   const moodColor=v=>v?`var(${MOODS[v-1][2]})`:"var(--line)";
   const exDays=D.filter(d=>!isRest(bodyOf(d).ex)).length,wDone=D.filter(d=>d.workout&&d.workout.done).length;
   const water=D.filter(d=>bodyOf(d).water===true).length,fruit=D.filter(d=>bodyOf(d).fruit===true).length;
-  const allTops=D.flatMap(d=>d.top3||[]);const tops=allTops.filter(x=>!x.bonus);const topDone=tops.filter(x=>x.done).length;const bonusN=allTops.filter(x=>x.bonus&&x.done).length;
+  const allTops=D.flatMap(d=>d.top3||[]);const tops=allTops.filter(x=>!x.bonus);const topDone=tops.filter(x=>x.done).length;const bonusN=allTops.filter(x=>x.bonus&&x.done).length;const allMaybe=D.flatMap(d=>d.maybe||[]);
   const ate=D.reduce((n,d)=>n+(d.ate||[]).length,0);
   const mix={};D.forEach(d=>actsOf(bodyOf(d)).forEach(a=>{const n=exName(a.k);mix[n]=(mix[n]||0)+1}));const mixTxt=Object.entries(mix).sort((a,b)=>b[1]-a[1]).map(([n,c])=>`${c} ${n}`).join(" · ");
   const wk=D.filter(d=>d.weight&&+d.weight.kg>0).pop();const cooked=D.flatMap(d=>d.meals||[]).map(m=>m.name);
@@ -1905,7 +1927,7 @@ function recapCard(){
     <div class="head"><h2>Weekly recap</h2><div class="wknav"><button type="button" class="btn ghost sm" data-act="recapwk" data-d="-7" aria-label="Previous week">‹</button><span class="mono small">${isThis?"This week":label}</span><button type="button" class="btn ghost sm" data-act="recapwk" data-d="7" ${isThis?"disabled":""} aria-label="Next week">›</button></div></div>
     ${isThis?`<p class="muted small">${label}</p>`:""}
     <div class="weekmood">${days.map(k=>{const m=getDay(k).mood;return `<div class="wm"><i style="background:${k>tk?"transparent":moodColor(m)};border-color:${moodColor(m)}" title="${m?MOODS[m-1][1]:"No mood logged"}"></i><span>${fmtDay(k,{weekday:"narrow"})}</span></div>`}).join("")}</div>
-    <div class="stats">${stat(`${wDone}`,"Workouts")}${stat(`${exDays}/${seen.length}`,"Exercise days")}${stat(`${water}/${seen.length}`,"Water days")}${stat(`${fruit}/${seen.length}`,"Fruit days")}${tops.length?stat(`${topDone}/${tops.length}${bonusN?` <span class="small muted">+${bonusN} bonus</span>`:""}`,"Top 3 done"):""}${D.filter(d=>d.therapy).length?stat(`${D.filter(d=>d.therapy).length}`,"Therapy"):""}${wk?stat(`${kgTxt(+wk.weight.kg)} kg`,"Weight"):""}</div>
+    <div class="stats">${stat(`${wDone}`,"Workouts")}${stat(`${exDays}/${seen.length}`,"Exercise days")}${stat(`${water}/${seen.length}`,"Water days")}${stat(`${fruit}/${seen.length}`,"Fruit days")}${tops.length?stat(`${topDone}/${tops.length}${bonusN?` <span class="small muted">+${bonusN} bonus</span>`:""}`,"Top 3 done"):""}${allMaybe.length?stat(`${allMaybe.filter(x=>x.done).length}/${allMaybe.length}`,"Maybe today"):""}${D.filter(d=>d.therapy).length?stat(`${D.filter(d=>d.therapy).length}`,"Therapy"):""}${wk?stat(`${kgTxt(+wk.weight.kg)} kg`,"Weight"):""}</div>
     ${mixTxt?`<p class="small muted" style="margin:0">Moves: ${esc(mixTxt)}</p>`:""}
     <div class="rgroup"><span class="eyebrow">Moments · pick the one that meant the most</span>
       ${moments.length?`<ul class="list">${moments.map(m=>{const on=hl&&hl.text===m.text&&hl.k===m.k;return `<li class="mrow"><button type="button" class="starbtn" data-act="pickhl" data-k="${m.k}" data-kind="${esc(m.kind)}" data-t="${esc(m.text)}" aria-pressed="${!!on}" aria-label="${on?"Your highlight":"Make this the week's highlight"}">${on?"★":"☆"}</button><div class="tmain"><span>${esc(m.text)}</span><span class="muted small">${m.kind} · ${fmtDay(m.k,{weekday:"long"})}</span></div></li>`}).join("")}</ul>`:`<p class="empty">No gratitude, proud moments or notes this week yet.</p>`}
@@ -2099,9 +2121,12 @@ document.addEventListener("click",e=>{
   if(a==="topdone"){S.showMoreToday=false;editDay(today(),d=>{d.topDone=true})}
   if(a==="top3"){const t=S.tt.today.find(x=>x.id===id);const cur=getDay(today()).top3||[];
     if(cur.some(x=>x.id===id))editDay(today(),d=>{d.top3=(d.top3||[]).filter(x=>x.id!==id);if(!d.top3.length)d.topDone=false});
-    else if(S.bonusPick&&t){S.bonusPick=false;S.showMoreToday=false;editDay(today(),d=>{d.top3=[...(d.top3||[]),{id:t.id,title:plainTitle(t.title),bonus:true}]})}
+    else if(S.bonusPick&&t){S.bonusPick=false;S.showMoreToday=false;editDay(today(),d=>{d.top3=[...(d.top3||[]),{id:t.id,title:plainTitle(t.title),bonus:true}];d.maybe=(d.maybe||[]).filter(x=>x.id!==t.id)})}
     else if(cur.length>=topMax(today()))toast(topMax(today())===3?"Your Top 3 is full. Unstar one, or tap +2 for room for 5.":"Your Top 5 is full. Unstar one first.");
-    else if(t)editDay(today(),d=>{d.top3=[...(d.top3||[]),{id:t.id,title:plainTitle(t.title)}]});}
+    else if(t)editDay(today(),d=>{d.top3=[...(d.top3||[]),{id:t.id,title:plainTitle(t.title)}];d.maybe=(d.maybe||[]).filter(x=>x.id!==t.id)});}
+  if(a==="maybe"){const t=S.tt.today.find(x=>x.id===id);const on=(getDay(today()).maybe||[]).some(x=>x.id===id&&!x.done);
+    editDay(today(),d=>{d.maybe=(d.maybe||[]).filter(x=>x.id!==id);if(!on&&t){d.maybe.push({id:t.id,title:plainTitle(t.title)});d.top3=(d.top3||[]).filter(x=>x.id!==id)}})}
+  if(a==="maybetm")toggleTomorrowMaybe(id);
   if(a==="viewday"){const dd=b.dataset.d;S.viewDay=dd===today()?null:dd;S.open={};S.gratShow=1;S.ateSlot=null;S.progOpen=false;render(true);window.scrollTo({top:0})}
   if(a==="ateslot"){S.ateSlot=b.dataset.s;render(true);const el=document.getElementById("ate-new");if(el)el.focus()}
   if(a==="delate")delLocal("ate",vday(),id,x=>`Deleted “${x.text}” from what you ate`);
@@ -2316,7 +2341,7 @@ function startDemo(){
     }
     days[k]=d;
   }
-  days[T]=blankDay(T);days[T].top3=[{id:"t2",title:"Reply to Sam about Saturday"}];
+  days[T]=blankDay(T);days[T].top3=[{id:"t2",title:"Reply to Sam about Saturday"}];days[T].maybe=[{id:"t3",title:"Pick up the dry cleaning"}];
   S.days=days;
   S.settings={...S.settings,startDay:addDays(T,-20),favs:[POINTERS.stoic?POINTERS.stoic[0][0]:""],pnotes:{},exKinds:["Swim"],weighOff:false,highlights:{},
     ttMap:{todo:["inbox","d-home"],projects:"d-proj",bucket:"d-bucket",recipes:"d-rec",travel:"d-travel"},todos:[],projects:[],habits:[],reminders:S.settings.reminders||[]};
