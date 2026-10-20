@@ -142,6 +142,8 @@ ul.list li.wrow{display:grid;gap:8px}
 .wmain{display:flex;align-items:center;gap:10px;min-width:0}
 .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
 .field{display:grid;gap:4px}
+.pgrid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+.yelist li{flex-wrap:wrap}.seg{display:flex;gap:4px;flex-wrap:wrap}.seg .chip{font-size:.78rem;padding:4px 8px}
 .vprog{display:block;height:4px;border-radius:999px;background:var(--line);overflow:hidden;margin-top:2px}
 .vprog span{display:block;height:100%;background:var(--accent);border-radius:999px}
 .vtile .vprog{margin:0}
@@ -417,7 +419,7 @@ body.has-undo .toast{bottom:calc(76px + env(safe-area-inset-bottom,0px))}
 const STANDALONE=!!window.__sdStandalone;
 const TABS=[["today","Today"],["tasks","Tasks"],["journal","Journal"],["vision","Vision"],["lists","Lists"],["learn","Learn"]];
 /* each merged tab has a small switch at the top */
-const SUBS={tasks:[["todo","To-do"],["projects","Projects"]],journal:[["days","Days"],["week","Week"],["checkins","Check-ins"],["cooking","Cooking"],["dreams","Dreams"]],vision:[["year","This year"],["bucket","Bucket list"]],lists:[["lists","Lists"],["wishlist","Wishlist"],["backlog","Backlog"],["spending","Spending"]],learn:[["pointers","Pointers"],["reminders","Reminders"]]};
+const SUBS={tasks:[["todo","To-do"],["projects","Projects"]],journal:[["days","Days"],["week","Week"],["checkins","Check-ins"],["cooking","Cooking"],["dreams","Dreams"]],vision:[["year","This year"],["long","Long term"],["bucket","Bucket list"]],lists:[["lists","Lists"],["wishlist","Wishlist"],["backlog","Backlog"],["spending","Spending"]],learn:[["pointers","Pointers"],["reminders","Reminders"]]};
 /* old tab names still work (saved tab, links, buttons) */
 const ROUTE={vision:["vision"],bucket:["vision","bucket"],dreams:["journal","dreams"],today:["today"],tasks:["tasks"],journal:["journal"],lists:["lists"],learn:["learn"],todo:["tasks","todo"],projects:["tasks","projects"],habits:["journal","checkins"],cooked:["journal","cooking"],purchases:["lists","spending"],wishlist:["lists","wishlist"],backlog:["lists","backlog"],reminders:["learn","reminders"],days:["journal","days"],week:["journal","week"],spending:["lists","spending"],pointers:["learn","pointers"],checkins:["journal","checkins"],cooking:["journal","cooking"]};
 /* Pointers are paraphrased in plain words; source names the passage they draw on */
@@ -1001,7 +1003,7 @@ function render(force){
   const focusId=typing?a.id:null;
   renderTabs();header();setStatus();
   $("#view").innerHTML=pageHtml()+(S.settingsOpen?`<div class="modal" role="dialog" aria-modal="true" aria-label="Settings"><button type="button" class="modal-bg" data-act="settings" aria-label="Close settings" tabindex="-1"></button><div class="modal-in">${settingsPanel()}</div></div>`:"");
-  document.body.classList.toggle("modal-open",!!(S.settingsOpen||S.vOpen&&S.tab==="vision"&&curSub("vision")==="year"||S.bOpen&&S.tab==="vision"));
+  document.body.classList.toggle("modal-open",!!(S.settingsOpen||S.vOpen&&S.tab==="vision"&&curSub("vision")==="year"||S.bOpen&&S.tab==="vision"||S.pOpen&&S.tab==="vision"||S.ye||S.pastView));
   const g=document.getElementById("gear");if(g)g.setAttribute("aria-expanded",String(!!S.settingsOpen));
   if(focusId){const el=document.getElementById(focusId);if(el)el.focus()}
 }
@@ -1489,7 +1491,7 @@ V.cooked=()=>{
 const ageDays=t=>t&&t.created?dayNum(today())-dayNum(key(new Date(t.created))):null;
 const norm=x=>String(x||"").replace(/\[([^\]]*)\]\([^)]*\)/g,"$1").trim().toLowerCase();
 const plainTitle=t=>String(t||"").replace(/\[([^\]]*)\]\([^)]*\)/g,"$1").trim();
-S.wish={items:[],imported:false};S.backlog={items:[]};S.vision={items:[]};S.visionimg={items:[]};S.bucket={items:[]};S.dreams={items:[]};
+S.wish={items:[],imported:false};S.backlog={items:[]};S.vision={items:[]};S.visionimg={items:[]};S.bucket={items:[]};S.dreams={items:[]};S.longterm={items:[]};
 function editDoc(id,fn,{silent=false}={}){const d=JSON.parse(JSON.stringify(S[id]));fn(d);S[id]=d;
   if(silent)saveLater(id,()=>queueWrite(id,{...S[id],kind:id}));else{queueWrite(id,{...d,kind:id});render(true)}}
 const daysTo=k=>dayNum(k)-dayNum(today());
@@ -1758,7 +1760,7 @@ async function exportData(){
   const tt=!STANDALONE&&S.tt&&S.tt.projects&&S.tt.projects.length?{projects:S.tt.projects.map(p=>({id:p.id,name:p.name})),lists:Object.fromEntries(Object.entries(S.tt.lists||{}).map(([k,L])=>[k,(L.tasks||[]).map(t=>({id:t.id,title:t.title,content:t.content,due:t.due,priority:t.priority,parentId:t.parentId,created:t.created}))]))}:null;
   const out={app:"Steady Days",format:1,exportedAt:new Date().toISOString(),timezone:TZ,
     settings:byId.settings?strip(byId.settings):S.settings,wishlist:byId.wish?strip(byId.wish):S.wish,backlog:byId.backlog?strip(byId.backlog):S.backlog,
-    days:days.map(d=>{const {id,...r}=d;return r}),tasks:tasksDump,vision:byId.vision?strip(byId.vision):(S.vision.items.length?S.vision:null),visionimg:byId.visionimg?strip(byId.visionimg):null,bucket:byId.bucket?strip(byId.bucket):(bItems().length?S.bucket:null),dreams:byId.dreams?strip(byId.dreams):((S.dreams.items||[]).length?S.dreams:null),ticktickSnapshot:tt};
+    days:days.map(d=>{const {id,...r}=d;return r}),tasks:tasksDump,vision:byId.vision?strip(byId.vision):(S.vision.items.length?S.vision:null),visionimg:byId.visionimg?strip(byId.visionimg):null,longterm:byId.longterm?strip(byId.longterm):(pItems().length?S.longterm:null),archives:Object.fromEntries(docs.filter(d=>d.kind==="varchive").map(d=>[d.id,strip(d)])),bucket:byId.bucket?strip(byId.bucket):(bItems().length?S.bucket:null),dreams:byId.dreams?strip(byId.dreams):((S.dreams.items||[]).length?S.dreams:null),ticktickSnapshot:tt};
   try{await DL.save({filename:`steady-days-${today()}.json`,data:new Blob([JSON.stringify(out,null,2)],{type:"application/json"})});toast("Saved. Keep it somewhere safe.")}
   catch(e){if(e&&e.code==="declined")return;toast(e&&e.code==="rate_limited"?"A save is already open":"Couldn't save the file here.")}
 }
@@ -1775,7 +1777,7 @@ async function importData(file){
   if(!j||j.app!=="Steady Days"||!Array.isArray(j.days)){setImp("error","That isn't a Steady Days export file.");return}
   const days=j.days.filter(d=>d&&/^\d{4}-\d{2}-\d{2}$/.test(d.date||""));
   const T=j.tasks&&Array.isArray(j.tasks.tasks)?j.tasks:null;
-  const parts=[days.length?`${days.length} day${days.length===1?"":"s"}`:"",j.settings?"your settings":"",j.wishlist?`wishlist (${(j.wishlist.items||[]).length})`:"",j.backlog?`backlog (${(j.backlog.items||[]).length})`:"",T?`${T.tasks.length} tasks in ${T.projects.length+1} lists`:"",j.vision?`vision board (${(j.vision.items||[]).length} tiles)`:"",j.bucket?`bucket list (${(j.bucket.items||[]).length})`:"",j.dreams?`dream journal (${(j.dreams.items||[]).length})`:""].filter(Boolean);
+  const parts=[days.length?`${days.length} day${days.length===1?"":"s"}`:"",j.settings?"your settings":"",j.wishlist?`wishlist (${(j.wishlist.items||[]).length})`:"",j.backlog?`backlog (${(j.backlog.items||[]).length})`:"",T?`${T.tasks.length} tasks in ${T.projects.length+1} lists`:"",j.vision?`vision board (${(j.vision.items||[]).length} tiles)`:"",j.bucket?`bucket list (${(j.bucket.items||[]).length})`:"",j.longterm?`long-term vision (${(j.longterm.items||[]).length} pillars)`:"",j.dreams?`dream journal (${(j.dreams.items||[]).length})`:""].filter(Boolean);
   setImp("ready",`Found ${parts.join(", ")||"nothing to import"}.${!T&&j.settings?" (No tasks in this file: export again from the Claude version to include them.)":""} Exported ${j.exportedAt?fmtDay(key(new Date(j.exportedAt)),{day:"numeric",month:"short"})+" at "+new Date(j.exportedAt).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}):"earlier"}.`,{j,days,T});
 }
 const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej({code:"timeout"}),ms))]);
@@ -1785,8 +1787,12 @@ async function runImport(){
   if(j.settings)steps.push(["settings",()=>col.doc("settings").set({...j.settings})]);
   if(j.wishlist)steps.push(["wishlist",()=>col.doc("wish").set({...j.wishlist,kind:"wish"})]);
   if(j.backlog)steps.push(["backlog",()=>col.doc("backlog").set({...j.backlog,kind:"backlog"})]);
+  if(j.longterm)steps.push(["long-term vision",()=>col.doc("longterm").set({...j.longterm,kind:"longterm"})]);
+  if(j.links)steps.push(["links",async()=>{const ps=(j.longterm&&j.longterm.items)||pItems();const pid=t=>(ps.find(p=>p.title===t)||{}).id;
+    editDoc("vision",d=>{(d.items||[]).forEach(x=>{const l=j.links.year&&j.links.year[x.title];if(l&&pid(l))x.pillar=pid(l)})});editDoc("bucket",d=>{(d.items||[]).forEach(x=>{const l=j.links.bucket&&j.links.bucket[x.title];if(l&&pid(l))x.pillar=pid(l)})})}]);
   if(j.bucket)steps.push(["bucket list",()=>col.doc("bucket").set({...j.bucket,kind:"bucket"})]);
   if(j.dreams)steps.push(["dream journal",()=>col.doc("dreams").set({...j.dreams,kind:"dreams"})]);
+  Object.entries(j.archives||{}).forEach(([k,v])=>{if(/^varchive-/.test(k))steps.push(["past vision",()=>col.doc(k).set({...v,kind:"varchive"})])});
   if(j.vision)steps.push(["vision board",()=>col.doc("vision").set({...j.vision,kind:"vision"})]);
   if(j.visionimg)steps.push(["board picture",()=>col.doc("visionimg").set({...j.visionimg,kind:"visionimg"})]);
   if(T)steps.push(["tasks",()=>col.doc("tt").set({projects:T.projects||[],tasks:T.tasks,columns:T.columns||{},comments:T.comments||[],kind:"tt"})]);
@@ -1794,7 +1800,7 @@ async function runImport(){
   try{
     for(let i=0;i<steps.length;i++){const [what,run]=steps[i];setImp("working",`Importing… ${i+1} of ${steps.length} (${what==="day"?"journal days":what})`);await withTimeout(run(),20000);if(what==="day")n++}
     if(T&&MCP)setTimeout(ttLoadAll,400);
-    setImp("done",j.vision&&!j.settings?`Done: your vision board${j.bucket?" and bucket list are":" is"} in. Have a look in the Vision tab. 🌿`:`Done: ${n} day${n===1?"":"s"}${T?`, ${T.tasks.length} tasks`:""}, your lists and settings are in. Welcome home. 🌿`,{j:null});
+    setImp("done",(j.vision||j.longterm)&&!j.settings?j.longterm&&!j.vision?"Done: your long-term vision is in, linked to this year's tiles and your bucket list. Have a look in Vision → Long term. 🌿":`Done: your vision board${j.bucket?" and bucket list are":" is"} in. Have a look in the Vision tab. 🌿`:`Done: ${n} day${n===1?"":"s"}${T?`, ${T.tasks.length} tasks`:""}, your lists and settings are in. Welcome home. 🌿`,{j:null});
   }catch(e){
     const msg=e&&e.code==="timeout"?"The database didn't confirm in time. What was imported so far is kept on this device and will sync when the database answers. "+(DB_HELP.timeout):`Stopped: ${esc(DB_HELP[e&&e.code]||e&&e.message||"couldn't save")}`;
     setImp("error",msg,{j:null});checkDb();
@@ -1836,6 +1842,8 @@ function kindFields(it){
   return "";
 }
 function visionToday(){
+  if(!isPastView()&&new Date().getDate()===1&&pItems().length){const ps=pItems();const p=ps[(new Date().getMonth()+new Date().getFullYear()*12)%ps.length];
+    return `<section class="card vtoday"><button type="button" class="vtile-open" data-act="popen" data-id="${p.id}" data-go2="1" aria-label="Open “${esc(p.title)}”">${pThumb(p,"vsm")}</button><div class="vtt"><span class="eyebrow">Your long-term vision</span><span class="vtitle">${esc(p.title)}</span>${p.why?`<span class="muted small">${esc(p.why)}</span>`:p.looks?`<span class="muted small">${esc(p.looks)}</span>`:""}</div></section>`}
   const all=vItems();if(!all.length||isPastView())return "";
   const n=dayNum(today());const done=all.filter(x=>x.done&&kindOf(x)==="milestone"),intents=all.filter(x=>kindOf(x)==="intention"),open=all.filter(x=>!x.done&&kindOf(x)!=="intention");
   const celebrate=done.length&&(n%7===0||!open.length&&!intents.length);const useInt=!celebrate&&intents.length&&(n%7===2||n%7===5||!open.length);
@@ -1852,7 +1860,7 @@ function vDetail(it){
       <label class="btn ghost sm filebtn">${it.img?"Change picture":"Add picture"}<input type="file" accept="image/*" data-act="vpic" data-id="${it.id}" hidden></label></div>
     <div class="chips kindchips" role="group" aria-label="Kind of tile">${V_KINDS.map(([k,n,h])=>`<button type="button" class="chip" data-act="vkind" data-id="${it.id}" data-k="${k}" aria-pressed="${kindOf(it)===k}" title="${esc(h)}">${n}</button>`).join("")}</div>
     <p class="muted small" style="margin:0">${esc((V_KINDS.find(x=>x[0]===kindOf(it))||[])[2]||"")}</p>
-    ${kindFields(it)}${(()=>{const pr=vProgress(it);return pr?`<div class="vprogline">${progBar(pr)}<span class="small">${esc(pr.label)}</span></div>`:""})()}
+    ${pillarSel("vsel",it.id,it.pillar)}${kindFields(it)}${(()=>{const pr=vProgress(it);return pr?`<div class="vprogline">${progBar(pr)}<span class="small">${esc(pr.label)}</span></div>`:""})()}
     <textarea id="vn-${it.id}" data-act="vnote" data-id="${it.id}" rows="2" placeholder="What this means to you, or a first small step">${esc(it.note||"")}</textarea>
     ${kindOf(it)==="intention"?"":it.done?`<div class="impbox done"><p class="small" style="margin:0"><b>Happened ${it.doneAt?fmtDay(it.doneAt,{day:"numeric",month:"long",year:"numeric"}):""}</b></p>
         <textarea id="vm-${it.id}" data-act="vmemory" data-id="${it.id}" rows="2" placeholder="A memory of it">${esc(it.memory||"")}</textarea>
@@ -1870,7 +1878,9 @@ V.vision=()=>{
   if(!all.length&&!board)return `<section class="block card"><div class="head"><h2>Vision</h2>${S.vision.year?`<span class="eyebrow">${esc(S.vision.year)}</span>`:""}</div>
     <p class="muted" style="margin:0">Your picture of the year: places, people, habits and small dreams. Add tiles one by one, or import your board file from Settings.</p>
     ${vAddForm()}</section>`;
-  return `${open?vDetail(open):""}${S.vZoom&&board?`<button type="button" class="vzoom" data-act="vzoom" aria-label="Close the board view"><img src="${esc(board)}" alt="Your vision board"></button>`:""}
+  const yeCard=S.ye?"":yeOpenable()?`<section class="block card import"><div class="head"><h2>Close your ${esc(S.vision.year||"")} vision</h2></div><p class="small" style="margin:0">Look back, decide what carries into next year, and start a fresh board.</p><div><button type="button" class="btn" data-act="yestart">Start</button></div></section>`:"";
+  const arch=(S.vision.archives||[]);
+  return `${S.ye?yePanel():""}${S.pastView?pastPanel():""}${yeCard}${open?vDetail(open):""}${S.vZoom&&board?`<button type="button" class="vzoom" data-act="vzoom" aria-label="Close the board view"><img src="${esc(board)}" alt="Your vision board"></button>`:""}
   <section class="block card vboard">
     <div class="head"><h2>Vision ${esc(S.vision.year||new Date().getFullYear())}</h2><span class="mono muted">${done}/${countable} happened</span></div>
     ${board?`<button type="button" class="vboardimg" data-act="vzoom" aria-label="See the whole board"><img src="${esc(board)}" alt="Your vision board"></button>`:""}
@@ -1890,10 +1900,91 @@ V.vision=()=>{
     <div class="addrow"><input type="text" id="vb-values" data-act="vvalues" value="${esc(S.vision.values||"")}" placeholder="Values, e.g. Peace · Honesty" aria-label="Values"></div>
     <div class="addrow"><input type="text" id="vb-motto" data-act="vmotto" value="${esc(S.vision.motto||"")}" placeholder="Motto, e.g. Step by step" aria-label="Motto"><input type="text" id="vb-year" data-act="vyear" value="${esc(S.vision.year||"")}" placeholder="Year" aria-label="Year" style="max-width:90px"></div>
     <label class="btn ghost sm filebtn" style="justify-self:start">${board?"Replace board picture":"Add your board picture"}<input type="file" accept="image/*" data-act="vboardpic" hidden></label>
+    ${arch.length?`<div class="wfoot"><span class="muted small">Past visions</span><span class="btnrow">${arch.map(y=>`<button type="button" class="chip" data-act="pastopen" data-y="${esc(y)}">${esc(y)}</button>`).join("")}</span></div>`:""}
+    <div class="wfoot"><span class="muted small">Ready to close this year early, or late?</span><button type="button" class="btn ghost sm" data-act="yestart">Close ${esc(S.vision.year||"the year")}</button></div>
     <div class="wfoot"><span class="muted small">Not working for you? Start again with an empty board.</span><button type="button" class="btn ghost sm danger" data-act="vreset">${S.vReset?"Tap again to delete the board":"Delete this board"}</button></div>
   </section>`;
 };
 function vAddForm(){return `<form class="addrow vaddform" data-form="vadd"><input type="text" id="vadd-title" placeholder="e.g. Visit Kyoto, Run a half marathon" autocomplete="off"><select id="vadd-area" aria-label="Area">${V_AREAS.map(a=>`<option>${esc(a)}</option>`).join("")}</select><input type="text" id="vadd-emoji" placeholder="🌍" maxlength="4" aria-label="Emoji" style="max-width:64px"><button class="btn">Add</button></form>`}
+
+/* ---------- Long-term vision: a handful of pillars for the next 10-15 years ---------- */
+const pItems=()=>S.longterm.items||[];
+const pillarSel=(act,id,cur)=>pItems().length?`<label class="field"><span class="small muted">Step toward a long-term pillar</span><select data-act="${act}" data-f="pillar" data-id="${id}"><option value="">None</option>${pItems().map(p=>`<option value="${p.id}" ${cur===p.id?"selected":""}>${esc(p.emoji||"")} ${esc(p.title)}</option>`).join("")}</select></label>`:"";
+const pThumb=(p,cls="")=>p.img?`<img class="vimg ${cls}" src="${esc(p.img)}" alt="" loading="lazy">`:`<span class="vemoji ${cls}" aria-hidden="true">${esc(p.emoji||"🌳")}</span>`;
+function pSheet(p){
+  const yt=vItems().filter(x=>x.pillar===p.id),bt=bItems().filter(x=>x.pillar===p.id);const years=Object.entries(p.years||{}).sort((a,b)=>a[0]<b[0]?1:-1);
+  return `<div class="vsheet" role="dialog" aria-label="${esc(p.title)}"><button type="button" class="modal-bg" data-act="pclose" aria-label="Close" tabindex="-1"></button><div class="vsheet-in">
+    <div class="vhero">${pThumb(p,"vbig")}</div>
+    <input type="text" id="pt-${p.id}" data-act="pfield" data-f="title" data-id="${p.id}" value="${esc(p.title)}" aria-label="Pillar" class="vtitle-in">
+    <div class="addrow"><input type="text" id="pe-${p.id}" data-act="pfield" data-f="emoji" data-id="${p.id}" value="${esc(p.emoji||"")}" placeholder="🌳" maxlength="4" aria-label="Emoji" style="max-width:64px"><label class="btn ghost sm filebtn">${p.img?"Change picture":"Picture"}<input type="file" accept="image/*" data-act="ppic" data-id="${p.id}" hidden></label></div>
+    <label class="field"><span class="small muted">Why it matters</span><textarea id="pw-${p.id}" data-act="pfield" data-f="why" data-id="${p.id}" rows="2" placeholder="In your own words">${esc(p.why||"")}</textarea></label>
+    <label class="field"><span class="small muted">What it looks like when it's true</span><textarea id="pl-${p.id}" data-act="pfield" data-f="looks" data-id="${p.id}" rows="2" placeholder="Picture a day in that life">${esc(p.looks||"")}</textarea></label>
+    ${yt.length||bt.length?`<div class="impbox"><p class="small" style="margin:0"><b>Feeding this pillar</b></p><ul class="plainlist">${yt.map(x=>`<li>${x.done?"✓ ":""}${esc(x.title)} <span class="muted small">· ${esc(S.vision.year||"this year")}</span></li>`).join("")}${bt.map(x=>`<li>${lived(x).length?"✓ ":""}${esc(x.title)} <span class="muted small">· bucket list</span></li>`).join("")}</ul></div>`:`<p class="muted small" style="margin:0">Link this year's tiles or bucket-list dreams to this pillar from their own pages.</p>`}
+    ${years.length?`<div class="impbox done"><p class="small" style="margin:0"><b>Year by year</b></p><ul class="plainlist">${years.map(([y,t])=>`<li><b>${esc(y)}</b> · ${esc(t)}</li>`).join("")}</ul></div>`:""}
+    <div class="wfoot"><button type="button" class="linkbtn subtle" data-act="pdel" data-id="${p.id}">${S.pDel===p.id?"Tap again to remove":"Remove pillar"}</button><button type="button" class="btn ghost sm" data-act="pclose">Close</button></div>
+  </div></div>`;
+}
+V.longterm=()=>{
+  const L=S.longterm,all=pItems();const open=S.pOpen&&all.find(x=>x.id===S.pOpen);
+  return `${open?pSheet(open):""}${S.pZoom&&L.img?`<button type="button" class="vzoom" data-act="pzoom" aria-label="Close the board view"><img src="${esc(L.img)}" alt="Your long-term vision board"></button>`:""}
+  <section class="block card vboard"><div class="head"><h2>${esc(L.title||"10-year vision")}</h2><span class="mono muted">${L.horizon?"by "+esc(L.horizon):""}</span></div>
+    ${L.img?`<button type="button" class="vboardimg" data-act="pzoom" aria-label="See the whole board"><img src="${esc(L.img)}" alt="Your long-term vision board"></button>`:""}
+    <p class="muted small" style="margin:0">The few big things you're growing towards. They change rarely: revisit them once a year. One shows on Today on the 1st of each month.</p></section>
+  <section class="block card"><div class="vgrid pgrid">${all.map(p=>{const n=vItems().filter(x=>x.pillar===p.id).length+bItems().filter(x=>x.pillar===p.id).length;return `<button type="button" class="vtile" data-act="popen" data-id="${p.id}">${pThumb(p)}<span class="vlab"><b>${esc(p.title)}</b>${n?`<span class="muted small"> · ${n} linked</span>`:""}</span></button>`}).join("")}
+    <button type="button" class="vtile vadd" data-act="paddopen"><span class="vemoji" aria-hidden="true">+</span><span class="vlab">Add a pillar</span></button></div>
+    ${S.pAdd?`<form class="addrow" data-form="padd"><input type="text" id="padd-title" placeholder="e.g. A home in the sun" autocomplete="off"><input type="text" id="padd-emoji" placeholder="🌳" maxlength="4" aria-label="Emoji" style="max-width:64px"><button class="btn">Add</button></form>`:""}</section>
+  <section class="block card"><div class="head"><h2>Board details</h2></div>
+    <div class="addrow"><input type="text" id="lt-title" data-act="ltfield" data-f="title" value="${esc(L.title||"")}" placeholder="10-year vision" aria-label="Title"><input type="text" id="lt-hz" data-act="ltfield" data-f="horizon" value="${esc(L.horizon||"")}" placeholder="2036" aria-label="Horizon year" style="max-width:90px"></div>
+    <label class="btn ghost sm filebtn" style="justify-self:start">${L.img?"Replace board picture":"Add your board picture"}<input type="file" accept="image/*" data-act="ltpic" hidden></label></section>`;
+};
+
+/* ---------- Year-end: close this year's vision, carry what matters, archive, start fresh ---------- */
+function yeOpenable(){const m=new Date().getMonth(),d=new Date().getDate();return vItems().length&&((m===11&&d>=15)||(m===0&&d<=31&&String(S.vision.year||"")<String(new Date().getFullYear())))}
+function startYearEnd(){
+  const ch={};vItems().forEach(x=>{if(!x.done)ch[x.id]=kindOf(x)==="milestone"&&/dream/i.test(x.note||"")?"bucket":"carry"});
+  S.ye={step:1,choice:ch,pillarNotes:{},note:""};render(true);
+}
+function yePanel(){
+  const Y=S.vision.year||String(new Date().getFullYear()),NY=String((+Y||new Date().getFullYear())+1),ye=S.ye,all=vItems();
+  const done=all.filter(x=>x.done),open=all.filter(x=>!x.done);const steps=["Look back","What's left","Pillars","Close"];
+  let body="";
+  if(ye.step===1)body=`<p class="small" style="margin:0">${done.length} thing${done.length===1?"":"s"} happened in ${esc(Y)}.</p>
+    <ul class="plainlist">${done.map(x=>`<li>✓ ${esc(x.title)}${x.doneAt?` <span class="muted small">· ${fmtDay(x.doneAt,{day:"numeric",month:"short"})}</span>`:""}${x.memory?` <span class="muted small">· ${esc(x.memory)}</span>`:""}</li>`).join("")||`<li class="muted">Nothing ticked off, and that's alright. Look at what you lived anyway.</li>`}</ul>
+    ${all.filter(x=>vProgress(x)).map(x=>`<p class="small" style="margin:0">${esc(x.title)}: ${esc(vProgress(x).label)}</p>`).join("")}`;
+  if(ye.step===2)body=`<p class="small" style="margin:0">For each thing still open, choose what happens next.</p>
+    <ul class="list yelist">${open.map(x=>`<li><span class="grow">${esc(x.title)}${kindOf(x)==="intention"?` <span class="muted small">· intention</span>`:""}</span><span class="seg">${[["carry",`Into ${NY}`],["bucket","Bucket list"],["drop","Let go"]].map(([v,n])=>`<button type="button" class="chip" data-act="yechoice" data-id="${x.id}" data-v="${v}" aria-pressed="${ye.choice[x.id]===v}">${n}</button>`).join("")}</span></li>`).join("")||`<li class="muted">Everything happened. What a year.</li>`}</ul>`;
+  if(ye.step===3)body=pItems().length?`<p class="small" style="margin:0">One line per pillar: what moved this year? Leave blank if it waited, that's fine too.</p>${pItems().map(p=>`<label class="field"><span class="small">${esc(p.emoji||"")} ${esc(p.title)}</span><input type="text" data-act="yepillar" data-id="${p.id}" id="yep-${p.id}" value="${esc(ye.pillarNotes[p.id]||"")}" autocomplete="off"></label>`).join("")}`:`<p class="muted small" style="margin:0">No long-term pillars yet. You can add them under Vision → Long term.</p>`;
+  if(ye.step===4)body=`<label class="field"><span class="small">One line for what ${esc(Y)} taught you</span><textarea id="ye-note" data-act="yenote" rows="2">${esc(ye.note||"")}</textarea></label>
+    <p class="small" style="margin:0">${esc(Y)} will be saved under <b>Past visions</b>, with its picture, ticks and memories. Your ${NY} board starts with ${open.filter(x=>ye.choice[x.id]==="carry").length} carried tile${open.filter(x=>ye.choice[x.id]==="carry").length===1?"":"s"}; ${open.filter(x=>ye.choice[x.id]==="bucket").length} go to the Bucket list.</p>`;
+  return `<div class="vsheet" role="dialog" aria-label="Close your ${esc(Y)} vision"><button type="button" class="modal-bg" data-act="yeclose" aria-label="Close" tabindex="-1"></button><div class="vsheet-in">
+    <div class="head"><h2>Closing ${esc(Y)}</h2><span class="mono muted small">${ye.step}/4 · ${steps[ye.step-1]}</span></div>${body}
+    <div class="wfoot"><button type="button" class="linkbtn subtle" data-act="${ye.step>1?"yeback":"yeclose"}">${ye.step>1?"Back":"Not now"}</button>${ye.step<4?`<button type="button" class="btn sm" data-act="yenext">Next</button>`:`<button type="button" class="btn sm" data-act="yefinish">Archive ${esc(Y)} and start ${NY}</button>`}</div>
+  </div></div>`;
+}
+async function finishYearEnd(){
+  const ye=S.ye,Y=S.vision.year||String(new Date().getFullYear()),NY=String((+Y||new Date().getFullYear())+1);
+  const archId="varchive-"+Y.replace(/[^0-9A-Za-z_-]/g,"");
+  const archive={kind:"varchive",year:Y,values:S.vision.values||"",motto:S.vision.motto||"",note:ye.note||"",items:JSON.parse(JSON.stringify(vItems())),img:(S.visionimg&&S.visionimg.img)||"",closed:today()};
+  try{if(S.live&&S.db)await S.db.collection("data/users/"+S.uid).doc(archId).set(archive)}catch(e){toast("Couldn't save the archive. Nothing was changed.");return}
+  const carried=vItems().filter(x=>!x.done&&ye.choice[x.id]==="carry").map(x=>({...x,id:uid(),done:false,doneAt:undefined,memory:undefined,from:Y}));
+  const toBucket=vItems().filter(x=>!x.done&&ye.choice[x.id]==="bucket").map(x=>({id:uid(),title:x.title,area:"exp",emoji:x.emoji||"",img:x.img,note:x.note||"",pillar:x.pillar,added:today(),lived:[]}));
+  if(toBucket.length)editDoc("bucket",d=>{d.items=[...(d.items||[]),...toBucket]});
+  if(Object.values(ye.pillarNotes).some(Boolean))editDoc("longterm",d=>{(d.items||[]).forEach(p=>{const t=(ye.pillarNotes[p.id]||"").trim();if(t){p.years={...(p.years||{}),[Y]:t}}})});
+  editDoc("vision",d=>{d.archives=[...new Set([...(d.archives||[]),Y])];d.year=NY;d.items=carried;});
+  editDoc("visionimg",d=>{d.img=""});
+  S.ye=null;toast(`${Y} is archived. Welcome to ${NY}. 🌿`);
+}
+async function openPast(y){
+  S.pastView={year:y,loading:true};render(true);
+  try{const snap=await S.db.collection("data/users/"+S.uid).doc("varchive-"+y).get();S.pastView=snap.exists?{year:y,...snap.data()}:{year:y,missing:true}}catch(_){S.pastView={year:y,missing:true}}
+  render(true);
+}
+function pastPanel(){const P=S.pastView;
+  return `<div class="vsheet" role="dialog" aria-label="Vision ${esc(P.year)}"><button type="button" class="modal-bg" data-act="pastclose" aria-label="Close" tabindex="-1"></button><div class="vsheet-in">
+    <div class="head"><h2>Vision ${esc(P.year)}</h2><button type="button" class="btn ghost sm" data-act="pastclose">Close</button></div>
+    ${P.loading?`<p class="muted">Opening…</p>`:P.missing?`<p class="muted">This year's archive couldn't be found.</p>`:`${P.img?`<img class="vimg" style="aspect-ratio:auto" src="${esc(P.img)}" alt="">`:""}${P.note?`<p class="vmotto">“${esc(P.note)}”</p>`:""}
+      <div class="vgrid">${(P.items||[]).map(it=>`<div class="vtile ${it.done?"isdone":""}">${vThumb(it)}${it.done?`<span class="vcheck">✓</span>`:""}<span class="vlab">${esc(it.title)}${it.memory?`<span class="muted small"> · ${esc(it.memory)}</span>`:""}</span></div>`).join("")}</div>`}
+  </div></div>`;}
 
 /* ---------- Bucket list: experiences for life, ticked off whenever they happen (some can happen again) ---------- */
 const B_AREAS=[["places","Places","🌍"],["exp","Experiences","✨"],["skills","Skills","🎯"],["make","Make","🛠️"],["people","People","🤝"]];
@@ -1915,6 +2006,7 @@ function bSheet(it){
     <textarea id="bn-${it.id}" data-act="bfield" data-f="note" data-id="${it.id}" rows="2" placeholder="Why it matters, details">${esc(it.note||"")}</textarea>
     <div class="impbox"><label class="field"><span class="small"><b>First tiny step</b></span><input type="text" id="bs-${it.id}" data-act="bfield" data-f="step" data-id="${it.id}" value="${esc(it.step||"")}" placeholder="e.g. Look up flights for one weekend" autocomplete="off"></label>
       ${it.step?`<div class="btnrow"><button type="button" class="btn ghost sm" data-act="bstep" data-id="${it.id}" data-t="top">★ Do it today</button><button type="button" class="btn ghost sm" data-act="bstep" data-id="${it.id}" data-t="maybe">◆ Maybe today</button></div>`:""}</div>
+    ${pillarSel("bsel",it.id,it.pillar)}
     <label class="homemade"><input type="checkbox" data-act="brepeat" data-id="${it.id}" ${it.repeat?"checked":""}> Can happen more than once (like Japan every decade)</label>
     ${L.length?`<div class="impbox done"><p class="small" style="margin:0"><b>Lived it</b></p><ul class="plainlist">${L.map((x,i)=>`<li>${fmtDay(x.date,{day:"numeric",month:"short",year:"numeric"})}${x.memory?` · ${esc(x.memory)}`:""} <button type="button" class="linkbtn subtle" data-act="bunlive" data-id="${it.id}" data-i="${i}">remove</button></li>`).join("")}</ul></div>`:""}
     ${!L.length||it.repeat?(S.bLiveForm===it.id?`<form class="impbox" data-form="blive" data-id="${it.id}"><label class="field"><span class="small">When?</span><input type="date" id="bl-date" value="${today()}"></label><textarea id="bl-memory" rows="2" placeholder="A memory of it (optional)"></textarea><div class="btnrow"><button class="btn sm">I lived it ✓</button><button type="button" class="btn ghost sm" data-act="bliveform" data-id="">Cancel</button></div></form>`
@@ -2066,7 +2158,7 @@ V.journal=()=>{
 S.sub={};
 function go(id){const r=ROUTE[id]||["today"];S.tab=r[0];if(r[1])S.sub[r[0]]=r[1];try{localStorage.setItem("sd-tab",r[1]?r[1]:r[0])}catch(_){}}
 const curSub=t=>{const subs=SUBS[t];if(!subs)return null;const v=S.sub[t];return subs.some(x=>x[0]===v)?v:subs[0][0]};
-const PAGES={"vision:year":()=>V.vision(),"vision:bucket":()=>V.bucket(),"journal:dreams":()=>V.dreams(),"tasks:todo":()=>V.todo(),"tasks:projects":()=>V.projects(),"journal:days":()=>V.journal(),"journal:week":()=>recapCard()+highlightsCard(),"journal:checkins":()=>V.habits(),"journal:cooking":()=>V.cooked(),"lists:lists":()=>V.lists(),"lists:wishlist":()=>V.wishlist(),"lists:backlog":()=>V.backlog(),"lists:spending":()=>V.purchases(),"learn:pointers":()=>V.learn(),"learn:reminders":()=>V.reminders()};
+const PAGES={"vision:year":()=>V.vision(),"vision:long":()=>V.longterm(),"vision:bucket":()=>V.bucket(),"journal:dreams":()=>V.dreams(),"tasks:todo":()=>V.todo(),"tasks:projects":()=>V.projects(),"journal:days":()=>V.journal(),"journal:week":()=>recapCard()+highlightsCard(),"journal:checkins":()=>V.habits(),"journal:cooking":()=>V.cooked(),"lists:lists":()=>V.lists(),"lists:wishlist":()=>V.wishlist(),"lists:backlog":()=>V.backlog(),"lists:spending":()=>V.purchases(),"learn:pointers":()=>V.learn(),"learn:reminders":()=>V.reminders()};
 /* ---------- settings: the morning reminder lives in Claude as a scheduled task; Steady Days pauses/resumes it ---------- */
 const NUDGE_TASK="trig_01WNVxsADqavGjR9DpeSyvho";const CCR="Claude Code Remote";
 S.nudge={state:"idle",enabled:null,err:null};
@@ -2158,6 +2250,20 @@ document.addEventListener("click",e=>{
   if(a==="arrhide"){const k=b.dataset.k;editSettings(st=>{const h=new Set(st.todayHidden||[]);h.has(k)?h.delete(k):h.add(k);st.todayHidden=[...h]})}
   if(a==="arrreset"){editSettings(st=>{st.todayOrder=[];st.todayHidden=[]});toast("Today is back to its usual order")}
   if(a==="vopen"){S.vOpen=id;S.vDoneForm=null;S.vDel=null;if(b.dataset.go2){go("vision");S.sub.vision="year"}render(true)}
+  if(a==="popen"){S.pOpen=id;S.pDel=null;if(b.dataset.go2){go("vision");S.sub.vision="long"}render(true)}
+  if(a==="pclose"){S.pOpen=null;render(true)}
+  if(a==="pzoom"){S.pZoom=!S.pZoom;render(true)}
+  if(a==="paddopen"){S.pAdd=!S.pAdd;render(true);const el=document.getElementById("padd-title");if(el)el.focus()}
+  if(a!=="pdel")S.pDel=null;
+  if(a==="pdel"){if(S.pDel!==id){S.pDel=id;render(true);return}const i=pItems().findIndex(x=>x.id===id);const it=pItems()[i];S.pOpen=null;S.pDel=null;editDoc("longterm",d=>{d.items.splice(i,1)});pushUndo({kind:"doc",doc:"longterm",item:it,index:i,label:`Removed the pillar “${it.title}”`})}
+  if(a==="yestart")startYearEnd();
+  if(a==="yeclose"){S.ye=null;render(true)}
+  if(a==="yenext"&&S.ye){S.ye.step=Math.min(4,S.ye.step+1);render(true)}
+  if(a==="yeback"&&S.ye){S.ye.step=Math.max(1,S.ye.step-1);render(true)}
+  if(a==="yechoice"&&S.ye){S.ye.choice[id]=b.dataset.v;render(true)}
+  if(a==="yefinish")finishYearEnd();
+  if(a==="pastopen")openPast(b.dataset.y);
+  if(a==="pastclose"){S.pastView=null;render(true)}
   if(a==="bopen"){S.bOpen=id;S.bLiveForm=null;S.bDel=null;render(true)}
   if(a==="bclose"){S.bOpen=null;render(true)}
   if(a==="barea-f"){S.bArea=b.dataset.a;render(true)}
@@ -2284,7 +2390,9 @@ document.addEventListener("click",e=>{
   if(a==="maptodo"){const m=ttMap();const cur=new Set(m.todo||[]);cur.has(id)?cur.delete(id):cur.add(id);editSettings(s=>{s.ttMap={...m,todo:[...cur]}});ttLoadLists()}
 });
 document.addEventListener("change",e=>{
-  if(e.target&&e.target.dataset&&e.target.dataset.act==="bsel"){const bid=e.target.dataset.id,val=e.target.value;editDoc("bucket",d=>{const x=d.items.find(y=>y.id===bid);if(x)x.area=val});return}
+  if(e.target&&e.target.dataset&&e.target.dataset.act==="bsel"){const bid=e.target.dataset.id,val=e.target.value,f2=e.target.dataset.f||"area";editDoc("bucket",d=>{const x=d.items.find(y=>y.id===bid);if(x)x[f2]=val});return}
+  if(e.target&&e.target.dataset&&(e.target.dataset.act==="ppic"||e.target.dataset.act==="ltpic")){const f=e.target.files&&e.target.files[0],act=e.target.dataset.act,pid=e.target.dataset.id;e.target.value="";if(!f)return;
+    shrinkImage(f,act==="ltpic"?1400:420,act==="ltpic"?0.72:0.7).then(url=>{if(act==="ltpic")editDoc("longterm",d=>{d.img=url});else editDoc("longterm",d=>{const x=d.items.find(y=>y.id===pid);if(x)x.img=url});toast("Picture added")}).catch(()=>toast("That picture couldn't be read."));return}
   if(e.target&&e.target.dataset&&e.target.dataset.act==="brepeat"){const bid=e.target.dataset.id,on=e.target.checked;editDoc("bucket",d=>{const x=d.items.find(y=>y.id===bid);if(x)x.repeat=on});return}
   if(e.target&&e.target.dataset&&e.target.dataset.act==="bpic"){const f=e.target.files&&e.target.files[0],bid=e.target.dataset.id;e.target.value="";if(!f)return;shrinkImage(f,420,0.7).then(url=>{editDoc("bucket",d=>{const x=d.items.find(y=>y.id===bid);if(x)x.img=url});toast("Picture added")}).catch(()=>toast("That picture couldn't be read."));return}
   if(e.target&&e.target.dataset&&e.target.dataset.act==="vsel"){const vid=e.target.dataset.id,f2=e.target.dataset.f,val=e.target.value;editDoc("vision",d=>{const x=d.items.find(y=>y.id===vid);if(x)x[f2]=val});return}
@@ -2304,6 +2412,10 @@ document.addEventListener("input",e=>{
   if(b.dataset.act==="note")editDay(vday(),d=>{d.note=b.value},{silent:true});
   if(b.dataset.act==="ex")editDay(vday(),d=>{d.body={...bodyOf(d),ex:b.value}},{silent:true});
   if(["vtitle","vnote","vmemory"].includes(b.dataset.act)){const vid=b.dataset.id,f2={vtitle:"title",vnote:"note",vmemory:"memory"}[b.dataset.act],val=b.value;if(f2!=="title"||val.trim())editDoc("vision",d=>{const x=d.items.find(y=>y.id===vid);if(x)x[f2]=f2==="title"?val.trim():val},{silent:true})}
+  if(b.dataset.act==="pfield"){const pid=b.dataset.id,f2=b.dataset.f,val=b.value;if(f2!=="title"||val.trim())editDoc("longterm",d=>{const x=d.items.find(y=>y.id===pid);if(x)x[f2]=f2==="title"?val.trim():val},{silent:true})}
+  if(b.dataset.act==="ltfield"){const f2=b.dataset.f,val=b.value;editDoc("longterm",d=>{d[f2]=val},{silent:true})}
+  if(b.dataset.act==="yepillar"&&S.ye){S.ye.pillarNotes[b.dataset.id]=b.value}
+  if(b.dataset.act==="yenote"&&S.ye){S.ye.note=b.value}
   if(b.dataset.act==="bfield"){const bid=b.dataset.id,f2=b.dataset.f,val=b.value;if(f2!=="title"||val.trim())editDoc("bucket",d=>{const x=d.items.find(y=>y.id===bid);if(x)x[f2]=f2==="title"?val.trim():val},{silent:true})}
   if(b.dataset.act==="dq"){S.dQuery=b.value;render(true)}
   if(b.dataset.act==="vfield"){const vid=b.dataset.id,f2=b.dataset.f,raw=b.value;const num=["start","target","current"].includes(f2);editDoc("vision",d=>{const x=d.items.find(y=>y.id===vid);if(x)x[f2]=num?(raw===""?null:+raw):raw},{silent:true})}
@@ -2361,6 +2473,7 @@ document.addEventListener("submit",e=>{
   }
   if(f==="wishadd"){const t=v("wish-new"),k=v("wish-kind")||"want30";if(!t)return;clear("wish-new");addWish(t,k==="need"?"need":"want",k==="want60"?60:30)}
   if(f==="bladd"){const t=v("bl-new"),ty=v("bl-type")||"book";if(!t)return;clear("bl-new");editDoc("backlog",d=>{d.items.unshift({id:uid(),type:ty,title:t,status:"someday",added:today()})});toast("Added to your backlog")}
+  if(f==="padd"){const t=v("padd-title");if(!t)return;const em=v("padd-emoji");S.pAdd=false;editDoc("longterm",d=>{d.items=[...(d.items||[]),{id:uid(),title:t,emoji:em,why:"",looks:"",years:{}}]});toast("Pillar added");return}
   if(f==="badd"){const t=v("badd-title");if(!t)return;const ar=v("badd-area")||"exp";clear("badd-title");editDoc("bucket",d=>{d.items=[...(d.items||[]),{id:uid(),title:t,area:ar,emoji:"",note:"",added:today(),lived:[]}]});toast("Added to your bucket list");return}
   if(f==="blive"){const bid=form.dataset.id,dt=v("bl-date")||today(),mem=v("bl-memory");S.bLiveForm=null;editDoc("bucket",d=>{const x=d.items.find(y=>y.id===bid);if(x)x.lived=[...(x.lived||[]),{date:dt,memory:mem}]});toast("You lived it. 🌿");return}
   if(f==="dream"){const t=v("dream-text");if(!t){toast("Write a few words first");return}const dt=v("dream-date")||today();const tags=[...form.querySelectorAll('input[name="dtag"]:checked')].map(x=>x.value);
@@ -2399,7 +2512,7 @@ document.addEventListener("submit",e=>{
   const first=form.querySelector("input[type=text]");if(first){setTimeout(()=>{const el=document.getElementById(first.id);if(el)el.focus()},0)}
 });
 /* Escape closes the settings pop-up or an open vision tile */
-document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(S.settingsOpen){S.settingsOpen=false;S.arrangeOpen=false;render(true)}else if(S.vOpen){S.vOpen=null;render(true)}else if(S.bOpen){S.bOpen=null;render(true)}else if(S.vZoom){S.vZoom=false;render(true)}});
+document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(S.settingsOpen){S.settingsOpen=false;S.arrangeOpen=false;render(true)}else if(S.vOpen){S.vOpen=null;render(true)}else if(S.bOpen){S.bOpen=null;render(true)}else if(S.pOpen){S.pOpen=null;render(true)}else if(S.ye){S.ye=null;render(true)}else if(S.pastView){S.pastView=null;render(true)}else if(S.vZoom){S.vZoom=false;render(true)}});
 /* new day: switch over by itself, even if the page stayed open */
 let lastDay=today();
 function checkNewDay(){
@@ -2479,6 +2592,7 @@ function startDemo(){
     vt("Learn to make bread","Create & learn","🍞"),vt("Weekly call with grandma","Roots & family","☎️"),vt("Save for a sabbatical","Home & money","🪴"),vt("Read 20 books","Create & learn","📚"),vt("Camp under the stars","Joy","⛺"),vt("Lisbon in spring","Places","🇵🇹")]};S.visionimg={items:[]};
   S.bucket={imported:true,items:[{id:uid(),title:"See the northern lights",area:"places",emoji:"🌌",step:"Check the best months to go to Tromsø",lived:[]},{id:uid(),title:"Learn to surf",area:"skills",emoji:"🏄",lived:[]},
     {id:uid(),title:"Run a marathon",area:"exp",emoji:"🏅",lived:[{date:addDays(T,-200),memory:"Cried at the finish line"}]},{id:uid(),title:"Kyoto in autumn",area:"places",emoji:"🍁",repeat:true,lived:[{date:addDays(T,-900),memory:"The maple leaves"}]},{id:uid(),title:"Build a canoe",area:"make",emoji:"🛶",lived:[]}]};
+  S.longterm={title:"10-year vision",horizon:String(new Date().getFullYear()+10),items:[{id:"lp1",title:"A home with a garden",emoji:"🏡",why:"Roots and room to grow",years:{}},{id:"lp2",title:"Fluent in Spanish",emoji:"🗣️",years:{}},{id:"lp3",title:"Strong and healthy at 50",emoji:"💪",why:"To keep up with the people I love",years:{}}]};
   S.dreams={imported:true,items:[{id:uid(),date:addDays(T,-1),text:"I was flying over a city made of bread. Nobody seemed surprised.",tags:["vivid","funny"]},{id:uid(),date:addDays(T,-4),text:"Back in my old school, looking for a classroom that kept moving.",tags:["recurring"]}]};
   S.vision.items.push({id:uid(),title:"More quiet moments",area:"Body & mind",emoji:"🕯️",kind:"intention",prompt:"5 minutes of silence today?"},{id:uid(),title:"Reach 76 kg",area:"Body & mind",emoji:"⚖️",kind:"goal",metric:"weight",start:79.2,target:76},{id:uid(),title:"Move most days",area:"Body & mind",emoji:"🏃",kind:"habit",link:"exercise",target:20});
   S.settingsReady=true;S.live=false;MCP=demoMcp(st);
@@ -2504,7 +2618,7 @@ async function connectDb(){
         if(ttOn())ttLoadListsMissing();}
       S.settingsReady=true;render();
     },()=>{S.settingsReady=true;render()});
-    ["wish","backlog","vision","visionimg","bucket","dreams"].forEach(id=>col.doc(id).onSnapshot(snap=>{
+    ["wish","backlog","vision","visionimg","bucket","dreams","longterm"].forEach(id=>col.doc(id).onSnapshot(snap=>{
       if(!pending[id]&&!inflight[id]&&!debounced[id]){const d=snap.exists?snap.data():null;S[id]={...S[id],...(d||{}),items:(d&&d.items)||[]}}
       render();
     },()=>{}));
