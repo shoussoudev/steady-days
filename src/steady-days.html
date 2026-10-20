@@ -1254,7 +1254,8 @@ V.lists=()=>{
     return `<li><input type="checkbox" class="check" id="tl-${t.id}" data-act="ttdone" data-id="${t.id}" data-pid="${esc(t.pid)}" data-msg="${role==="bucket"?"Ticked off your bucket list!":role==="selling"?"Marked as sold":"Done"}"><label class="grow" for="tl-${t.id}">${esc(t.title)}</label>${age!=null?`<span class="mono muted small">${age}d</span>`:""}</li>`;
   };
   return recentBox(u=>u.kind==="tt")+`<section class="block card">
-    <div class="head"><h2>My lists</h2><button class="btn ghost" data-act="ttreload">Refresh</button></div>
+    <div class="head"><h2>My lists</h2>${STANDALONE?`<button class="btn ghost" data-act="newlist">${S.newList?"Cancel":"+ New list"}</button>`:`<button class="btn ghost" data-act="ttreload">Refresh</button>`}</div>
+    ${STANDALONE&&S.newList?`<form class="addrow" data-form="newlist"><input type="text" id="newlist-name" placeholder="List name, e.g. 🎁 Gift ideas" autocomplete="off"><button class="btn">Create</button></form><p class="muted small" style="margin:0">Then choose what it's for under Choose lists below.</p>`:""}
     <div class="chips">${roles.map(([k,n])=>`<button class="chip" data-act="listrole" data-r="${k}" aria-pressed="${role===k}">${n}</button>`).join("")}</div>
   </section>
   ${id?`<section class="block card">
@@ -1556,6 +1557,19 @@ function prettyPanel(doc){
 }
 
 /* ---------- Export: everything you've saved, as one file ---------- */
+/* everything open in TickTick: lists, tasks, kanban columns (for moving into the app) */
+async function ttDump(){
+  const ps=arr(await call("list_projects",{},true)).filter(p=>!p.closed);
+  const projects=[],tasks=[],columns={};
+  const keep=["id","projectId","title","content","desc","startDate","dueDate","timeZone","isAllDay","priority","repeatFlag","repeatFrom","status","parentId","columnId","kind","createdTime","modifiedTime","tags","items","sortOrder"];
+  for(const p of ps){
+    const r=await call("get_project_with_undone_tasks",{project_id:p.id},true);
+    if(p.id!=="inbox")projects.push({id:p.id,name:p.name,kind:p.kind||"TASK",viewMode:p.viewMode||"list",sortOrder:p.sortOrder||0,color:p.color||null});
+    arr(r&&r.tasks?r.tasks:r).forEach(t=>{const o={};keep.forEach(k=>{if(t[k]!==undefined&&t[k]!==null)o[k]=t[k]});tasks.push(o)});
+    if(r&&r.columns&&r.columns.length)columns[p.id]=r.columns.map(c=>({id:c.id,name:c.name,sortOrder:c.sortOrder||0}));
+  }
+  return {projects,tasks,columns,comments:[]};
+}
 async function exportData(){
   if(!DL){toast("Downloads aren't available in this view");return}
   let docs=[];
@@ -1566,10 +1580,13 @@ async function exportData(){
   const days=docs.filter(d=>d.kind==="day").sort((a,b)=>a.date<b.date?-1:1);
   if(!S.live)Object.values(S.days).forEach(d=>days.push(d));
   const strip=({id,...r})=>r;
-  const tt=S.tt&&S.tt.projects&&S.tt.projects.length?{projects:S.tt.projects.map(p=>({id:p.id,name:p.name})),lists:Object.fromEntries(Object.entries(S.tt.lists||{}).map(([k,L])=>[k,(L.tasks||[]).map(t=>({id:t.id,title:t.title,content:t.content,due:t.due,priority:t.priority,parentId:t.parentId,created:t.created}))]))}:null;
+  let tasksDump=null;
+  if(STANDALONE)tasksDump=byId.tt?strip(byId.tt):null;
+  else if(ttOn()){toast("Gathering your TickTick tasks…");try{tasksDump=await ttDump()}catch(e){toast("Couldn't read all of TickTick just now. Try again in a moment.");return}}
+  const tt=!STANDALONE&&S.tt&&S.tt.projects&&S.tt.projects.length?{projects:S.tt.projects.map(p=>({id:p.id,name:p.name})),lists:Object.fromEntries(Object.entries(S.tt.lists||{}).map(([k,L])=>[k,(L.tasks||[]).map(t=>({id:t.id,title:t.title,content:t.content,due:t.due,priority:t.priority,parentId:t.parentId,created:t.created}))]))}:null;
   const out={app:"Steady Days",format:1,exportedAt:new Date().toISOString(),timezone:TZ,
     settings:byId.settings?strip(byId.settings):S.settings,wishlist:byId.wish?strip(byId.wish):S.wish,backlog:byId.backlog?strip(byId.backlog):S.backlog,
-    days:days.map(d=>{const {id,...r}=d;return r}),ticktickSnapshot:tt};
+    days:days.map(d=>{const {id,...r}=d;return r}),tasks:tasksDump,ticktickSnapshot:tt};
   try{await DL.save({filename:`steady-days-${today()}.json`,data:new Blob([JSON.stringify(out,null,2)],{type:"application/json"})});toast("Saved. Keep it somewhere safe.")}
   catch(e){if(e&&e.code==="declined")return;toast(e&&e.code==="rate_limited"?"A save is already open":"Couldn't save the file here.")}
 }
@@ -1580,15 +1597,18 @@ async function importData(file){
   let j;try{j=JSON.parse(await file.text())}catch(_){toast("That file couldn't be read.");return}
   if(!j||j.app!=="Steady Days"||!Array.isArray(j.days)){toast("That isn't a Steady Days export file.");return}
   const days=j.days.filter(d=>d&&/^\d{4}-\d{2}-\d{2}$/.test(d.date||""));
-  const ok=confirm(`Import ${days.length} day${days.length===1?"":"s"}, your settings, wishlist (${(j.wishlist&&j.wishlist.items||[]).length}) and backlog (${(j.backlog&&j.backlog.items||[]).length})?`);
+  const T=j.tasks&&Array.isArray(j.tasks.tasks)?j.tasks:null;
+  const ok=confirm(`Import ${days.length} day${days.length===1?"":"s"}, your settings, wishlist (${(j.wishlist&&j.wishlist.items||[]).length}), backlog (${(j.backlog&&j.backlog.items||[]).length})${T?` and ${T.tasks.length} tasks in ${T.projects.length+1} lists`:""}?${T?" Tasks already in the app are replaced.":""}`);
   if(!ok)return;
   const col=S.db.collection("data/users/"+S.uid);let n=0;toast("Importing…");
   try{
     if(j.settings)await col.doc("settings").set({...j.settings});
     if(j.wishlist)await col.doc("wish").set({...j.wishlist,kind:"wish"});
     if(j.backlog)await col.doc("backlog").set({...j.backlog,kind:"backlog"});
+    if(T)await col.doc("tt").set({projects:T.projects||[],tasks:T.tasks,columns:T.columns||{},comments:T.comments||[],kind:"tt"});
     for(const d of days){await col.doc("d-"+d.date).set({...d,kind:"day"});n++}
-    toast(`Imported ${n} day${n===1?"":"s"} and your lists. Welcome home. 🌿`);
+    if(T&&MCP)setTimeout(ttLoadAll,600);
+    toast(`Imported ${n} day${n===1?"":"s"}${T?`, ${T.tasks.length} tasks`:""} and your lists. Welcome home. 🌿`);
   }catch(e){toast(`Stopped after ${n} days: ${e&&e.message||"couldn't save"}. Try again.`)}
 }
 
@@ -1823,6 +1843,7 @@ document.addEventListener("click",e=>{
   if(a==="wprio"){const pv=+b.dataset.p;editDoc("wish",d=>{const x=d.items.find(y=>y.id===id);if(x)x.prio=pv});toast("Priority: "+["none","low","medium","high"][pv])}
   if(a==="wkind"){const k=b.dataset.k;editDoc("wish",d=>{const x=d.items.find(y=>y.id===id);if(!x)return;x.kind=k;if(k==="need"){x.until=null}else{x.until=addDays(today(),30);x.checked=false;x.hold=30}});toast(k==="need"?"Moved to needs. It's ready.":"Cooling off for 30 days")}
   if(a==="wimport")importWish();
+  if(a==="newlist"){S.newList=!S.newList;render(true);const el=document.getElementById("newlist-name");if(el)el.focus()}
   if(a==="edit"){S.edit={k:b.dataset.k,date:b.dataset.date,id};render(true);const el=document.getElementById("ed-text");if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length)}}
   if(a==="editcancel"){S.edit=null;render(true)}
   if(a==="bledit"){S.blEdit=id;S.blFinish=null;S.blDrop=null;render(true);const el=document.getElementById("ble-title");if(el)el.focus()}
@@ -1918,6 +1939,8 @@ document.addEventListener("submit",e=>{
   }
   if(f==="wishadd"){const t=v("wish-new"),k=v("wish-kind")||"want30";if(!t)return;clear("wish-new");addWish(t,k==="need"?"need":"want",k==="want60"?60:30)}
   if(f==="bladd"){const t=v("bl-new"),ty=v("bl-type")||"book";if(!t)return;clear("bl-new");editDoc("backlog",d=>{d.items.unshift({id:uid(),type:ty,title:t,status:"someday",added:today()})});toast("Added to your backlog")}
+  if(f==="newlist"){const n=v("newlist-name");if(!n)return;S.newList=false;
+    call("create_project",{name:n}).then(()=>{toast("List created");ttLoadAll()}).catch(e=>toast(ttErrToast(e)));return}
   if(f==="edit"){const k=form.dataset.k,dt=form.dataset.date,eid=form.dataset.id,arr=ED_ARR[k];const t=v("ed-text");if(!t){toast("It needs a name");return}
     const home=(document.getElementById("ed-home")||{}).checked;
     S.edit=null;editDay(dt,d=>{const x=(d[arr]||[]).find(y=>y.id===eid);if(!x)return;

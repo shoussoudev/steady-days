@@ -3,6 +3,7 @@
    Paths "data/users/<uid>/..." map to Firestore "users/<uid>/docs/...". */
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {getAuth,GoogleAuthProvider,onAuthStateChanged,signInWithPopup,signInWithRedirect,getRedirectResult,signOut} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {makeTasks} from "./tasks.js";
 import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,doc,collection,setDoc,getDoc,getDocs,onSnapshot,query,where} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig={
@@ -66,7 +67,7 @@ onAuthStateChanged(auth,u=>{
   if(!u){showGate("");return}
   gate.hidden=true;window.__sdAuth.email=u.email;
   if(started)return;started=true;
-  window.__sdReady({db:makeDb(u.uid),user:{id:async()=>u.uid,isOwner:()=>true,canEdit:()=>true}});
+  window.__sdReady({db:makeDb(u.uid),mcp:makeTasks(fs,u.uid),user:{id:async()=>u.uid,isOwner:()=>true,canEdit:()=>true}});
 });
 
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});

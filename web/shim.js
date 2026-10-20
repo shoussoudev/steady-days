@@ -12,7 +12,7 @@
   }};
   window.claude={use:async name=>{
     if(name==="downloads")return downloads;
-    if(name==="db"||name==="user"){const r=await ready;return r[name]}
-    return null; /* mcp (TickTick), sample (Claude), etc. are not available outside Claude yet */
+    if(name==="db"||name==="user"||name==="mcp"){const r=await ready;return r[name]}
+    return null; /* sample (Claude) etc. are not available outside Claude yet */
   }};
 })();

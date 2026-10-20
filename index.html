@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261019234458"></script>
-<script type="module" src="boot.js?v=20261019234458"></script>
+<script src="shim.js?v=20261020091655"></script>
+<script type="module" src="boot.js?v=20261020091655"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -509,7 +509,7 @@ function toast(msg){const t=$("#toast");t.textContent=msg;t.hidden=false;clearTi
 function setStatus(){
   const bad=!S.live||S.tt.state==="error";if(!bad){$("#status").textContent="";return}
   const parts=[S.live?"Saved to your account":"Not saving in this view"];
-  if(S.tt.state==="ok")parts.push("TickTick connected");else if(S.tt.state==="loading")parts.push("Loading TickTick…");else if(S.tt.state==="error")parts.push("TickTick unavailable");
+  if(S.tt.state==="ok")parts.push("TickTick connected");else if(S.tt.state==="loading")parts.push("Loading your tasks…");else if(S.tt.state==="error")parts.push("Tasks unavailable");
   $("#status").textContent=parts.join(" · ");
 }
 
@@ -581,8 +581,8 @@ function ttErrToast(e){
   if(c==="server_unavailable"||c==="upstream_error")return "TickTick didn't confirm that change. Refresh to check whether it went through.";
   if(c==="approval_required")return "TickTick needs your approval for that. Try again and choose Allow.";
   if(c==="not_in_manifest"||c==="blocked_by_policy")return "TickTick is turned off for this page.";
-  if(c==="tool_error")return "TickTick refused that change: "+(e.message||"unknown reason");
-  return "Couldn't reach TickTick. Try again in a moment.";
+  if(c==="tool_error")return "That change didn't go through: "+(e.message||"unknown reason");
+  return "Couldn't load your tasks. Try again in a moment.";
 }
 function ttErrBox(e){
   const c=e&&e.code;let msg;
@@ -591,8 +591,8 @@ function ttErrBox(e){
   else if(c==="selection_required")msg="You have more than one TickTick connection. Choose one when Claude asks, then try again.";
   else if(c==="not_in_manifest"||c==="blocked_by_policy"||c==="consent_required")msg="TickTick is turned off for this page. You can allow it from the page's Permissions menu.";
   else if(c==="approval_required")msg="TickTick needs your approval before the page can read it.";
-  else if(c==="tool_error")msg="TickTick returned an error: "+esc(e.message||"unknown");
-  else msg="Couldn't reach TickTick just now.";
+  else if(c==="tool_error")msg="Something went wrong: "+esc(e.message||"unknown");
+  else msg="Couldn't load your tasks just now.";
   return `<div class="tt-err"><span>${msg}</span><button class="btn ghost" data-act="ttreload">${c==="approval_required"?"Allow and load":"Try again"}</button></div>`;
 }
 
@@ -684,7 +684,7 @@ async function runUndo(uidv){
       await call("update_task",{task_id:u.tid,task:{id:u.tid,projectId:u.pid,status:0},client_timezone:TZ});
       if((getDay(today()).top3||[]).some(x=>x.id===u.tid))editDay(today(),d=>{d.top3=d.top3.map(x=>x.id===u.tid?{...x,done:false}:x)},{silent:true});
       if(u.buy)editDay(u.buy.date,d=>{d.purchases=d.purchases.filter(p=>p.id!==u.buy.id)});
-      toast(`Restored “${u.title}” in TickTick`);
+      toast(`Restored “${u.title}”`);
       ttLoadLists();ttLoadToday();
     }else{
       const restore={meal:d=>d.meals.unshift(u.item),purchase:d=>d.purchases.unshift(u.item),progress:d=>{d.progress=d.progress||[];d.progress.push(u.item)},ate:d=>{d.ate=d.ate||[];d.ate.push(u.item)}}[u.what];
@@ -800,7 +800,7 @@ function planPanel(){
   const row=(t,from)=>{const on=ids.includes(t.id);return `<li class="trow"><button class="starbtn" data-act="top3tm" data-id="${t.id}" aria-pressed="${on}" aria-label="${on?"Remove from tomorrow's Top 3":"Add to tomorrow's Top 3"}">${on?"★":"☆"}</button><div class="tmain"><span>${esc(plainTitle(t.title))}</span>${from==="today"?`<div class="tmeta"><span class="pill soft">still open today</span></div>`:""}</div></li>`};
   return `<div class="plan">
     <div class="head"><h3>Tomorrow's ${topLabel(tk)}</h3><span class="topmeta"><span class="mono muted">${top.length}/${topMax(tk)} · ${fmtDay(tk,{weekday:"long"})}</span>${sizeBtn(tk)}</span></div>
-    ${top.length?`<ol class="planpicks">${top.map(x=>`<li>${esc(x.title)}${x.moved?` <span class="muted small">(from today)</span>`:""}</li>`).join("")}</ol>`:`<p class="muted small">Star up to ${topMax(tk)} tasks for tomorrow. Picking one of today's open tasks moves it to tomorrow in TickTick.</p>`}
+    ${top.length?`<ol class="planpicks">${top.map(x=>`<li>${esc(x.title)}${x.moved?` <span class="muted small">(from today)</span>`:""}</li>`).join("")}</ol>`:`<p class="muted small">Star up to ${topMax(tk)} tasks for tomorrow. Picking one of today's open tasks moves it to tomorrow.</p>`}
     ${S.tt.tmErr?ttErrBox(S.tt.tmErr):S.tt.tomorrow==null?`<p class="empty">Loading tomorrow…</p>`:`
     ${tm.length?`<span class="eyebrow">Due tomorrow</span><ul class="list">${tm.map(t=>row(t,"tomorrow")).join("")}</ul>`:""}
     ${td.length?`<span class="eyebrow">Still open today</span><ul class="list">${td.map(t=>row(t,"today")).join("")}</ul>`:""}
@@ -827,7 +827,7 @@ async function addTask(listId,title,{dueToday=false}={}){
   const task={title};
   if(listId&&listId!=="inbox")task.projectId=listId;
   if(dueToday){task.isAllDay=true;task.dueDate=dueTodayISO();task.startDate=task.dueDate;task.timeZone=TZ}
-  try{await call("create_task",{task,client_timezone:TZ});toast("Added to TickTick")}
+  try{await call("create_task",{task,client_timezone:TZ});toast("Added")}
   catch(e){toast(ttErrToast(e));return}
   if(listId&&S.tt.lists[listId])ttLoadList(listId);
   if(dueToday)ttLoadToday();
@@ -843,7 +843,7 @@ async function completeTask(tid,pid,msg,extra){
 async function moveTask(tid,colId){
   let t=null;for(const k in S.tt.lists){t=S.tt.lists[k].tasks.find(x=>x.id===tid)||t}
   if(!t)return;const prev=t.columnId;t.columnId=colId;render(true);
-  try{await call("update_task",{task_id:t.id,task:{id:t.id,projectId:t.pid,columnId:colId},client_timezone:TZ});toast("Moved in TickTick")}
+  try{await call("update_task",{task_id:t.id,task:{id:t.id,projectId:t.pid,columnId:colId},client_timezone:TZ});toast("Moved")}
   catch(e){t.columnId=prev;render(true);toast(ttErrToast(e))}
 }
 function hVal(h,k){const c=(S.tt.checks[h.id]||{})[stamp(k)];return c?c.value||0:0}
@@ -1053,7 +1053,7 @@ function todayTasks(){
       ${!picking?`<ul class="list">${openTop.map(row).join("")}${doneTop.map(x=>`<li class="trow donerow"><span class="check donechk" aria-hidden="true"></span><div class="tmain"><span>${esc(plainTitle(x.title))}${x.bonus?` <span class="pill soft">bonus</span>`:""}</span></div></li>`).join("")}</ul>
       ${allDone?`<div class="gentle"><p class="small" style="margin:0">${doneLine(bonusDone)}</p>${rest.length?(S.bonusPick?`<div class="pickbar"><span class="muted small">Star one task below.</span><button type="button" class="linkbtn subtle" data-act="bonuspick">Never mind</button></div>`:`<button type="button" class="linkbtn" data-act="bonuspick">Add one more</button>`):""}</div>`:""}`:""}
       ${S.tt.state==="error"?ttErrBox(S.tt.err):S.tt.todayErr?ttErrBox(S.tt.todayErr):S.tt.state==="loading"&&!ts.length?`<p class="empty">Loading today's tasks…</p>`:
-        !ts.length&&!top.length?`<p class="empty">Nothing due today in TickTick. Enjoy the space, or pick one thing that matters.</p>`:
+        !ts.length&&!top.length?`<p class="empty">Nothing due today. Enjoy the space, or pick one thing that matters.</p>`:
         !rest.length?"":showRest?`${!picking?`<div class="head"><span class="eyebrow">Everything else today</span>${choosing?"":`<button class="btn ghost sm" data-act="moretoday">Hide</button>`}</div>`:""}<ul class="list">${rest.map(row).join("")}</ul>`:
         `<button class="btn ghost" data-act="moretoday">+ ${rest.length} more today</button>`}
       <form class="addrow" data-form="tttoday"><input type="text" id="tttoday-new" placeholder="Add a task for today" autocomplete="off"><button class="btn">Add</button></form>
@@ -1128,7 +1128,7 @@ function projForm(pid,idp){
   const tt=tr.filter(x=>!x.local),lo=tr.filter(x=>x.local);
   const opt=x=>`<option value="${x.id}">${esc(x.name)}${x.ongoing?" (ongoing)":""}</option>`;
   return `<form class="addrow" data-form="progress" data-pid="${pid||""}">
-    ${pid?"":`<select id="${idp}-pid" aria-label="Project">${tt.length&&lo.length?`<optgroup label="TickTick">${tt.map(opt).join("")}</optgroup><optgroup label="Saved here">${lo.map(opt).join("")}</optgroup>`:tr.map(opt).join("")}</select>`}
+    ${pid?"":`<select id="${idp}-pid" aria-label="Project">${tt.length&&lo.length?`<optgroup label="Lists">${tt.map(opt).join("")}</optgroup><optgroup label="Saved here">${lo.map(opt).join("")}</optgroup>`:tr.map(opt).join("")}</select>`}
     <input type="text" id="${idp}-text" placeholder="What did you do?" autocomplete="off">
     <input type="number" id="${idp}-mins" placeholder="mins" min="0" step="5" inputmode="numeric" aria-label="Minutes spent">
     ${pid?`<input type="date" id="${idp}-date" value="${today()}" aria-label="Date">`:""}
@@ -1139,10 +1139,10 @@ function projLabel(pid){const t=trackable().find(x=>x.id===pid);if(t)return t.na
 V.todo=()=>{
   if(MCP&&S.tt.state!=="off"){
     if(S.tt.state==="error")return `<section class="block card"><h2>To-do</h2>${ttErrBox(S.tt.err)}</section>`+localTodo();
-    if(S.tt.state==="loading"&&!S.tt.projects.length)return `<section class="block card"><h2>To-do</h2><p class="empty">Loading your TickTick lists…</p></section>`;
+    if(S.tt.state==="loading"&&!S.tt.projects.length)return `<section class="block card"><h2>To-do</h2><p class="empty">Loading your lists…</p></section>`;
     const ids=ttMap().todo||[];
-    if(!ids.length)return `<section class="block card"><h2>To-do</h2><p class="empty">Pick which TickTick lists count as your to-do in Lists → Choose lists.</p></section>`;
-    return recentBox()+`<div class="head"><span class="eyebrow">From TickTick</span><button class="btn ghost" data-act="ttreload">Refresh</button></div>`+ids.map(id=>{
+    if(!ids.length)return `<section class="block card"><h2>To-do</h2><p class="empty">Pick which lists count as your to-do in Lists → Choose lists.</p></section>`;
+    return recentBox()+`<div class="head"><span class="eyebrow">Your tasks</span><button class="btn ghost" data-act="ttreload">Refresh</button></div>`+ids.map(id=>{
       const L=S.tt.lists[id];const all=L?L.tasks.filter(t=>t.kind!=="NOTE"&&!L.tasks.some(x=>x.parentId===t.id)).sort(byDue):[];
       const more=!S.showAll[id]&&all.length>15;const ts=more?all.slice(0,15):all;
       return `<section class="block card"><div class="head"><h2>${esc(projName(id))}</h2><span class="mono muted">${all.length} open</span></div>
@@ -1168,7 +1168,7 @@ V.projects=()=>{
   if(MCP&&S.tt.state!=="off"){
     const b=ttOn()&&projBoard();
     if(S.tt.state==="error")html+=`<section class="block card"><h2>Projects</h2>${ttErrBox(S.tt.err)}</section>`;
-    else if(!b){html+=`<section class="block card"><h2>Projects</h2><p class="empty">${S.tt.state==="loading"||(ttMap().projects&&!S.tt.lists[ttMap().projects])?"Loading your project board…":"Choose your TickTick project list in Lists → Choose lists."}</p></section>`}
+    else if(!b){html+=`<section class="block card"><h2>Projects</h2><p class="empty">${S.tt.state==="loading"||(ttMap().projects&&!S.tt.lists[ttMap().projects])?"Loading your project board…":"Choose your project list in Lists → Choose lists."}</p></section>`}
     else if(b.L.err)html+=`<section class="block card"><h2>${esc(projName(b.listId))}</h2>${ttErrBox(b.L.err)}</section>`;
     else{
       const f=S.projFilter;
@@ -1177,7 +1177,7 @@ V.projects=()=>{
       html+=`<section class="block card">
         <div class="head"><h2>${esc(projName(b.listId))}</h2><button class="btn ghost" data-act="ttreload">Refresh</button></div>
         <div class="chips">${[["all","Open"],["ongoing",`Ongoing · ${nOn}`],["done","Done"]].filter(x=>x[0]!=="done"||b.doneCol).map(([k,l])=>`<button class="chip" data-act="projfilter" data-f="${k}" aria-pressed="${f===k}">${l}</button>`).join("")}</div>
-        <p class="muted small">Tap a project to log what you did. Notes are saved here and added as a comment on the task in TickTick.</p>
+        <p class="muted small">Tap a project to log what you did. Notes are saved with the project.</p>
       </section>`;
       b.groups.forEach(g=>{
         const items=g.items.filter(show);if(!items.length)return;
@@ -1255,7 +1255,7 @@ V.habits=()=>{
 V.lists=()=>{
   if(!MCP||S.tt.state==="off")return `<section class="block card"><h2>Lists</h2><p class="empty">Your TickTick lists show here when TickTick is available in this view.</p></section>`;
   if(S.tt.state==="error")return `<section class="block card"><h2>Lists</h2>${ttErrBox(S.tt.err)}</section>`;
-  if(!S.tt.projects.length)return `<section class="block card"><h2>Lists</h2><p class="empty">Loading your TickTick lists…</p></section>`;
+  if(!S.tt.projects.length)return `<section class="block card"><h2>Lists</h2><p class="empty">Loading your lists…</p></section>`;
   const m=ttMap();const roles=ROLES.filter(r=>m[r[0]]&&r[0]!=="wishlist");
   if(!roles.some(r=>r[0]===S.listRole)&&roles.length)S.listRole=roles[0][0];
   const role=S.listRole,id=m[role],L=id&&S.tt.lists[id];
@@ -1274,7 +1274,8 @@ V.lists=()=>{
     return `<li><input type="checkbox" class="check" id="tl-${t.id}" data-act="ttdone" data-id="${t.id}" data-pid="${esc(t.pid)}" data-msg="${role==="bucket"?"Ticked off your bucket list!":role==="selling"?"Marked as sold":"Done"}"><label class="grow" for="tl-${t.id}">${esc(t.title)}</label>${age!=null?`<span class="mono muted small">${age}d</span>`:""}</li>`;
   };
   return recentBox(u=>u.kind==="tt")+`<section class="block card">
-    <div class="head"><h2>My lists</h2><button class="btn ghost" data-act="ttreload">Refresh</button></div>
+    <div class="head"><h2>My lists</h2>${STANDALONE?`<button class="btn ghost" data-act="newlist">${S.newList?"Cancel":"+ New list"}</button>`:`<button class="btn ghost" data-act="ttreload">Refresh</button>`}</div>
+    ${STANDALONE&&S.newList?`<form class="addrow" data-form="newlist"><input type="text" id="newlist-name" placeholder="List name, e.g. 🎁 Gift ideas" autocomplete="off"><button class="btn">Create</button></form><p class="muted small" style="margin:0">Then choose what it's for under Choose lists below.</p>`:""}
     <div class="chips">${roles.map(([k,n])=>`<button class="chip" data-act="listrole" data-r="${k}" aria-pressed="${role===k}">${n}</button>`).join("")}</div>
   </section>
   ${id?`<section class="block card">
@@ -1289,7 +1290,7 @@ function chooseLists(){
   const m=ttMap(),ps=S.tt.projects;
   const sel=(k,label)=>`<label class="field"><span class="eyebrow">${label}</span><select id="map-${k}" data-act="setmap" data-k="${k}"><option value="">None</option>${ps.map(p=>`<option value="${esc(p.id)}" ${m[k]===p.id?"selected":""}>${esc(p.name)}</option>`).join("")}</select></label>`;
   return `<section class="block card">
-    <div class="head"><h2>Choose lists</h2><span class="eyebrow">Which TickTick lists to use</span></div>
+    <div class="head"><h2>Choose lists</h2><span class="eyebrow">Which lists to use</span></div>
     <div class="fields">${sel("projects","Project tracker")}${ROLES.filter(([k])=>k!=="wishlist"||!S.wish.imported).map(([k,n])=>sel(k,n)).join("")}</div>
     <div class="field"><span class="eyebrow">To-do lists</span><div class="chips">${ps.map(p=>`<button class="chip" data-act="maptodo" data-id="${esc(p.id)}" aria-pressed="${(m.todo||[]).includes(p.id)}">${esc(p.name)}</button>`).join("")}</div></div>
   </section>`;
@@ -1576,6 +1577,19 @@ function prettyPanel(doc){
 }
 
 /* ---------- Export: everything you've saved, as one file ---------- */
+/* everything open in TickTick: lists, tasks, kanban columns (for moving into the app) */
+async function ttDump(){
+  const ps=arr(await call("list_projects",{},true)).filter(p=>!p.closed);
+  const projects=[],tasks=[],columns={};
+  const keep=["id","projectId","title","content","desc","startDate","dueDate","timeZone","isAllDay","priority","repeatFlag","repeatFrom","status","parentId","columnId","kind","createdTime","modifiedTime","tags","items","sortOrder"];
+  for(const p of ps){
+    const r=await call("get_project_with_undone_tasks",{project_id:p.id},true);
+    if(p.id!=="inbox")projects.push({id:p.id,name:p.name,kind:p.kind||"TASK",viewMode:p.viewMode||"list",sortOrder:p.sortOrder||0,color:p.color||null});
+    arr(r&&r.tasks?r.tasks:r).forEach(t=>{const o={};keep.forEach(k=>{if(t[k]!==undefined&&t[k]!==null)o[k]=t[k]});tasks.push(o)});
+    if(r&&r.columns&&r.columns.length)columns[p.id]=r.columns.map(c=>({id:c.id,name:c.name,sortOrder:c.sortOrder||0}));
+  }
+  return {projects,tasks,columns,comments:[]};
+}
 async function exportData(){
   if(!DL){toast("Downloads aren't available in this view");return}
   let docs=[];
@@ -1586,10 +1600,13 @@ async function exportData(){
   const days=docs.filter(d=>d.kind==="day").sort((a,b)=>a.date<b.date?-1:1);
   if(!S.live)Object.values(S.days).forEach(d=>days.push(d));
   const strip=({id,...r})=>r;
-  const tt=S.tt&&S.tt.projects&&S.tt.projects.length?{projects:S.tt.projects.map(p=>({id:p.id,name:p.name})),lists:Object.fromEntries(Object.entries(S.tt.lists||{}).map(([k,L])=>[k,(L.tasks||[]).map(t=>({id:t.id,title:t.title,content:t.content,due:t.due,priority:t.priority,parentId:t.parentId,created:t.created}))]))}:null;
+  let tasksDump=null;
+  if(STANDALONE)tasksDump=byId.tt?strip(byId.tt):null;
+  else if(ttOn()){toast("Gathering your TickTick tasks…");try{tasksDump=await ttDump()}catch(e){toast("Couldn't read all of TickTick just now. Try again in a moment.");return}}
+  const tt=!STANDALONE&&S.tt&&S.tt.projects&&S.tt.projects.length?{projects:S.tt.projects.map(p=>({id:p.id,name:p.name})),lists:Object.fromEntries(Object.entries(S.tt.lists||{}).map(([k,L])=>[k,(L.tasks||[]).map(t=>({id:t.id,title:t.title,content:t.content,due:t.due,priority:t.priority,parentId:t.parentId,created:t.created}))]))}:null;
   const out={app:"Steady Days",format:1,exportedAt:new Date().toISOString(),timezone:TZ,
     settings:byId.settings?strip(byId.settings):S.settings,wishlist:byId.wish?strip(byId.wish):S.wish,backlog:byId.backlog?strip(byId.backlog):S.backlog,
-    days:days.map(d=>{const {id,...r}=d;return r}),ticktickSnapshot:tt};
+    days:days.map(d=>{const {id,...r}=d;return r}),tasks:tasksDump,ticktickSnapshot:tt};
   try{await DL.save({filename:`steady-days-${today()}.json`,data:new Blob([JSON.stringify(out,null,2)],{type:"application/json"})});toast("Saved. Keep it somewhere safe.")}
   catch(e){if(e&&e.code==="declined")return;toast(e&&e.code==="rate_limited"?"A save is already open":"Couldn't save the file here.")}
 }
@@ -1600,15 +1617,18 @@ async function importData(file){
   let j;try{j=JSON.parse(await file.text())}catch(_){toast("That file couldn't be read.");return}
   if(!j||j.app!=="Steady Days"||!Array.isArray(j.days)){toast("That isn't a Steady Days export file.");return}
   const days=j.days.filter(d=>d&&/^\d{4}-\d{2}-\d{2}$/.test(d.date||""));
-  const ok=confirm(`Import ${days.length} day${days.length===1?"":"s"}, your settings, wishlist (${(j.wishlist&&j.wishlist.items||[]).length}) and backlog (${(j.backlog&&j.backlog.items||[]).length})?`);
+  const T=j.tasks&&Array.isArray(j.tasks.tasks)?j.tasks:null;
+  const ok=confirm(`Import ${days.length} day${days.length===1?"":"s"}, your settings, wishlist (${(j.wishlist&&j.wishlist.items||[]).length}), backlog (${(j.backlog&&j.backlog.items||[]).length})${T?` and ${T.tasks.length} tasks in ${T.projects.length+1} lists`:""}?${T?" Tasks already in the app are replaced.":""}`);
   if(!ok)return;
   const col=S.db.collection("data/users/"+S.uid);let n=0;toast("Importing…");
   try{
     if(j.settings)await col.doc("settings").set({...j.settings});
     if(j.wishlist)await col.doc("wish").set({...j.wishlist,kind:"wish"});
     if(j.backlog)await col.doc("backlog").set({...j.backlog,kind:"backlog"});
+    if(T)await col.doc("tt").set({projects:T.projects||[],tasks:T.tasks,columns:T.columns||{},comments:T.comments||[],kind:"tt"});
     for(const d of days){await col.doc("d-"+d.date).set({...d,kind:"day"});n++}
-    toast(`Imported ${n} day${n===1?"":"s"} and your lists. Welcome home. 🌿`);
+    if(T&&MCP)setTimeout(ttLoadAll,600);
+    toast(`Imported ${n} day${n===1?"":"s"}${T?`, ${T.tasks.length} tasks`:""} and your lists. Welcome home. 🌿`);
   }catch(e){toast(`Stopped after ${n} days: ${e&&e.message||"couldn't save"}. Try again.`)}
 }
 
@@ -1843,6 +1863,7 @@ document.addEventListener("click",e=>{
   if(a==="wprio"){const pv=+b.dataset.p;editDoc("wish",d=>{const x=d.items.find(y=>y.id===id);if(x)x.prio=pv});toast("Priority: "+["none","low","medium","high"][pv])}
   if(a==="wkind"){const k=b.dataset.k;editDoc("wish",d=>{const x=d.items.find(y=>y.id===id);if(!x)return;x.kind=k;if(k==="need"){x.until=null}else{x.until=addDays(today(),30);x.checked=false;x.hold=30}});toast(k==="need"?"Moved to needs. It's ready.":"Cooling off for 30 days")}
   if(a==="wimport")importWish();
+  if(a==="newlist"){S.newList=!S.newList;render(true);const el=document.getElementById("newlist-name");if(el)el.focus()}
   if(a==="edit"){S.edit={k:b.dataset.k,date:b.dataset.date,id};render(true);const el=document.getElementById("ed-text");if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length)}}
   if(a==="editcancel"){S.edit=null;render(true)}
   if(a==="bledit"){S.blEdit=id;S.blFinish=null;S.blDrop=null;render(true);const el=document.getElementById("ble-title");if(el)el.focus()}
@@ -1924,7 +1945,7 @@ document.addEventListener("submit",e=>{
     editDay(dt,d=>{d.progress=d.progress||[];d.progress.push({id:uid(),pid:p,text:t,mins:m,pname:tr?tr.name:""})});
     if(tr&&tr.tt){
       call("add_comment",{project_id:tr.tt.pid,task_id:tr.tt.id,title:`${fmtDay(dt)} · ${t}${m?` (${m} min)`:""}`})
-        .then(()=>toast("Progress logged and added to TickTick"))
+        .then(()=>toast("Progress logged"))
         .catch(err=>toast("Progress saved here, but the TickTick note didn't go through. "+(err&&err.code==="needs_reauth"?"Reconnect TickTick.":"")));
     }else toast("Progress logged");
   }
@@ -1938,6 +1959,8 @@ document.addEventListener("submit",e=>{
   }
   if(f==="wishadd"){const t=v("wish-new"),k=v("wish-kind")||"want30";if(!t)return;clear("wish-new");addWish(t,k==="need"?"need":"want",k==="want60"?60:30)}
   if(f==="bladd"){const t=v("bl-new"),ty=v("bl-type")||"book";if(!t)return;clear("bl-new");editDoc("backlog",d=>{d.items.unshift({id:uid(),type:ty,title:t,status:"someday",added:today()})});toast("Added to your backlog")}
+  if(f==="newlist"){const n=v("newlist-name");if(!n)return;S.newList=false;
+    call("create_project",{name:n}).then(()=>{toast("List created");ttLoadAll()}).catch(e=>toast(ttErrToast(e)));return}
   if(f==="edit"){const k=form.dataset.k,dt=form.dataset.date,eid=form.dataset.id,arr=ED_ARR[k];const t=v("ed-text");if(!t){toast("It needs a name");return}
     const home=(document.getElementById("ed-home")||{}).checked;
     S.edit=null;editDay(dt,d=>{const x=(d[arr]||[]).find(y=>y.id===eid);if(!x)return;

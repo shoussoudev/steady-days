@@ -3,6 +3,20 @@ The same source is also published as the Claude artifact; here we add the Fireba
 import shutil,time,pathlib
 root=pathlib.Path(__file__).resolve().parent.parent
 src=(root/"src/steady-days.html").read_text()
+# In the app, tasks live in Steady Days itself, so drop "TickTick" from user-facing wording.
+WORDING=[("Progress logged and added to TickTick","Progress logged"),("Added to TickTick","Added"),("Moved in TickTick","Moved"),
+  ("” in TickTick`","”`"),('<span class="eyebrow">From TickTick</span>','<span class="eyebrow">Your tasks</span>'),
+  ("Nothing due today in TickTick.","Nothing due today."),("moves it to tomorrow in TickTick.","moves it to tomorrow."),
+  ("Loading your TickTick lists…","Loading your lists…"),("Pick which TickTick lists count","Pick which lists count"),
+  ("Which TickTick lists to use","Which lists to use"),('<optgroup label="TickTick">','<optgroup label="Lists">'),
+  ("Couldn't reach TickTick","Couldn't load your tasks"),("Choose your TickTick","Choose your"),
+  ("TickTick returned an error: ","Something went wrong: "),("TickTick refused that change: ","That change didn't go through: "),
+  ("Loading TickTick…","Loading your tasks…"),("TickTick unavailable","Tasks unavailable"),
+  ("Notes are saved here and added as a comment on the task in TickTick.","Notes are saved with the project.")]
+for a,b in WORDING:
+    n=src.count(a)
+    if not n:raise SystemExit("wording not found: "+a)
+    src=src.replace(a,b)
 stamp=time.strftime("%Y%m%d%H%M%S")
 head='''<!doctype html>
 <html lang="en"><head>
@@ -31,7 +45,7 @@ gate='''
 </body></html>
 '''
 (root/"index.html").write_text(head+src+gate)
-for f in ["shim.js","boot.js","manifest.webmanifest"]:shutil.copy(root/"web"/f,root/f)
+for f in ["shim.js","boot.js","tasks.js","manifest.webmanifest"]:shutil.copy(root/"web"/f,root/f)
 (root/"sw.js").write_text((root/"web/sw.js").read_text().replace("__BUILD__",stamp))
 (root/".nojekyll").write_text("")
 print("built",stamp)
