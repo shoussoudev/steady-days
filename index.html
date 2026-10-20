@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261020100729"></script>
-<script type="module" src="boot.js?v=20261020100729"></script>
+<script src="shim.js?v=20261020210341"></script>
+<script type="module" src="boot.js?v=20261020210341"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -169,6 +169,19 @@ ul.list li.wrow{display:grid;gap:8px}
 .wmain{display:flex;align-items:center;gap:10px;min-width:0}
 .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
 .field{display:grid;gap:4px}
+.modal{position:fixed;inset:0;z-index:40;display:grid;align-items:start;justify-items:center;padding:calc(env(safe-area-inset-top,0px) + 56px) 12px 16px;overflow:auto}
+.modal-bg{position:fixed;inset:0;background:rgba(10,20,14,.45);border:0;padding:0;margin:0;cursor:default}
+.vsheet-in{position:relative}
+.modal-in{position:relative;width:min(560px,100%)}
+.modal-in .settings{margin:0;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+body.modal-open{overflow:hidden}
+.arrange{display:grid;gap:8px;border-top:1px solid var(--line);padding-top:10px}
+.arrlist{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.arrlist li{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--line)}
+.arrlist li.isgrp span{font-family:var(--f-mono);font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.arrlist li.off span{opacity:.45;text-decoration:line-through}
+.arrlist .btn.sm{min-width:34px}
+.arrlist li .grow{flex:1;min-width:0}
 @media (max-width:420px){nav.tabs button{padding:7px 7px;font-size:.84rem}nav.tabs{gap:0}}
 .vtoday{display:flex;gap:12px;align-items:center;padding:10px 12px}
 .vtile-open{background:none;border:0;padding:0;cursor:pointer;flex:none}
@@ -189,13 +202,13 @@ ul.list li.wrow{display:grid;gap:8px}
 .vcheck.big{width:40px;height:40px;font-size:1.2rem;top:10px;right:10px}
 .vadd .vemoji{background:transparent;border:1.5px dashed var(--line);color:var(--muted)}
 .vaddform{flex-wrap:wrap}
-.vsheet{position:fixed;inset:0;z-index:30;background:rgba(10,20,14,.45);display:grid;align-items:end;justify-items:center;padding:16px}
+.vsheet{position:fixed;inset:0;z-index:30;display:grid;align-items:end;justify-items:center;padding:16px}
 .vsheet-in{background:var(--surface);border-radius:18px;padding:16px;width:min(520px,100%);max-height:calc(100dvh - 32px);overflow:auto;display:grid;gap:10px}
 .vhero{position:relative}
 .vbig{max-height:46dvh;object-fit:cover}
 .vtitle-in{font:600 1.1rem var(--f-body)}
 .vsheet textarea{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 11px;width:100%;min-width:0;resize:vertical;font:inherit;color:inherit}
-.vzoom{position:fixed;inset:0;z-index:31;background:rgba(10,20,14,.85);overflow:auto;cursor:zoom-out;display:grid;place-items:center;padding:12px}
+.vzoom{position:fixed;inset:0;z-index:31;border:0;margin:0;background:rgba(10,20,14,.85);overflow:auto;cursor:zoom-out;display:grid;place-items:center;padding:12px}
 .vzoom img{max-width:none;width:min(1400px,240vw);border-radius:8px}
 @media (min-width:700px){.vzoom img{width:min(1400px,96vw)}}
 .banner.demo{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
@@ -979,7 +992,8 @@ function render(force){
   deferred=false;
   const focusId=typing?a.id:null;
   renderTabs();header();setStatus();
-  $("#view").innerHTML=(S.settingsOpen?settingsPanel():"")+pageHtml();
+  $("#view").innerHTML=pageHtml()+(S.settingsOpen?`<div class="modal" role="dialog" aria-modal="true" aria-label="Settings"><button type="button" class="modal-bg" data-act="settings" aria-label="Close settings" tabindex="-1"></button><div class="modal-in">${settingsPanel()}</div></div>`:"");
+  document.body.classList.toggle("modal-open",!!(S.settingsOpen||S.vOpen&&S.tab==="vision"));
   const g=document.getElementById("gear");if(g)g.setAttribute("aria-expanded",String(!!S.settingsOpen));
   if(focusId){const el=document.getElementById(focusId);if(el)el.focus()}
 }
@@ -1130,14 +1144,27 @@ V.today=()=>{
   if(past)return `<div class="pastnote"><span>Filling in <b>${fmtDay(vd,{weekday:"long",day:"numeric",month:"long"})}</b></span><button type="button" class="btn ghost sm" data-act="viewday" data-d="${today()}">Back to today</button></div>
   <span class="grp">Notice</span>${moodCard(d,true)}${checkinCard()}${ateCard()}
   <span class="grp">Reflect</span>${reflectCard(d,true)}${footerExtras()}`;
-  return `${recapPromptCard()}
-  ${pointerCard(pointerOfDay(),true)}
-  ${visionToday()}
-  <span class="grp">Do</span>${todayTasks()}${workoutCard()}
-  <span class="grp">Notice</span>${moodCard(d,false)}${checkinCard()}${weighCard()}${ateCard()}${wishCheckCard()}
-  <span class="grp">Reflect</span>${reflectCard(d,false)}
-  ${footerExtras()}`;
+  const R={pointer:()=>pointerCard(pointerOfDay(),true),vision:visionToday,"g-do":()=>`<span class="grp">Do</span>`,tasks:todayTasks,workout:workoutCard,
+    "g-notice":()=>`<span class="grp">Notice</span>`,mood:()=>moodCard(d,false),checkin:checkinCard,weigh:weighCard,ate:ateCard,wishcheck:wishCheckCard,
+    "g-reflect":()=>`<span class="grp">Reflect</span>`,reflect:()=>reflectCard(d,false),extras:footerExtras};
+  return recapPromptCard()+todayOrder().filter(k=>!(S.settings.todayHidden||[]).includes(k)).map(k=>R[k]()).join("\n");
 };
+/* Today's blocks, in your order (Settings → Arrange Today). New blocks appear in their default place. */
+const TODAY_BLOCKS=[["pointer","Today's pointer"],["vision","Vision tile"],["g-do","“Do” heading"],["tasks","Top 3 and today's tasks"],["workout","Steady 10 workout"],["g-notice","“Notice” heading"],["mood","Mood"],["checkin","Check-in (exercise, water, fruit)"],["weigh","Weekly weigh-in"],["ate","What I ate"],["wishcheck","Wishlist “still want it?”"],["g-reflect","“Reflect” heading"],["reflect","Reflection and gratitude"],["extras","Links, project progress, past days"]];
+function todayOrder(){
+  const def=TODAY_BLOCKS.map(x=>x[0]);const mine=(S.settings.todayOrder||[]).filter(k=>def.includes(k));
+  def.forEach((k,i)=>{if(!mine.includes(k)){const prev=def.slice(0,i).reverse().find(x=>mine.includes(x));mine.splice(prev?mine.indexOf(prev)+1:0,0,k)}});
+  return mine;
+}
+function arrangePanel(){
+  const order=todayOrder(),hidden=S.settings.todayHidden||[];const name=k=>(TODAY_BLOCKS.find(x=>x[0]===k)||[k,k])[1];
+  return `<div class="arrange"><div class="head"><h3>Arrange Today</h3><button type="button" class="linkbtn" data-act="arrange">Done</button></div>
+    <p class="muted small" style="margin:0">Move blocks up or down, or hide the ones you don't use. Cards that only show at certain times (weigh-in, wishlist) keep that timing.</p>
+    <ul class="arrlist">${order.map((k,i)=>`<li class="${hidden.includes(k)?"off":""} ${k.startsWith("g-")?"isgrp":""}"><span class="grow">${esc(name(k))}</span>
+      <button type="button" class="btn ghost sm" data-act="arrmove" data-k="${k}" data-d="-1" ${i?"":"disabled"} aria-label="Move ${esc(name(k))} up">↑</button><button type="button" class="btn ghost sm" data-act="arrmove" data-k="${k}" data-d="1" ${i<order.length-1?"":"disabled"} aria-label="Move ${esc(name(k))} down">↓</button>
+      <button type="button" class="btn ghost sm" data-act="arrhide" data-k="${k}" aria-pressed="${hidden.includes(k)}">${hidden.includes(k)?"Show":"Hide"}</button></li>`).join("")}</ul>
+    <div><button type="button" class="linkbtn subtle" data-act="arrreset">Back to the default order</button></div></div>`;
+}
 
 function todayTasks(){
   if(MCP&&S.tt.state!=="off"){
@@ -1774,7 +1801,7 @@ function visionToday(){
     ${celebrate&&it.memory?`<span class="muted small">${esc(it.memory)}</span>`:it.note?`<span class="muted small">${esc(it.note.split("\n")[0])}</span>`:S.vision.motto?`<span class="muted small">${esc(S.vision.motto)}</span>`:""}</div></section>`;
 }
 function vDetail(it){
-  return `<div class="vsheet" role="dialog" aria-label="${esc(it.title)}"><div class="vsheet-in">
+  return `<div class="vsheet" role="dialog" aria-label="${esc(it.title)}"><button type="button" class="modal-bg" data-act="vclose" aria-label="Close" tabindex="-1"></button><div class="vsheet-in">
     <div class="vhero">${vThumb(it,"vbig")}${it.done?`<span class="vcheck big" aria-hidden="true">✓</span>`:""}</div>
     <input type="text" id="vt-${it.id}" data-act="vtitle" data-id="${it.id}" value="${esc(it.title)}" aria-label="Title" class="vtitle-in">
     <div class="addrow"><select id="va-${it.id}" data-act="varea" data-id="${it.id}" aria-label="Area">${V_AREAS.map(a=>`<option ${a===it.area?"selected":""}>${esc(a)}</option>`).join("")}</select>
@@ -1796,7 +1823,7 @@ V.vision=()=>{
   if(!all.length&&!board)return `<section class="block card"><div class="head"><h2>Vision</h2>${S.vision.year?`<span class="eyebrow">${esc(S.vision.year)}</span>`:""}</div>
     <p class="muted" style="margin:0">Your picture of the year: places, people, habits and small dreams. Add tiles one by one, or import your board file from Settings.</p>
     ${vAddForm()}</section>`;
-  return `${open?vDetail(open):""}${S.vZoom&&board?`<div class="vzoom" data-act="vzoom" role="dialog" aria-label="Vision board"><img src="${esc(board)}" alt="Your vision board"></div>`:""}
+  return `${open?vDetail(open):""}${S.vZoom&&board?`<button type="button" class="vzoom" data-act="vzoom" aria-label="Close the board view"><img src="${esc(board)}" alt="Your vision board"></button>`:""}
   <section class="block card vboard">
     <div class="head"><h2>Vision ${esc(S.vision.year||new Date().getFullYear())}</h2><span class="mono muted">${done}/${all.length} happened</span></div>
     ${board?`<button type="button" class="vboardimg" data-act="vzoom" aria-label="See the whole board"><img src="${esc(board)}" alt="Your vision board"></button>`:""}
@@ -1961,8 +1988,9 @@ function settingsPanel(){
     <button type="button" class="switch" role="switch" aria-checked="${n.enabled===true}" aria-label="Morning reminder" data-act="nudgeswitch" ${busy||n.enabled==null?"disabled":""}><span></span></button></div>`;
   const data=DL?`<div class="setrow"><div><b>Your data</b><div class="muted small">Download everything you've saved (journal, check-ins, lists, settings) as one file. ${STANDALONE?"Keep a copy somewhere safe now and then.":"Useful as a backup and for moving to the app later."}</div></div><button type="button" class="btn ghost sm" data-act="export">Download</button></div>`:"";
   const demo=`<div class="setrow"><div><b>Demo mode</b><div class="muted small">${S.demo?"You're looking at invented entries. Your own data is untouched.":"Show invented entries instead of yours, to show Steady Days to friends. Nothing you do in demo mode is saved."}</div></div><button type="button" class="btn ${S.demo?"":"ghost "}sm" data-act="${S.demo?"demoexit":"demostart"}">${S.demo?(S.demoConfirm?"Tap again to exit":"Exit demo"):"Start demo"}</button></div>`;
-  if(S.demo)return `<section class="block card settings"><div class="head"><h2>Settings</h2><button type="button" class="linkbtn" data-act="settings">Close</button></div>${demo}</section>`;
-  return `<section class="block card settings"><div class="head"><h2>Settings</h2><button type="button" class="linkbtn" data-act="settings">Close</button></div>${body}${data}${demo}</section>`;
+  const arr=S.arrangeOpen?arrangePanel():`<div class="setrow"><div><b>Arrange Today</b><div class="muted small">Change the order of Today's blocks, or hide some.</div></div><button type="button" class="btn ghost sm" data-act="arrange">Arrange</button></div>`;
+  if(S.demo)return `<section class="block card settings"><div class="head"><h2>Settings</h2><button type="button" class="linkbtn" data-act="settings">Close</button></div>${arr}${demo}</section>`;
+  return `<section class="block card settings"><div class="head"><h2>Settings</h2><button type="button" class="linkbtn" data-act="settings">Close</button></div>${arr}${body}${data}${demo}</section>`;
 }
 function pageHtml(){
   if(!SUBS[S.tab])return (V[S.tab]||V.today)();
@@ -2009,6 +2037,11 @@ document.addEventListener("click",e=>{
   if(a==="pnoteopen"){S.pnoteOpen=b.dataset.k||null;render(true);if(S.pnoteOpen){const el=document.getElementById("pnote-edit");if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length)}}}
   if(a==="signout"){if(window.__sdAuth&&window.__sdAuth.signOut)window.__sdAuth.signOut()}
   if(a==="impgo")runImport();
+  if(a==="arrange"){S.arrangeOpen=!S.arrangeOpen;render(true)}
+  if(a==="arrmove"){const k=b.dataset.k,dd=+b.dataset.d;const o=todayOrder();const i=o.indexOf(k),j=i+dd;if(j<0||j>=o.length)return;[o[i],o[j]]=[o[j],o[i]];editSettings(st=>{st.todayOrder=o});
+    requestAnimationFrame(()=>{const el=document.querySelector(`[data-act="arrmove"][data-k="${k}"][data-d="${dd}"]`);if(el&&!el.disabled)el.focus()})}
+  if(a==="arrhide"){const k=b.dataset.k;editSettings(st=>{const h=new Set(st.todayHidden||[]);h.has(k)?h.delete(k):h.add(k);st.todayHidden=[...h]})}
+  if(a==="arrreset"){editSettings(st=>{st.todayOrder=[];st.todayHidden=[]});toast("Today is back to its usual order")}
   if(a==="vopen"){S.vOpen=id;S.vDoneForm=null;S.vDel=null;if(b.dataset.go2){go("vision")}render(true)}
   if(a==="vclose"){S.vOpen=null;S.vDoneForm=null;render(true)}
   if(a==="vzoom"){S.vZoom=!S.vZoom;render(true)}
@@ -2027,7 +2060,7 @@ document.addEventListener("click",e=>{
   if(a==="demostart"){try{localStorage.setItem("sd-demo","1")}catch(_){}location.reload()}
   if(a==="demoexit"){if(!S.demoConfirm){S.demoConfirm=true;render(true);return}try{localStorage.removeItem("sd-demo")}catch(_){}location.reload()}
   if(a==="impcancel"){S.imp=null;render(true)}
-  if(a==="settings"){S.settingsOpen=!S.settingsOpen;if(S.settingsOpen&&STANDALONE&&!S.demo)checkDb();if(S.settingsOpen&&S.nudge.state!=="ok"&&!STANDALONE&&!S.demo)loadNudge();else render(true);if(S.settingsOpen)window.scrollTo({top:0})}
+  if(a==="settings"){S.settingsOpen=!S.settingsOpen;if(S.settingsOpen&&STANDALONE&&!S.demo)checkDb();if(S.settingsOpen&&S.nudge.state!=="ok"&&!STANDALONE&&!S.demo)loadNudge();else render(true);if(!S.settingsOpen)S.arrangeOpen=false}
   if(a==="nudgeswitch"){if(S.nudge.enabled!=null)setNudge(!S.nudge.enabled)}
   if(a!=="therapyrm")S.confirmTher=false;
   if(a==="therapyrm"){if(!S.confirmTher){S.confirmTher=true;render(true);return}S.confirmTher=false;S.open.therapy=false;editDay(vday(),d=>{delete d.therapy});toast("Therapy session removed")}
@@ -2218,6 +2251,8 @@ document.addEventListener("submit",e=>{
     S.blFinish=null;editDoc("backlog",d=>{const x=d.items.find(y=>y.id===bid);if(x)Object.assign(x,{status:"done",finished:today(),rating:r||null,thought:th})});toast("Finished! Nice one. 🌿");return}
   const first=form.querySelector("input[type=text]");if(first){setTimeout(()=>{const el=document.getElementById(first.id);if(el)el.focus()},0)}
 });
+/* Escape closes the settings pop-up or an open vision tile */
+document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(S.settingsOpen){S.settingsOpen=false;S.arrangeOpen=false;render(true)}else if(S.vOpen){S.vOpen=null;render(true)}else if(S.vZoom){S.vZoom=false;render(true)}});
 /* new day: switch over by itself, even if the page stayed open */
 let lastDay=today();
 function checkNewDay(){
@@ -2314,7 +2349,7 @@ async function connectDb(){
     const col=db.collection("data/users/"+id);
     col.doc("settings").onSnapshot(snap=>{
       if(!pending.settings&&!inflight.settings){const d=snap.exists?snap.data():null;
-        S.settings={habits:d?.habits||[],reminders:d?.reminders||[],todos:d?.todos||[],projects:d?.projects||[],ttMap:d?.ttMap||null,favs:d?.favs||[],pnotes:d?.pnotes||{},exKinds:d?.exKinds||[],weighOff:!!d?.weighOff,skills:d?.skills||{},highlights:d?.highlights||{}};
+        S.settings={habits:d?.habits||[],reminders:d?.reminders||[],todos:d?.todos||[],projects:d?.projects||[],ttMap:d?.ttMap||null,favs:d?.favs||[],pnotes:d?.pnotes||{},todayOrder:d?.todayOrder||[],todayHidden:d?.todayHidden||[],exKinds:d?.exKinds||[],weighOff:!!d?.weighOff,skills:d?.skills||{},highlights:d?.highlights||{}};
         if(ttOn())ttLoadListsMissing();}
       S.settingsReady=true;render();
     },()=>{S.settingsReady=true;render()});
