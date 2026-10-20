@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261020095322"></script>
-<script type="module" src="boot.js?v=20261020095322"></script>
+<script src="shim.js?v=20261020100729"></script>
+<script type="module" src="boot.js?v=20261020100729"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -730,7 +730,8 @@ async function runUndo(uidv){
   const u=S.undo.find(x=>x.uid===uidv);if(!u)return;
   S.undo=S.undo.filter(x=>x.uid!==uidv);saveUndo();tickUndo();
   try{
-    if(u.kind==="docall"){editDoc(u.doc,d=>{d.items=u.items});toast("Restored the earlier version")}
+    if(u.kind==="vreset"){editDoc("vision",d=>{Object.assign(d,u.snap.vision)});editDoc("visionimg",d=>{d.img=u.snap.img});toast("Your board is back")}
+    else if(u.kind==="docall"){editDoc(u.doc,d=>{d.items=u.items});toast("Restored the earlier version")}
     else if(u.kind==="doc"){
       editDoc(u.doc,d=>{const i=d.items.findIndex(x=>x.id===u.item.id);if(i>=0)d.items[i]=u.item;else d.items.splice(Math.min(u.index??0,d.items.length),0,u.item)});
       if(u.buy)editDay(u.buy.date,d=>{d.purchases=d.purchases.filter(p=>p.id!==u.buy.id)});
@@ -1815,6 +1816,7 @@ V.vision=()=>{
     <div class="addrow"><input type="text" id="vb-values" data-act="vvalues" value="${esc(S.vision.values||"")}" placeholder="Values, e.g. Peace · Honesty" aria-label="Values"></div>
     <div class="addrow"><input type="text" id="vb-motto" data-act="vmotto" value="${esc(S.vision.motto||"")}" placeholder="Motto, e.g. Step by step" aria-label="Motto"><input type="text" id="vb-year" data-act="vyear" value="${esc(S.vision.year||"")}" placeholder="Year" aria-label="Year" style="max-width:90px"></div>
     <label class="btn ghost sm filebtn" style="justify-self:start">${board?"Replace board picture":"Add your board picture"}<input type="file" accept="image/*" data-act="vboardpic" hidden></label>
+    <div class="wfoot"><span class="muted small">Not working for you? Start again with an empty board.</span><button type="button" class="btn ghost sm danger" data-act="vreset">${S.vReset?"Tap again to delete the board":"Delete this board"}</button></div>
   </section>`;
 };
 function vAddForm(){return `<form class="addrow vaddform" data-form="vadd"><input type="text" id="vadd-title" placeholder="e.g. Visit Kyoto, Run a half marathon" autocomplete="off"><select id="vadd-area" aria-label="Area">${V_AREAS.map(a=>`<option>${esc(a)}</option>`).join("")}</select><input type="text" id="vadd-emoji" placeholder="🌍" maxlength="4" aria-label="Emoji" style="max-width:64px"><button class="btn">Add</button></form>`}
@@ -2015,6 +2017,11 @@ document.addEventListener("click",e=>{
   if(a==="vdoneform"){S.vDoneForm=id||null;render(true)}
   if(a==="vundone"){editDoc("vision",d=>{const x=d.items.find(y=>y.id===id);if(x){x.done=false;delete x.doneAt}})}
   if(a!=="vdel")S.vDel=null;
+  if(a!=="vreset")S.vReset=false;
+  if(a==="vreset"){if(!S.vReset){S.vReset=true;render(true);return}S.vReset=false;
+    const before={vision:JSON.parse(JSON.stringify(S.vision)),img:(S.visionimg&&S.visionimg.img)||""};
+    editDoc("vision",d=>{d.items=[];d.values="";d.motto="";d.year=""});editDoc("visionimg",d=>{d.img=""});
+    pushUndo({kind:"vreset",snap:before,label:`Deleted your vision board (${before.vision.items.length} tiles)`});toast("Board deleted. You can undo for 5 minutes.")}
   if(a==="vdel"){if(S.vDel!==id){S.vDel=id;render(true);return}const i=vItems().findIndex(x=>x.id===id);const it=vItems()[i];S.vOpen=null;S.vDel=null;editDoc("vision",d=>{d.items.splice(i,1)});pushUndo({kind:"doc",doc:"vision",item:it,index:i,label:`Removed “${it.title}” from your board`})}
   if(a!=="demoexit")S.demoConfirm=false;
   if(a==="demostart"){try{localStorage.setItem("sd-demo","1")}catch(_){}location.reload()}
