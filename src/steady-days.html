@@ -143,6 +143,9 @@ ul.list li.wrow{display:grid;gap:8px}
 .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
 .field{display:grid;gap:4px}
 .filebtn{cursor:pointer}
+.impbox{display:grid;gap:8px;background:var(--accent-soft);border-radius:12px;padding:10px 12px}
+.impbox.error{background:var(--warm-soft)}
+.warn{color:var(--warm)}
 .etext{background:none;border:0;padding:0;margin:0;text-align:left;font:inherit;color:inherit;cursor:pointer;min-width:0;overflow-wrap:anywhere}
 .etext:hover{color:var(--accent)}
 .etext:focus-visible{outline:2px solid var(--accent);border-radius:4px}
@@ -1592,24 +1595,36 @@ async function exportData(){
 }
 
 /* ---------- Import: load a Steady Days export file into this account ---------- */
+const DB_HELP={"failed-precondition":"the Firestore database doesn't seem to exist yet. In Firebase, open Build → Firestore Database and create it (London, production mode).","permission-denied":"the database refused access. Check the Firestore Rules from setup step 5 are published.","unavailable":"you seem to be offline, or the database can't be reached right now. Changes stay on this device and sync later.","timeout":"no answer from the database. Check your connection; if this stays, the Firestore database may not be created yet."};
+async function checkDb(){if(!window.__sdAuth||!window.__sdAuth.check)return;S.dbCheck=null;render(true);S.dbCheck=await window.__sdAuth.check();render(true)}
+/* ---------- Import: load a Steady Days export file into this account (shows each step in Settings) ---------- */
+const setImp=(state,msg,extra)=>{S.imp={...(S.imp||{}),state,msg,...(extra||{})};S.settingsOpen=true;render(true)};
 async function importData(file){
-  if(!S.live||!S.db){toast("Sign in first, then import.");return}
-  let j;try{j=JSON.parse(await file.text())}catch(_){toast("That file couldn't be read.");return}
-  if(!j||j.app!=="Steady Days"||!Array.isArray(j.days)){toast("That isn't a Steady Days export file.");return}
+  setImp("reading",`Reading ${file.name}…`);
+  if(!S.live||!S.db){setImp("error","You're not signed in to your database yet. Sign in, then try again.");return}
+  let j;try{j=JSON.parse(await file.text())}catch(e){setImp("error","That file couldn't be read as a Steady Days export. Choose the .json file from Settings → Download in the Claude version.");return}
+  if(!j||j.app!=="Steady Days"||!Array.isArray(j.days)){setImp("error","That isn't a Steady Days export file.");return}
   const days=j.days.filter(d=>d&&/^\d{4}-\d{2}-\d{2}$/.test(d.date||""));
   const T=j.tasks&&Array.isArray(j.tasks.tasks)?j.tasks:null;
-  const ok=confirm(`Import ${days.length} day${days.length===1?"":"s"}, your settings, wishlist (${(j.wishlist&&j.wishlist.items||[]).length}), backlog (${(j.backlog&&j.backlog.items||[]).length})${T?` and ${T.tasks.length} tasks in ${T.projects.length+1} lists`:""}?${T?" Tasks already in the app are replaced.":""}`);
-  if(!ok)return;
-  const col=S.db.collection("data/users/"+S.uid);let n=0;toast("Importing…");
+  setImp("ready",`Found ${days.length} day${days.length===1?"":"s"}, your settings, wishlist (${(j.wishlist&&j.wishlist.items||[]).length}), backlog (${(j.backlog&&j.backlog.items||[]).length})${T?` and ${T.tasks.length} tasks in ${T.projects.length+1} lists`:" (no tasks in this file: export again from the Claude version to include them)"}. Exported ${j.exportedAt?fmtDay(key(new Date(j.exportedAt)),{day:"numeric",month:"short"})+" at "+new Date(j.exportedAt).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}):"earlier"}.`,{j,days,T});
+}
+const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej({code:"timeout"}),ms))]);
+async function runImport(){
+  const I=S.imp;if(!I||!I.j)return;const {j,days,T}=I;const col=S.db.collection("data/users/"+S.uid);let n=0;
+  const steps=[];
+  if(j.settings)steps.push(["settings",()=>col.doc("settings").set({...j.settings})]);
+  if(j.wishlist)steps.push(["wishlist",()=>col.doc("wish").set({...j.wishlist,kind:"wish"})]);
+  if(j.backlog)steps.push(["backlog",()=>col.doc("backlog").set({...j.backlog,kind:"backlog"})]);
+  if(T)steps.push(["tasks",()=>col.doc("tt").set({projects:T.projects||[],tasks:T.tasks,columns:T.columns||{},comments:T.comments||[],kind:"tt"})]);
+  days.forEach(d=>steps.push(["day",()=>col.doc("d-"+d.date).set({...d,kind:"day"})]));
   try{
-    if(j.settings)await col.doc("settings").set({...j.settings});
-    if(j.wishlist)await col.doc("wish").set({...j.wishlist,kind:"wish"});
-    if(j.backlog)await col.doc("backlog").set({...j.backlog,kind:"backlog"});
-    if(T)await col.doc("tt").set({projects:T.projects||[],tasks:T.tasks,columns:T.columns||{},comments:T.comments||[],kind:"tt"});
-    for(const d of days){await col.doc("d-"+d.date).set({...d,kind:"day"});n++}
-    if(T&&MCP)setTimeout(ttLoadAll,600);
-    toast(`Imported ${n} day${n===1?"":"s"}${T?`, ${T.tasks.length} tasks`:""} and your lists. Welcome home. 🌿`);
-  }catch(e){toast(`Stopped after ${n} days: ${e&&e.message||"couldn't save"}. Try again.`)}
+    for(let i=0;i<steps.length;i++){const [what,run]=steps[i];setImp("working",`Importing… ${i+1} of ${steps.length} (${what==="day"?"journal days":what})`);await withTimeout(run(),20000);if(what==="day")n++}
+    if(T&&MCP)setTimeout(ttLoadAll,400);
+    setImp("done",`Done: ${n} day${n===1?"":"s"}${T?`, ${T.tasks.length} tasks`:""}, your lists and settings are in. Welcome home. 🌿`,{j:null});
+  }catch(e){
+    const msg=e&&e.code==="timeout"?"The database didn't confirm in time. What was imported so far is kept on this device and will sync when the database answers. "+(DB_HELP.timeout):`Stopped: ${esc(DB_HELP[e&&e.code]||e&&e.message||"couldn't save")}`;
+    setImp("error",msg,{j:null});checkDb();
+  }
 }
 
 /* ---------- Purchases ---------- */
@@ -1739,8 +1754,11 @@ function settingsPanel(){
   const n=S.nudge;const busy=n.state==="loading"||n.state==="saving";
   const nextTxt=n.enabled&&n.next?(()=>{const d=new Date(n.next);return "Next: "+d.toLocaleDateString("en-GB",{weekday:"long"})+" at "+d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})})():"";
   let body;
-  if(STANDALONE){const A=window.__sdAuth||{};body=`<div class="setrow"><div><b>Account</b><div class="muted small">Signed in${A.email?" as "+esc(A.email):""}. Your entries are saved to your own database.</div></div><button type="button" class="btn ghost sm" data-act="signout">Sign out</button></div>
-    <div class="setrow"><div><b>Bring in your data</b><div class="muted small">Choose a Steady Days export file (from Settings → Download in the Claude version). Entries with the same day are replaced.</div></div><label class="btn ghost sm filebtn">Import<input type="file" id="import-file" accept=".json,application/json" hidden></label></div>`}
+  if(STANDALONE){const A=window.__sdAuth||{};const c=S.dbCheck;const I=S.imp;
+    const dbLine=!c?"Checking the connection to your database…":c.ok?"✓ Connected to your database.":`⚠ Can't reach your database: ${esc(DB_HELP[c.code]||c.message||c.code)}`;
+    body=`<div class="setrow"><div><b>Account</b><div class="muted small">Signed in${A.email?" as "+esc(A.email):""}.</div><div class="small ${c&&!c.ok?"warn":"muted"}">${dbLine}</div></div><button type="button" class="btn ghost sm" data-act="signout">Sign out</button></div>
+    <div class="setrow"><div><b>Bring in your data</b><div class="muted small">Choose a Steady Days export file (from Settings → Download in the Claude version). Entries with the same day are replaced.</div></div><label class="btn ghost sm filebtn">Choose file<input type="file" id="import-file" accept=".json,application/json,text/plain,*/*" hidden></label></div>
+    ${I?`<div class="impbox ${I.state}"><p class="small" style="margin:0">${esc(I.msg)}</p>${I.state==="ready"?`<div class="btnrow"><button type="button" class="btn sm" data-act="impgo">Import now</button><button type="button" class="btn ghost sm" data-act="impcancel">Cancel</button></div>`:I.state==="done"||I.state==="error"?`<div><button type="button" class="linkbtn subtle" data-act="impcancel">OK</button></div>`:""}</div>`:""}`}
   else if(n.state==="error"||n.state==="missing")body=`<p class="muted small" style="margin:0">${n.state==="missing"?"The reminder task wasn't found. Ask Claude to set it up again.":"Couldn't reach your scheduled tasks from here. You can pause it in Claude under Scheduled."}</p>`;
   else body=`<div class="setrow"><div><b>Morning reminder</b><div class="muted small">A short nudge around 7:20–7:30 with your pointer and Top 3, by push and email.${nextTxt?" "+nextTxt+".":""}</div></div>
     <button type="button" class="switch" role="switch" aria-checked="${n.enabled===true}" aria-label="Morning reminder" data-act="nudgeswitch" ${busy||n.enabled==null?"disabled":""}><span></span></button></div>`;
@@ -1791,7 +1809,9 @@ document.addEventListener("click",e=>{
   if(a==="undo")runUndo(id);
   if(a==="pnoteopen"){S.pnoteOpen=b.dataset.k||null;render(true);if(S.pnoteOpen){const el=document.getElementById("pnote-edit");if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length)}}}
   if(a==="signout"){if(window.__sdAuth&&window.__sdAuth.signOut)window.__sdAuth.signOut()}
-  if(a==="settings"){S.settingsOpen=!S.settingsOpen;if(S.settingsOpen&&S.nudge.state!=="ok"&&!STANDALONE)loadNudge();else render(true);if(S.settingsOpen)window.scrollTo({top:0})}
+  if(a==="impgo")runImport();
+  if(a==="impcancel"){S.imp=null;render(true)}
+  if(a==="settings"){S.settingsOpen=!S.settingsOpen;if(S.settingsOpen&&STANDALONE)checkDb();if(S.settingsOpen&&S.nudge.state!=="ok"&&!STANDALONE)loadNudge();else render(true);if(S.settingsOpen)window.scrollTo({top:0})}
   if(a==="nudgeswitch"){if(S.nudge.enabled!=null)setNudge(!S.nudge.enabled)}
   if(a!=="therapyrm")S.confirmTher=false;
   if(a==="therapyrm"){if(!S.confirmTher){S.confirmTher=true;render(true);return}S.confirmTher=false;S.open.therapy=false;editDay(vday(),d=>{delete d.therapy});toast("Therapy session removed")}

@@ -4,7 +4,7 @@
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {getAuth,GoogleAuthProvider,onAuthStateChanged,signInWithPopup,signInWithRedirect,getRedirectResult,signOut} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {makeTasks} from "./tasks.js";
-import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,doc,collection,setDoc,getDoc,getDocs,onSnapshot,query,where} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,doc,collection,setDoc,getDoc,getDocs,getDocFromServer,onSnapshot,query,where} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig={
   apiKey:"AIzaSyD_5cBocXlhsy3495kZoSvLoj6qXo1rhU8",
@@ -67,6 +67,11 @@ onAuthStateChanged(auth,u=>{
   if(!u){showGate("");return}
   gate.hidden=true;window.__sdAuth.email=u.email;
   if(started)return;started=true;
+  /* a direct server read tells us whether the database is really reachable (not just this device's copy) */
+  window.__sdAuth.check=async()=>{
+    try{await Promise.race([getDocFromServer(doc(fs,"users/"+u.uid+"/docs","settings")),new Promise((_,rej)=>setTimeout(()=>rej({code:"timeout",message:"No answer from the database after 12 seconds."}),12000))]);return {ok:true}}
+    catch(e){return {ok:false,code:e&&e.code||"error",message:e&&e.message||String(e)}}
+  };
   window.__sdReady({db:makeDb(u.uid),mcp:makeTasks(fs,u.uid),user:{id:async()=>u.uid,isOwner:()=>true,canEdit:()=>true}});
 });
 
