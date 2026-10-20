@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261020092753"></script>
-<script type="module" src="boot.js?v=20261020092753"></script>
+<script src="shim.js?v=20261020093845"></script>
+<script type="module" src="boot.js?v=20261020093845"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -169,6 +169,19 @@ ul.list li.wrow{display:grid;gap:8px}
 .wmain{display:flex;align-items:center;gap:10px;min-width:0}
 .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
 .field{display:grid;gap:4px}
+.banner.demo{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.expick{gap:8px}
+.addchip{min-width:36px;justify-content:center}
+.exnote{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:10px}
+.exnote span{min-width:64px}
+.weigh .addrow input[type=number]{max-width:120px}
+.wchart{width:100%;height:auto;display:block;overflow:visible}
+.wline{fill:none;stroke:var(--accent);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.wdot{fill:var(--accent);stroke:var(--surface);stroke-width:2}
+.whit{fill:transparent;cursor:default}
+.wpt:hover .wdot{r:5}
+.wgrid{stroke:var(--line);stroke-width:1}
+.wlab{fill:var(--muted);font-size:10px;font-family:var(--f-mono)}
 .filebtn{cursor:pointer}
 .impbox{display:grid;gap:8px;background:var(--accent-soft);border-radius:12px;padding:10px 12px}
 .impbox.error{background:var(--warm-soft)}
@@ -509,6 +522,8 @@ const today=()=>key(new Date(Date.now()-DAY_START_HOUR*3600e3));
 const stamp=k=>+k.replace(/-/g,"");
 const dayNum=k=>{const [y,m,d]=k.split("-").map(Number);return Math.floor(Date.UTC(y,m-1,d)/864e5)};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+/* demo mode: invented entries for showing Steady Days to friends; nothing is read from or written to your data */
+S.demo=(()=>{try{return localStorage.getItem("sd-demo")==="1"}catch(_){return false}})();
 const blankDay=date=>({kind:"day",date,mood:null,note:"",gratitude:["","",""],habits:{},meals:[],purchases:[],progress:[]});
 const getDay=date=>S.days[date]||blankDay(date);
 /* Today can look back up to 2 days, to fill in anything forgotten */
@@ -517,6 +532,7 @@ const isPastView=()=>vday()!==today();
 
 function toast(msg){const t=$("#toast");t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,3000)}
 function setStatus(){
+  if(S.demo){$("#status").textContent="";return}
   const bad=!S.live||S.tt.state==="error";if(!bad){$("#status").textContent="";return}
   const parts=[S.live?"Saved to your account":"Not saving in this view"];
   if(S.tt.state==="ok")parts.push("TickTick connected");else if(S.tt.state==="loading")parts.push("Loading your tasks…");else if(S.tt.state==="error")parts.push("Tasks unavailable");
@@ -664,9 +680,9 @@ async function ttLoadHabits(){
 
 /* ---------- undo (5 minutes) ---------- */
 const UNDO_MS=5*60*1000;
-S.undo=(()=>{try{return JSON.parse(localStorage.getItem("sd-undo")||"[]").filter(u=>Date.now()-u.at<UNDO_MS)}catch(_){return []}})();
+S.undo=S.demo?[]:(()=>{try{return JSON.parse(localStorage.getItem("sd-undo")||"[]").filter(u=>Date.now()-u.at<UNDO_MS)}catch(_){return []}})();
 let undoBarHidden=false;
-function saveUndo(){try{localStorage.setItem("sd-undo",JSON.stringify(S.undo))}catch(_){}}
+function saveUndo(){if(S.demo)return;try{localStorage.setItem("sd-undo",JSON.stringify(S.undo))}catch(_){}}
 function pushUndo(entry){entry.uid=uid();entry.at=Date.now();S.undo.unshift(entry);S.undo=S.undo.slice(0,20);saveUndo();undoBarHidden=false;tickUndo();render()}
 const undoLabel=u=>u.label||(u.kind==="tt"?`Completed “${u.title}”`:"");
 function tickUndo(){
@@ -726,7 +742,7 @@ function delLocal(kind,date,id,label){
 
 /* rollover: unfinished to-dos from earlier days move to today, once a day */
 S.rolled=(()=>{try{const r=JSON.parse(localStorage.getItem("sd-rolled")||"{}");return r.date===today()?r:{date:today(),ids:[],done:false}}catch(_){return {date:today(),ids:[],done:false}}})();
-function saveRolled(){try{localStorage.setItem("sd-rolled",JSON.stringify(S.rolled))}catch(_){}}
+function saveRolled(){if(S.demo)return;try{localStorage.setItem("sd-rolled",JSON.stringify(S.rolled))}catch(_){}}
 async function rollover(){
   if(S.rolled.date!==today())S.rolled={date:today(),ids:[],done:false};
   if(S.rolled.done)return;
@@ -951,12 +967,59 @@ function moodCard(d,past){
     ${d.mood?`<input type="text" id="mood-note" data-act="note" placeholder="A word about ${past?"that day":"today"} (optional)" value="${esc(d.note)}">${doneBtn("mood")}`:""}
   </section>`;
 }
+function exPicker(b){
+  const acts=actsOf(b);const on=k=>acts.some(a=>a.k===k);
+  return `<div class="field expick"><span class="small muted">Exercise <span class="muted">· tap what you did; nothing ticked is a rest day</span></span>
+    <div class="chips">${exKinds().map(([k,n])=>`<button type="button" class="chip" data-act="exk" data-k="${esc(k)}" aria-pressed="${on(k)}">${esc(n)}</button>`).join("")}${on("other")?`<button type="button" class="chip" data-act="exk" data-k="other" aria-pressed="true">Other</button>`:""}<button type="button" class="chip addchip" data-act="exaddopen" aria-label="Add your own activity" title="Add your own activity">+</button></div>
+    ${S.exAdd?`<form class="addrow" data-form="exadd"><input type="text" id="exadd-name" placeholder="Your activity, e.g. Swim or Football" autocomplete="off"><button class="btn sm">Add</button></form>`:""}
+    ${acts.map((a,i)=>`<label class="exnote"><span class="small">${esc(exName(a.k))}</span><input type="text" id="exn-${i}" data-act="exnote" data-k="${esc(a.k)}" value="${esc(a.note||"")}" placeholder="${esc(EX_HINT[a.k]||"Add a detail (optional)")}" autocomplete="off"></label>`).join("")}
+  </div>`;
+}
+/* ---------- weekly weigh-in: Monday morning is the suggested moment; the card waits until Wednesday ---------- */
+const weighIns=()=>Object.values(S.days).filter(d=>d.weight&&+d.weight.kg>0).map(d=>({date:d.date,kg:+d.weight.kg})).sort((a,b)=>a.date<b.date?-1:1);
+const kgTxt=x=>(Math.round(x*10)/10).toFixed(1);
+const deltaTxt=(cur,prev)=>{if(prev==null)return "";const d=Math.round((cur-prev)*10)/10;return d===0?"same as last time":(d>0?"+":"−")+Math.abs(d).toFixed(1)+" kg since last time"};
+function weighCard(){
+  if(isPastView()||S.settings.weighOff)return "";
+  const all=weighIns(),ws=weekStart(today()),dow=dowOf(today());const mine=all.filter(w=>w.date>=ws).pop();
+  const prev=all.filter(w=>w.date<(mine?mine.date:today())).pop();
+  if(mine&&!isOpen("weigh"))return [1,2,3].includes(dow)||mine.date===today()?foldRow("weigh","Weigh-in",`${kgTxt(mine.kg)} kg`,esc(deltaTxt(mine.kg,prev&&prev.kg))):"";
+  if(!mine&&![1,2,3].includes(dow))return "";
+  return `<section class="block card weigh"><div class="head"><h2>Weekly weigh-in</h2>${mine?`<button type="button" class="linkbtn" data-act="fold" data-k="weigh">Done</button>`:""}</div>
+    <form class="addrow" data-form="weigh"><input type="number" id="weigh-kg" step="0.1" min="20" max="400" inputmode="decimal" placeholder="${prev?kgTxt(prev.kg):"kg"}" value="${mine?kgTxt(mine.kg):""}" aria-label="Weight in kg"><span class="muted">kg</span><button class="btn">${mine?"Update":"Save"}</button></form>
+    <p class="muted small" style="margin:0">${dow===1?"Monday morning, after waking and before breakfast, gives the most consistent number.":"Best on Monday mornings; any day this week is fine."} One number a week is plenty: the trend matters more than any single day.</p>
+  </section>`;
+}
+function weightChart(pts){
+  if(pts.length<2)return "";
+  const W=320,H=130,L=34,R=10,T=12,B=22;const ys=pts.map(p=>p.kg);let lo=Math.min(...ys),hi=Math.max(...ys);if(hi-lo<1){const m=(hi+lo)/2;lo=m-0.5;hi=m+0.5}
+  const pad=(hi-lo)*0.15;lo-=pad;hi+=pad;const x=i=>L+(W-L-R)*(pts.length===1?0.5:i/(pts.length-1)),y=v=>T+(H-T-B)*(1-(v-lo)/(hi-lo));
+  const path=pts.map((p,i)=>(i?"L":"M")+x(i).toFixed(1)+" "+y(p.kg).toFixed(1)).join(" ");
+  const gl=[hi-pad,lo+pad];
+  return `<svg class="wchart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Weight over the last ${pts.length} weigh-ins, from ${kgTxt(pts[0].kg)} to ${kgTxt(pts[pts.length-1].kg)} kg">
+    ${gl.map(v=>`<line x1="${L}" x2="${W-R}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" class="wgrid"/><text x="${L-6}" y="${(y(v)+3.5).toFixed(1)}" text-anchor="end" class="wlab">${kgTxt(v)}</text>`).join("")}
+    <path d="${path}" class="wline"/>
+    ${pts.map((p,i)=>`<g class="wpt"><circle cx="${x(i).toFixed(1)}" cy="${y(p.kg).toFixed(1)}" r="12" class="whit"><title>${fmtDay(p.date,{day:"numeric",month:"short"})}: ${kgTxt(p.kg)} kg</title></circle><circle cx="${x(i).toFixed(1)}" cy="${y(p.kg).toFixed(1)}" r="4" class="wdot"/></g>`).join("")}
+    <text x="${L}" y="${H-5}" class="wlab">${fmtDay(pts[0].date,{day:"numeric",month:"short"})}</text><text x="${W-R}" y="${H-5}" text-anchor="end" class="wlab">${fmtDay(pts[pts.length-1].date,{day:"numeric",month:"short"})}</text>
+  </svg>`;
+}
+function weightSection(){
+  const all=weighIns();const last=all.slice(-12);const cur=all[all.length-1];
+  const monthAgo=cur?all.filter(w=>w.date<=addDays(cur.date,-26)).pop():null;
+  return `<section class="block card"><div class="head"><h2>Weight</h2><span class="eyebrow">Weekly</span></div>
+    ${cur?`<div class="stats"><div class="stat"><span class="eyebrow">Latest · ${fmtDay(cur.date,{day:"numeric",month:"short"})}</span><span class="v">${kgTxt(cur.kg)} kg</span></div>${monthAgo?`<div class="stat"><span class="eyebrow">Over a month</span><span class="v" style="font-size:1rem">${(cur.kg-monthAgo.kg>0?"+":cur.kg-monthAgo.kg<0?"−":"")+Math.abs(Math.round((cur.kg-monthAgo.kg)*10)/10).toFixed(1)} kg</span></div>`:""}</div>`:""}
+    ${weightChart(last)}
+    <form class="addrow" data-form="weighany"><input type="number" id="wa-kg" step="0.1" min="20" max="400" inputmode="decimal" placeholder="kg" aria-label="Weight in kg"><input type="date" id="wa-date" value="${today()}" aria-label="Date"><button class="btn">Add</button></form>
+    ${all.length?`<ul class="list">${all.slice().reverse().slice(0,8).map(w=>`<li><span class="mono muted" style="width:82px;flex:none;font-size:.8rem">${fmtDay(w.date)}</span><span class="grow">${kgTxt(w.kg)} kg</span><button class="x" aria-label="Delete weigh-in" data-act="delweigh" data-d="${w.date}">×</button></li>`).join("")}</ul>`:`<p class="empty">Your weekly weigh-ins will show here as a gentle trend.</p>`}
+    <label class="homemade"><input type="checkbox" id="weigh-off" data-act="weighoff" ${S.settings.weighOff?"checked":""}> Hide the Monday reminder on Today</label>
+  </section>`;
+}
 function checkinCard(){
   const b=bodyOf(getDay(vday()));const past=isPastView();
   const yn=v=>v===true?"✓":v===false?"not yet":"–";
   if(b.water!=null&&b.fruit!=null&&!isOpen("checkin"))return foldRow("checkin","Check-in",esc(exLabel(b.ex)),`Water ${yn(b.water)} · Fruit ${yn(b.fruit)}`);
   return `<section class="block card"><h2>Check-in</h2>
-    <label class="field"><span class="small muted">Exercise</span><input type="text" id="ex-what" data-act="ex" placeholder="Rest day" value="${esc(isRest(b.ex)?"":b.ex)}" autocomplete="off"></label>
+    ${exPicker(b)}
     ${YN("water",b.water,"2+ glasses of water?")}
     ${YN("fruit",b.fruit,past?"2 fruits that day?":"2 fruits today?")}
     ${b.water!=null&&b.fruit!=null?doneBtn("checkin"):""}
@@ -1040,7 +1103,7 @@ V.today=()=>{
   return `${recapPromptCard()}
   ${pointerCard(pointerOfDay(),true)}
   <span class="grp">Do</span>${todayTasks()}${workoutCard()}
-  <span class="grp">Notice</span>${moodCard(d,false)}${checkinCard()}${ateCard()}${wishCheckCard()}
+  <span class="grp">Notice</span>${moodCard(d,false)}${checkinCard()}${weighCard()}${ateCard()}${wishCheckCard()}
   <span class="grp">Reflect</span>${reflectCard(d,false)}
   ${footerExtras()}`;
 };
@@ -1098,6 +1161,13 @@ const YN=(field,val,label)=>`<div class="yn"><span>${label}</span><div class="se
 const bodyOf=d=>d.body||{ex:"",water:null,fruit:null};
 const isRest=ex=>!ex||!String(ex).trim()||/^rest( day)?$/i.test(String(ex).trim());
 const exLabel=ex=>isRest(ex)?"Rest day":String(ex).trim();
+const EX_KINDS=[["steady10","Steady 10"],["run","Run"],["gym","Gym"],["class","Class"],["walk","Walk"],["yoga","Yoga"]];
+const EX_HINT={steady10:"e.g. strength focus, 12 min",run:"e.g. 5 km, easy pace",gym:"e.g. legs, 45 min",class:"e.g. boxing at 7pm",walk:"e.g. 40 min in the park",yoga:"e.g. 20 min stretch"};
+const exKinds=()=>[...EX_KINDS,...(S.settings.exKinds||[]).map(n=>["c:"+n,n])];
+const exName=k=>k==="other"?"Other":(exKinds().find(x=>x[0]===k)||[k,String(k).replace(/^c:/,"")])[1];
+const actsOf=b=>Array.isArray(b.acts)?b.acts:(isRest(b.ex)?[]:[{k:"other",note:String(b.ex).trim()}]);
+const exText=acts=>acts.map(a=>exName(a.k)+(a.note?": "+a.note:"")).join(" · ");
+function setActs(date,fn,silent){editDay(date,d=>{const b=bodyOf(d);const acts=JSON.parse(JSON.stringify(actsOf(b)));fn(acts);d.body={...b,acts,ex:exText(acts)}},{silent:!!silent})}
 const SLOTS=[["breakfast","Breakfast"],["lunch","Lunch"],["dinner","Dinner"],["snack","Snack"]];
 const slotNow=()=>{const h=new Date().getHours();return h<11?"breakfast":h<15?"lunch":h>=18&&h<22?"dinner":"snack"};
 /* stopwatch for the whole session; saved on the day so it survives reloads and a locked phone */
@@ -1257,6 +1327,7 @@ V.habits=()=>{
     ${[["ex","Exercise"],["water","2+ glasses of water"],["fruit","2 fruits"]].map(([f,n])=>`<tr><th class="name">${n}</th>${days.map(k=>cell(k,f)).join("")}<td class="sk mono">${streakOf(f)||""}</td></tr>`).join("")}
     </tbody></table></div>
     <p class="muted small">You answer these on the Today page. A filled square means yes; an outlined one means "not yet". Days with no exercise entered count as rest days.</p></section>
+  ${weightSection()}
   <section class="block card"><div class="head"><h2>Exercise log</h2></div>
     ${log.length?`<ul class="list">${log.map(d=>`<li><span class="mono muted" style="width:82px;flex:none;font-size:.8rem">${fmtDay(d.date)}</span><span class="grow">${esc(bodyOf(d).ex)}</span></li>`).join("")}</ul>`:`<p class="empty">What you type in the daily check-in collects here.</p>`}</section>`;
 };
@@ -1698,7 +1769,9 @@ function recapCard(){
   const exDays=D.filter(d=>!isRest(bodyOf(d).ex)).length,wDone=D.filter(d=>d.workout&&d.workout.done).length;
   const water=D.filter(d=>bodyOf(d).water===true).length,fruit=D.filter(d=>bodyOf(d).fruit===true).length;
   const allTops=D.flatMap(d=>d.top3||[]);const tops=allTops.filter(x=>!x.bonus);const topDone=tops.filter(x=>x.done).length;const bonusN=allTops.filter(x=>x.bonus&&x.done).length;
-  const ate=D.reduce((n,d)=>n+(d.ate||[]).length,0);const cooked=D.flatMap(d=>d.meals||[]).map(m=>m.name);
+  const ate=D.reduce((n,d)=>n+(d.ate||[]).length,0);
+  const mix={};D.forEach(d=>actsOf(bodyOf(d)).forEach(a=>{const n=exName(a.k);mix[n]=(mix[n]||0)+1}));const mixTxt=Object.entries(mix).sort((a,b)=>b[1]-a[1]).map(([n,c])=>`${c} ${n}`).join(" · ");
+  const wk=D.filter(d=>d.weight&&+d.weight.kg>0).pop();const cooked=D.flatMap(d=>d.meals||[]).map(m=>m.name);
   const buys=D.flatMap(d=>d.purchases||[]);const spent=buys.reduce((a,p)=>a+(+p.price||0),0);const wants=buys.filter(p=>p.kind==="want").reduce((a,p)=>a+(+p.price||0),0);const letN=S.wish.items.filter(x=>x.status==="letgo"&&x.closed>=ws&&x.closed<=days[6]).length;
   const prog={};D.forEach(d=>(d.progress||[]).forEach(e=>{const n=projLabel(e.pid)||e.pname||"A project";prog[n]=prog[n]||{n:0,m:0};prog[n].n++;prog[n].m+=(+e.mins||0)}));
   const nexts=seen.map(k=>({k,t:(getDay(k).better||"").trim()})).filter(x=>x.t);
@@ -1709,7 +1782,8 @@ function recapCard(){
     <div class="head"><h2>Weekly recap</h2><div class="wknav"><button type="button" class="btn ghost sm" data-act="recapwk" data-d="-7" aria-label="Previous week">‹</button><span class="mono small">${isThis?"This week":label}</span><button type="button" class="btn ghost sm" data-act="recapwk" data-d="7" ${isThis?"disabled":""} aria-label="Next week">›</button></div></div>
     ${isThis?`<p class="muted small">${label}</p>`:""}
     <div class="weekmood">${days.map(k=>{const m=getDay(k).mood;return `<div class="wm"><i style="background:${k>tk?"transparent":moodColor(m)};border-color:${moodColor(m)}" title="${m?MOODS[m-1][1]:"No mood logged"}"></i><span>${fmtDay(k,{weekday:"narrow"})}</span></div>`}).join("")}</div>
-    <div class="stats">${stat(`${wDone}`,"Workouts")}${stat(`${exDays}/${seen.length}`,"Exercise days")}${stat(`${water}/${seen.length}`,"Water days")}${stat(`${fruit}/${seen.length}`,"Fruit days")}${tops.length?stat(`${topDone}/${tops.length}${bonusN?` <span class="small muted">+${bonusN} bonus</span>`:""}`,"Top 3 done"):""}${D.filter(d=>d.therapy).length?stat(`${D.filter(d=>d.therapy).length}`,"Therapy"):""}</div>
+    <div class="stats">${stat(`${wDone}`,"Workouts")}${stat(`${exDays}/${seen.length}`,"Exercise days")}${stat(`${water}/${seen.length}`,"Water days")}${stat(`${fruit}/${seen.length}`,"Fruit days")}${tops.length?stat(`${topDone}/${tops.length}${bonusN?` <span class="small muted">+${bonusN} bonus</span>`:""}`,"Top 3 done"):""}${D.filter(d=>d.therapy).length?stat(`${D.filter(d=>d.therapy).length}`,"Therapy"):""}${wk?stat(`${kgTxt(+wk.weight.kg)} kg`,"Weight"):""}</div>
+    ${mixTxt?`<p class="small muted" style="margin:0">Moves: ${esc(mixTxt)}</p>`:""}
     <div class="rgroup"><span class="eyebrow">Moments · pick the one that meant the most</span>
       ${moments.length?`<ul class="list">${moments.map(m=>{const on=hl&&hl.text===m.text&&hl.k===m.k;return `<li class="mrow"><button type="button" class="starbtn" data-act="pickhl" data-k="${m.k}" data-kind="${esc(m.kind)}" data-t="${esc(m.text)}" aria-pressed="${!!on}" aria-label="${on?"Your highlight":"Make this the week's highlight"}">${on?"★":"☆"}</button><div class="tmain"><span>${esc(m.text)}</span><span class="muted small">${m.kind} · ${fmtDay(m.k,{weekday:"long"})}</span></div></li>`}).join("")}</ul>`:`<p class="empty">No gratitude, proud moments or notes this week yet.</p>`}
     </div>
@@ -1790,7 +1864,9 @@ function settingsPanel(){
   else body=`<div class="setrow"><div><b>Morning reminder</b><div class="muted small">A short nudge around 7:20–7:30 with your pointer and Top 3, by push and email.${nextTxt?" "+nextTxt+".":""}</div></div>
     <button type="button" class="switch" role="switch" aria-checked="${n.enabled===true}" aria-label="Morning reminder" data-act="nudgeswitch" ${busy||n.enabled==null?"disabled":""}><span></span></button></div>`;
   const data=DL?`<div class="setrow"><div><b>Your data</b><div class="muted small">Download everything you've saved (journal, check-ins, lists, settings) as one file. ${STANDALONE?"Keep a copy somewhere safe now and then.":"Useful as a backup and for moving to the app later."}</div></div><button type="button" class="btn ghost sm" data-act="export">Download</button></div>`:"";
-  return `<section class="block card settings"><div class="head"><h2>Settings</h2><button type="button" class="linkbtn" data-act="settings">Close</button></div>${body}${data}</section>`;
+  const demo=`<div class="setrow"><div><b>Demo mode</b><div class="muted small">${S.demo?"You're looking at invented entries. Your own data is untouched.":"Show invented entries instead of yours, to show Steady Days to friends. Nothing you do in demo mode is saved."}</div></div><button type="button" class="btn ${S.demo?"":"ghost "}sm" data-act="${S.demo?"demoexit":"demostart"}">${S.demo?(S.demoConfirm?"Tap again to exit":"Exit demo"):"Start demo"}</button></div>`;
+  if(S.demo)return `<section class="block card settings"><div class="head"><h2>Settings</h2><button type="button" class="linkbtn" data-act="settings">Close</button></div>${demo}</section>`;
+  return `<section class="block card settings"><div class="head"><h2>Settings</h2><button type="button" class="linkbtn" data-act="settings">Close</button></div>${body}${data}${demo}</section>`;
 }
 function pageHtml(){
   if(!SUBS[S.tab])return (V[S.tab]||V.today)();
@@ -1837,8 +1913,11 @@ document.addEventListener("click",e=>{
   if(a==="pnoteopen"){S.pnoteOpen=b.dataset.k||null;render(true);if(S.pnoteOpen){const el=document.getElementById("pnote-edit");if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length)}}}
   if(a==="signout"){if(window.__sdAuth&&window.__sdAuth.signOut)window.__sdAuth.signOut()}
   if(a==="impgo")runImport();
+  if(a!=="demoexit")S.demoConfirm=false;
+  if(a==="demostart"){try{localStorage.setItem("sd-demo","1")}catch(_){}location.reload()}
+  if(a==="demoexit"){if(!S.demoConfirm){S.demoConfirm=true;render(true);return}try{localStorage.removeItem("sd-demo")}catch(_){}location.reload()}
   if(a==="impcancel"){S.imp=null;render(true)}
-  if(a==="settings"){S.settingsOpen=!S.settingsOpen;if(S.settingsOpen&&STANDALONE)checkDb();if(S.settingsOpen&&S.nudge.state!=="ok"&&!STANDALONE)loadNudge();else render(true);if(S.settingsOpen)window.scrollTo({top:0})}
+  if(a==="settings"){S.settingsOpen=!S.settingsOpen;if(S.settingsOpen&&STANDALONE&&!S.demo)checkDb();if(S.settingsOpen&&S.nudge.state!=="ok"&&!STANDALONE&&!S.demo)loadNudge();else render(true);if(S.settingsOpen)window.scrollTo({top:0})}
   if(a==="nudgeswitch"){if(S.nudge.enabled!=null)setNudge(!S.nudge.enabled)}
   if(a!=="therapyrm")S.confirmTher=false;
   if(a==="therapyrm"){if(!S.confirmTher){S.confirmTher=true;render(true);return}S.confirmTher=false;S.open.therapy=false;editDay(vday(),d=>{delete d.therapy});toast("Therapy session removed")}
@@ -1862,8 +1941,9 @@ document.addEventListener("click",e=>{
     const label="Steady 10 · "+workoutFor(today(),w0.shift||0).focus.name+(secs?` · ${Math.max(1,Math.round(secs/60))} min`:"");
     keepAwake(false);
     editDay(today(),d=>{const w={...(d.workout||{})};const b0=bodyOf(d);w.done=!w.done;if(w.done&&secs)w.secs=secs;d.workout=w;
-      if(w.done&&isRest(b0.ex))d.body={...b0,ex:label};
-      if(!w.done&&/^Steady 10 · /.test(b0.ex||""))d.body={...b0,ex:""};});
+      const acts=actsOf(b0).filter(x=>x.k!=="steady10"&&!(x.k==="other"&&/^Steady 10 · /.test(x.note||"")));
+      if(w.done)acts.unshift({k:"steady10",note:label.replace(/^Steady 10 · /,"")});
+      d.body={...b0,acts,ex:exText(acts)};});
     if(!getDay(today()).workout?.done)return;toast(secs?`Workout logged: ${mmss(secs)}. Well done!`:"Workout logged. Well done!")}
   if(a==="planopen"){S.planOpen=!S.planOpen;if(S.planOpen){S.tt.tomorrow=null;ttLoadTomorrow()}render(true)}
   if(a==="top3tm")toggleTomorrowTop(id);
@@ -1890,6 +1970,9 @@ document.addEventListener("click",e=>{
   if(a==="wprio"){const pv=+b.dataset.p;editDoc("wish",d=>{const x=d.items.find(y=>y.id===id);if(x)x.prio=pv});toast("Priority: "+["none","low","medium","high"][pv])}
   if(a==="wkind"){const k=b.dataset.k;editDoc("wish",d=>{const x=d.items.find(y=>y.id===id);if(!x)return;x.kind=k;if(k==="need"){x.until=null}else{x.until=addDays(today(),30);x.checked=false;x.hold=30}});toast(k==="need"?"Moved to needs. It's ready.":"Cooling off for 30 days")}
   if(a==="wimport")importWish();
+  if(a==="exk"){const k=b.dataset.k;setActs(vday(),acts=>{const i=acts.findIndex(x=>x.k===k);if(i>=0)acts.splice(i,1);else acts.push({k,note:""})})}
+  if(a==="delweigh"){const k=b.dataset.d;const w0=getDay(k).weight;editDay(k,d=>{delete d.weight});toast("Weigh-in removed")}
+  if(a==="exaddopen"){S.exAdd=!S.exAdd;render(true);const el=document.getElementById("exadd-name");if(el)el.focus()}
   if(a==="newlist"){S.newList=!S.newList;render(true);const el=document.getElementById("newlist-name");if(el)el.focus()}
   if(a==="edit"){S.edit={k:b.dataset.k,date:b.dataset.date,id};render(true);const el=document.getElementById("ed-text");if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length)}}
   if(a==="editcancel"){S.edit=null;render(true)}
@@ -1935,6 +2018,8 @@ document.addEventListener("input",e=>{
   const b=e.target;if(!b.dataset)return;
   if(b.dataset.act==="note")editDay(vday(),d=>{d.note=b.value},{silent:true});
   if(b.dataset.act==="ex")editDay(vday(),d=>{d.body={...bodyOf(d),ex:b.value}},{silent:true});
+  if(b.dataset.act==="weighoff"){const on=b.checked;editSettings(st=>{st.weighOff=on})}
+  if(b.dataset.act==="exnote"){const k=b.dataset.k,val=b.value;setActs(vday(),acts=>{const a=acts.find(x=>x.k===k);if(a)a.note=val},true)}
   if(b.dataset.act==="wtitle"){const wid=b.dataset.id,val=b.value;if(val.trim())editDoc("wish",d=>{const x=d.items.find(y=>y.id===wid);if(x){x.title=val.trim();x.pretty=false}},{silent:true})}
   if(b.dataset.act==="wnote"||b.dataset.act==="wlink"){const f=b.dataset.act==="wnote"?"note":"link",wid=b.dataset.id,val=b.value;editDoc("wish",d=>{const x=d.items.find(y=>y.id===wid);if(x)x[f]=val},{silent:true})}
   if(b.dataset.act==="bnote"){const bid=b.dataset.id,val=b.value;editDoc("backlog",d=>{const x=d.items.find(y=>y.id===bid);if(x)x.thought=val},{silent:true})}
@@ -1986,6 +2071,12 @@ document.addEventListener("submit",e=>{
   }
   if(f==="wishadd"){const t=v("wish-new"),k=v("wish-kind")||"want30";if(!t)return;clear("wish-new");addWish(t,k==="need"?"need":"want",k==="want60"?60:30)}
   if(f==="bladd"){const t=v("bl-new"),ty=v("bl-type")||"book";if(!t)return;clear("bl-new");editDoc("backlog",d=>{d.items.unshift({id:uid(),type:ty,title:t,status:"someday",added:today()})});toast("Added to your backlog")}
+  if(f==="exadd"){const n=v("exadd-name").replace(/\s+/g," ").trim().slice(0,30);if(!n)return;S.exAdd=false;
+    if(!exKinds().some(x=>x[1].toLowerCase()===n.toLowerCase()))editSettings(st=>{st.exKinds=[...(st.exKinds||[]),n]});
+    const k=(exKinds().find(x=>x[1].toLowerCase()===n.toLowerCase())||["c:"+n])[0];setActs(vday(),acts=>{if(!acts.some(x=>x.k===k))acts.push({k,note:""})});return}
+  if(f==="weigh"||f==="weighany"){const kg=parseFloat(v(f==="weigh"?"weigh-kg":"wa-kg"));const dt=f==="weigh"?today():(v("wa-date")||today());
+    if(!(kg>=20&&kg<=400)){toast("Enter your weight in kg, e.g. 72.4");return}
+    S.open.weigh=false;editDay(dt,d=>{d.weight={kg:Math.round(kg*10)/10}});toast("Weigh-in saved");return}
   if(f==="newlist"){const n=v("newlist-name");if(!n)return;S.newList=false;
     call("create_project",{name:n}).then(()=>{toast("List created");ttLoadAll()}).catch(e=>toast(ttErrToast(e)));return}
   if(f==="edit"){const k=form.dataset.k,dt=form.dataset.date,eid=form.dataset.id,arr=ED_ARR[k];const t=v("ed-text");if(!t){toast("It needs a name");return}
@@ -2021,6 +2112,72 @@ setInterval(checkNewDay,60000);
 window.addEventListener("focus",checkNewDay);
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState!=="visible")return;if(checkNewDay())return;if(ttOn()&&Date.now()-S.tt.loadedAt>120000)ttLoadAll()});
 
+/* ---------- demo mode ---------- */
+function demoMcp(st){
+  const open=t=>t.status===0,dk=t=>t.dueDate?key(new Date(t.dueDate)):null,find=id=>st.tasks.find(x=>x.id===id);
+  const tools={
+    list_projects:()=>({result:[{id:"inbox",name:"Inbox",kind:"TASK"},...st.projects]}),
+    get_project_with_undone_tasks:({project_id})=>({project:st.projects.find(p=>p.id===project_id)||{id:"inbox",name:"Inbox"},tasks:st.tasks.filter(t=>open(t)&&t.projectId===project_id),columns:st.columns[project_id]||[]}),
+    list_undone_tasks_by_date:({search})=>{const a=key(new Date(search.startDate)),b=key(new Date(search.endDate||search.startDate));return {result:st.tasks.filter(t=>open(t)&&dk(t)&&dk(t)>=a&&dk(t)<=b)}},
+    list_undone_tasks_by_time_query:({query_command})=>{const k=query_command==="tomorrow"?addDays(today(),1):today();return {result:st.tasks.filter(t=>open(t)&&dk(t)===k)}},
+    create_task:({task})=>{const t={priority:0,kind:"TEXT",content:"",...task,id:"dm"+uid(),projectId:task.projectId||"inbox",status:0,createdTime:new Date().toISOString()};st.tasks.push(t);return t},
+    complete_task:({task_id})=>{const t=find(task_id);if(t)t.status=2;return t||{}},
+    update_task:({task_id,task})=>{const t=find(task_id||task.id);if(t)Object.assign(t,task);return t||{}},
+    batch_update_tasks:({tasks})=>{(tasks||[]).forEach(p=>{const t=find(p.id);if(t)Object.assign(t,p)});return {ok:true}},
+    add_comment:()=>({ok:true}),
+    create_project:({name})=>{const p={id:"dm"+uid(),name,kind:"TASK",viewMode:"list"};st.projects.push(p);return p},
+    list_habits:()=>({result:[]}),get_habit_checkins:()=>({result:[]}),upsert_habit_checkins:()=>({ok:true})
+  };
+  return {callTool:async(server,name,input)=>{const f=tools[name];if(!f){const e=new Error("Not available in demo mode");e.code="tool_error";throw e}return {payload:JSON.parse(JSON.stringify(f(input||{})))}}};
+}
+function startDemo(){
+  let seed=11;const rnd=()=>{seed=seed*16807%2147483647;return (seed-1)/2147483646};const pick=a=>a[Math.floor(rnd()*a.length)];
+  const T=today(),due=k=>dueISO(k),created=n=>new Date(Date.now()-n*864e5).toISOString();
+  const tk=(id,pid,title,extra)=>({id,projectId:pid,title,status:0,kind:"TEXT",priority:0,content:"",createdTime:created(10),...(extra||{})});
+  const st={projects:[{id:"d-home",name:"🏠 Home",kind:"TASK"},{id:"d-proj",name:"💫 Projects",kind:"TASK",viewMode:"kanban"},{id:"d-bucket",name:"🌟 Bucket list",kind:"TASK"},{id:"d-rec",name:"🥐 Recipe ideas",kind:"TASK"},{id:"d-travel",name:"🧳 Travels",kind:"TASK"}],
+    columns:{"d-proj":[{id:"c1",name:"To Do",sortOrder:1},{id:"c2",name:"Ongoing",sortOrder:2},{id:"c3",name:"Done",sortOrder:3}]},
+    tasks:[tk("t1","inbox","Book a dentist appointment",{dueDate:due(T),isAllDay:true}),tk("t2","inbox","Reply to Sam about Saturday",{dueDate:due(T),isAllDay:true}),
+      tk("t3","d-home","Pick up the dry cleaning",{dueDate:due(T),isAllDay:true}),tk("t4","d-home","Water the plants",{dueDate:due(T),isAllDay:true,repeatFlag:"RRULE:FREQ=WEEKLY;INTERVAL=1"}),
+      tk("t5","inbox","Plan the weekend hike",{dueDate:due(addDays(T,1)),isAllDay:true}),tk("t6","d-home","Fix the wobbly shelf"),tk("t7","inbox","Call the bank about the card",{dueDate:due(T),isAllDay:true,priority:3}),
+      tk("p1","d-proj","Learn basic Japanese",{columnId:"c2",content:"20 minutes a day of reviews."}),tk("p2","d-proj","Build a bookshelf",{columnId:"c1"}),tk("p3","d-proj","Photo album of the year",{columnId:"c1"}),
+      tk("b1","d-bucket","See the northern lights"),tk("b2","d-bucket","Learn to surf"),tk("b3","d-bucket","Run a half marathon"),tk("b4","d-bucket","Walk the Camino de Santiago"),
+      tk("r1","d-rec","Shakshuka"),tk("r2","d-rec","Miso-glazed salmon"),tk("r3","d-rec","Lemon risotto"),tk("v1","d-travel","Lisbon in spring"),tk("v2","d-travel","Kyoto in autumn")]};
+  const GRAT=["Coffee in the sun","A long call with my sister","Fresh bread from the bakery","Finishing a tricky task","A quiet walk home","Laughing at lunch","Clean sheets","A kind message from a friend","Rain on the window","Good music on the commute","A nap on the sofa","Dinner with friends"];
+  const NOTE=["Calm, steady day","Busy but good","A bit tired","Felt focused","Slow start, lovely evening",""];
+  const PROUD=["Went for the run even in the rain","Cleared my inbox","Cooked instead of ordering","Called grandma","Finished the report early",""];
+  const BETTER=["Phone away after 10pm","Start the hard task first","Drink water before coffee","Take a proper lunch break",""];
+  const DONE=["Pay the electricity bill","Send the birthday card","Tidy the desk","Book train tickets","Return the parcel","Prepare slides for Monday","Buy groceries"];
+  const MEALS=[["breakfast","Porridge with berries"],["breakfast","Eggs on toast"],["lunch","Lentil soup"],["lunch","Chicken wrap"],["dinner","Salmon, rice and greens"],["dinner","Veggie stir-fry"],["snack","Apple and almonds"]];
+  const days={};
+  for(let i=70;i>=1;i--){const k=addDays(T,-i);const d=blankDay(k);
+    if(dowOf(k)===1)d.weight={kg:Math.round((79.2-(70-i)*0.022+(rnd()-.5)*.5)*10)/10};
+    if(i<=13){
+      d.mood=pick([3,4,4,5,3,4,2,5]);d.note=pick(NOTE);d.gratitude=[pick(GRAT),rnd()<.6?pick(GRAT):"",""];
+      const acts=[];if(rnd()<.4){acts.push({k:"steady10",note:"Strength focus · 11 min"});d.workout={done:true,secs:640+Math.floor(rnd()*120)}}
+      if(rnd()<.3)acts.push({k:"run",note:pick(["5 km easy","3 km intervals","6 km by the river"])});if(rnd()<.15)acts.push({k:"class",note:"Yoga class"});
+      d.body={acts,ex:exText(acts),water:rnd()<.75,fruit:rnd()<.65};
+      d.ate=[0,1,2].filter(()=>rnd()<.8).map(()=>{const m=pick(MEALS);return {id:uid(),slot:m[0],text:m[1],home:rnd()<.6}});
+      d.top3=[0,1,2].map(j=>({id:"o"+i+j,title:pick(DONE),done:rnd()<.75}));
+      d.proud=pick(PROUD);d.better=pick(BETTER);
+    }
+    days[k]=d;
+  }
+  days[T]=blankDay(T);days[T].top3=[{id:"t2",title:"Reply to Sam about Saturday"}];
+  S.days=days;
+  S.settings={...S.settings,startDay:addDays(T,-20),favs:[POINTERS.stoic?POINTERS.stoic[0][0]:""],pnotes:{},exKinds:["Swim"],weighOff:false,highlights:{},
+    ttMap:{todo:["inbox","d-home"],projects:"d-proj",bucket:"d-bucket",recipes:"d-rec",travel:"d-travel"},todos:[],projects:[],habits:[],reminders:S.settings.reminders||[]};
+  const w=(title,extra)=>({id:uid(),title,kind:"want",hold:30,added:addDays(T,-20),until:addDays(T,10),checked:false,status:"open",prio:0,note:"",link:"",...(extra||{})});
+  S.wish={imported:true,items:[w("Noise-cancelling headphones",{prio:2,until:addDays(T,12),added:addDays(T,-18)}),w("Running shoes",{kind:"need",until:null,prio:3}),
+    w("Instant camera",{added:addDays(T,-31),until:addDays(T,-1)}),w("Cast-iron pan",{added:addDays(T,-45),until:addDays(T,-15),checked:true}),w("Linen bedding",{prio:1,added:addDays(T,-3),until:addDays(T,27)})]};
+  const bl=(type,title,status,extra)=>({id:uid(),type,title,status,added:addDays(T,-30),...(extra||{})});
+  S.backlog={items:[bl("book","Project Hail Mary","now",{by:"Andy Weir",year:2021,started:addDays(T,-6)}),bl("book","The Midnight Library","someday",{by:"Matt Haig",year:2020}),
+    bl("manga","Frieren: Beyond Journey's End","now",{by:"Kanehito Yamada",year:2020,started:addDays(T,-12)}),bl("game","Hades","done",{by:"Supergiant Games",year:2020,finished:addDays(T,-9),rating:5,thought:"Couldn't stop playing"}),
+    bl("game","Stardew Valley","someday",{by:"ConcernedApe",year:2016}),bl("series","Severance","now",{year:2022,started:addDays(T,-4)}),bl("series","Spirited Away","someday",{by:"Hayao Miyazaki",year:2001})]};
+  S.settingsReady=true;S.live=false;MCP=demoMcp(st);
+  const b=$("#banner");b.hidden=false;b.classList.add("demo");b.innerHTML=`<span><b>Demo mode</b> · invented entries, nothing is saved.</span><button type="button" class="linkbtn" data-act="settings">Exit in Settings</button>`;
+  setStatus();render(true);ttLoadAll();
+}
+
 /* ---------- boot ---------- */
 try{const t=localStorage.getItem("sd-tab");if(t&&ROUTE[t])go(t)}catch(_){}
 const h=(location.hash||"").slice(1);if(ROUTE[h])go(h);
@@ -2035,7 +2192,7 @@ async function connectDb(){
     const col=db.collection("data/users/"+id);
     col.doc("settings").onSnapshot(snap=>{
       if(!pending.settings&&!inflight.settings){const d=snap.exists?snap.data():null;
-        S.settings={habits:d?.habits||[],reminders:d?.reminders||[],todos:d?.todos||[],projects:d?.projects||[],ttMap:d?.ttMap||null,favs:d?.favs||[],pnotes:d?.pnotes||{},skills:d?.skills||{},highlights:d?.highlights||{}};
+        S.settings={habits:d?.habits||[],reminders:d?.reminders||[],todos:d?.todos||[],projects:d?.projects||[],ttMap:d?.ttMap||null,favs:d?.favs||[],pnotes:d?.pnotes||{},exKinds:d?.exKinds||[],weighOff:!!d?.weighOff,skills:d?.skills||{},highlights:d?.highlights||{}};
         if(ttOn())ttLoadListsMissing();}
       S.settingsReady=true;render();
     },()=>{S.settingsReady=true;render()});
@@ -2065,7 +2222,8 @@ async function connectTT(){
 $("#undo-btn").addEventListener("click",()=>{const u=S.undo[0];if(u)runUndo(u.uid)});
 $("#undo-close").addEventListener("click",()=>{undoBarHidden=true;tickUndo()});
 tickUndo();
-if(!window.claude||!claude.use){S.tt.state="off";offlineDb()}
+if(S.demo)startDemo();
+else if(!window.claude||!claude.use){S.tt.state="off";offlineDb()}
 else{connectDb();connectTT()}
 })();
 </script>
