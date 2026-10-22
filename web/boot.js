@@ -8,7 +8,7 @@ import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,do
 import {getMessaging,getToken,deleteToken,isSupported} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 import {getFunctions,httpsCallable} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 /* Web Push key from Firebase → Project settings → Cloud Messaging → Web Push certificates (public, safe to share) */
-const VAPID_KEY="__VAPID_KEY__";
+const VAPID_KEY="BM0n1OI8l5kaNpEHMlaYeY1y-mTfWdO-h-52aYCPzL-Il2hx4nVq7Z6xRi8qWGUdEAmPGWcxop2vnKdNOBkLPlI";
 
 const firebaseConfig={
   apiKey:"AIzaSyD_5cBocXlhsy3495kZoSvLoj6qXo1rhU8",
