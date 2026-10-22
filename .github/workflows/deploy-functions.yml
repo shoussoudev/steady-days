@@ -40,4 +40,9 @@ jobs:
         if: env.HAS_SA == 'true'
         run: |
           if [ "$HAS_KEY" = "true" ]; then ONLY="functions,firestore:rules"; else ONLY="functions:tick,firestore:rules"; fi
-          npx -y firebase-tools@13 deploy --only "$ONLY" --project "$PROJECT" --non-interactive --force
+          set -o pipefail
+          if ! npx -y firebase-tools@13 deploy --only "$ONLY" --project "$PROJECT" --non-interactive --force 2>&1 | tee deploy.log; then
+            msg=$(grep -v '^\s*$' deploy.log | tail -n 40 | sed -e 's/%/%25/g' -e 's/\r//g' | sed ':a;N;$!ba;s/\n/%0A/g')
+            echo "::error title=Deploy failed::$msg"
+            exit 1
+          fi
