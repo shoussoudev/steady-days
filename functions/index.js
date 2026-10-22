@@ -100,6 +100,7 @@ export const claude = onCall({region: REGION, secrets: [ANTHROPIC_API_KEY], time
   const email = req.auth && req.auth.token && req.auth.token.email;
   const allowed = ALLOWED_EMAILS.value().split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
   if (!email || !allowed.includes(String(email).toLowerCase())) throw new HttpsError("permission-denied", "Claude isn't enabled for this account.");
+  if (!ANTHROPIC_API_KEY.value() || ANTHROPIC_API_KEY.value() === "not-set") throw new HttpsError("failed-precondition", "No Claude key has been added yet.");
   const prompt = String((req.data && req.data.prompt) || "");
   if (!prompt || prompt.length > 60000) throw new HttpsError("invalid-argument", "Empty or too long.");
   const r = await fetch("https://api.anthropic.com/v1/messages", {

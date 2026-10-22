@@ -32,14 +32,25 @@ jobs:
         if: env.HAS_SA == 'true'
         uses: google-github-actions/auth@v2
         with: { credentials_json: "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" }
+      - uses: google-github-actions/setup-gcloud@v2
+        if: env.HAS_SA == 'true'
+      - name: Switch on the Google services the server uses
+        if: env.HAS_SA == 'true'
+        run: gcloud services enable secretmanager.googleapis.com cloudscheduler.googleapis.com run.googleapis.com eventarc.googleapis.com pubsub.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com fcm.googleapis.com --project "$PROJECT"
+      - name: Placeholder Claude key until a real one is added
+        if: env.HAS_SA == 'true' && env.HAS_KEY != 'true'
+        run: |
+          if ! gcloud secrets describe ANTHROPIC_API_KEY --project "$PROJECT" >/dev/null 2>&1; then
+            printf 'not-set' | npx -y firebase-tools@15 functions:secrets:set ANTHROPIC_API_KEY --data-file=- --project "$PROJECT" --non-interactive --force
+          fi
       - name: Store the Claude key as a secret
         if: env.HAS_SA == 'true' && env.HAS_KEY == 'true'
         env: { ANTHROPIC_API_KEY: "${{ secrets.ANTHROPIC_API_KEY }}" }
         run: printf '%s' "$ANTHROPIC_API_KEY" | npx -y firebase-tools@15 functions:secrets:set ANTHROPIC_API_KEY --data-file=- --project "$PROJECT" --non-interactive --force
-      - name: Deploy (everything, or reminders only until a Claude key is added)
+      - name: Deploy
         if: env.HAS_SA == 'true'
         run: |
-          if [ "$HAS_KEY" = "true" ]; then ONLY="functions,firestore:rules"; else ONLY="functions:tick,firestore:rules"; fi
+          ONLY="functions,firestore:rules"
           set -o pipefail
           if ! npx -y firebase-tools@15 deploy --only "$ONLY" --project "$PROJECT" --non-interactive --force 2>&1 | tee deploy.log; then
             msg=$(grep -v '^\s*$' deploy.log | grep -iv 'serving at port' | tail -n 14 | sed -e 's/%/%25/g' -e 's/\r//g' | sed ':a;N;$!ba;s/\n/%0A/g')
