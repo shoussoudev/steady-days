@@ -19,7 +19,7 @@ jobs:
         if: env.HAS_SA == 'true'
       - uses: actions/setup-node@v4
         if: env.HAS_SA == 'true'
-        with: { node-version: 20 }
+        with: { node-version: 22 }
       - name: Install function packages
         if: env.HAS_SA == 'true'
         run: npm install --omit=dev --no-audit --no-fund
@@ -35,14 +35,14 @@ jobs:
       - name: Store the Claude key as a secret
         if: env.HAS_SA == 'true' && env.HAS_KEY == 'true'
         env: { ANTHROPIC_API_KEY: "${{ secrets.ANTHROPIC_API_KEY }}" }
-        run: printf '%s' "$ANTHROPIC_API_KEY" | npx -y firebase-tools@13 functions:secrets:set ANTHROPIC_API_KEY --data-file=- --project "$PROJECT" --non-interactive --force
+        run: printf '%s' "$ANTHROPIC_API_KEY" | npx -y firebase-tools@15 functions:secrets:set ANTHROPIC_API_KEY --data-file=- --project "$PROJECT" --non-interactive --force
       - name: Deploy (everything, or reminders only until a Claude key is added)
         if: env.HAS_SA == 'true'
         run: |
           if [ "$HAS_KEY" = "true" ]; then ONLY="functions,firestore:rules"; else ONLY="functions:tick,firestore:rules"; fi
           set -o pipefail
-          if ! npx -y firebase-tools@13 deploy --only "$ONLY" --project "$PROJECT" --non-interactive --force 2>&1 | tee deploy.log; then
-            msg=$(grep -v '^\s*$' deploy.log | tail -n 40 | sed -e 's/%/%25/g' -e 's/\r//g' | sed ':a;N;$!ba;s/\n/%0A/g')
+          if ! npx -y firebase-tools@15 deploy --only "$ONLY" --project "$PROJECT" --non-interactive --force 2>&1 | tee deploy.log; then
+            msg=$(grep -v '^\s*$' deploy.log | grep -iv 'serving at port' | tail -n 14 | sed -e 's/%/%25/g' -e 's/\r//g' | sed ':a;N;$!ba;s/\n/%0A/g')
             echo "::error title=Deploy failed::$msg"
             exit 1
           fi
