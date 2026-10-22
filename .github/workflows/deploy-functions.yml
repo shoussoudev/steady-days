@@ -1,0 +1,43 @@
+name: Deploy server functions
+on:
+  push:
+    branches: [main]
+    paths: ["functions/**", "firebase.json", "firestore.rules", ".github/workflows/deploy-functions.yml"]
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      PROJECT: steady-days-6a2e7
+      HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+      HAS_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}
+    steps:
+      - name: Waiting for setup
+        if: env.HAS_SA != 'true'
+        run: echo "Add the FIREBASE_SERVICE_ACCOUNT secret to deploy. Nothing to do yet."
+      - uses: actions/checkout@v4
+        if: env.HAS_SA == 'true'
+      - uses: actions/setup-node@v4
+        if: env.HAS_SA == 'true'
+        with: { node-version: 20 }
+      - name: Install function packages
+        if: env.HAS_SA == 'true'
+        run: npm install --omit=dev --no-audit --no-fund
+        working-directory: functions
+      - name: Settings for the functions
+        if: env.HAS_SA == 'true'
+        run: |
+          printf 'ALLOWED_EMAILS=%s\nCLAUDE_MODEL=%s\n' "${{ secrets.ALLOWED_EMAILS }}" "${{ vars.CLAUDE_MODEL || 'claude-sonnet-5-5' }}" > functions/.env
+      - name: Sign in to Google Cloud
+        if: env.HAS_SA == 'true'
+        uses: google-github-actions/auth@v2
+        with: { credentials_json: "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" }
+      - name: Store the Claude key as a secret
+        if: env.HAS_SA == 'true' && env.HAS_KEY == 'true'
+        env: { ANTHROPIC_API_KEY: "${{ secrets.ANTHROPIC_API_KEY }}" }
+        run: printf '%s' "$ANTHROPIC_API_KEY" | npx -y firebase-tools@13 functions:secrets:set ANTHROPIC_API_KEY --data-file=- --project "$PROJECT" --non-interactive --force
+      - name: Deploy (everything, or reminders only until a Claude key is added)
+        if: env.HAS_SA == 'true'
+        run: |
+          if [ "$HAS_KEY" = "true" ]; then ONLY="functions,firestore:rules"; else ONLY="functions:tick,firestore:rules"; fi
+          npx -y firebase-tools@13 deploy --only "$ONLY" --project "$PROJECT" --non-interactive --force

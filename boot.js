@@ -4,7 +4,11 @@
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {getAuth,GoogleAuthProvider,onAuthStateChanged,signInWithPopup,signInWithRedirect,getRedirectResult,signOut} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {makeTasks} from "./tasks.js";
-import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,doc,collection,setDoc,getDoc,getDocs,getDocFromServer,onSnapshot,query,where} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,doc,collection,setDoc,getDoc,getDocs,getDocFromServer,onSnapshot,query,where,deleteField} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {getMessaging,getToken,deleteToken,isSupported} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
+import {getFunctions,httpsCallable} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
+/* Web Push key from Firebase → Project settings → Cloud Messaging → Web Push certificates (public, safe to share) */
+const VAPID_KEY="__VAPID_KEY__";
 
 const firebaseConfig={
   apiKey:"AIzaSyD_5cBocXlhsy3495kZoSvLoj6qXo1rhU8",
@@ -71,6 +75,25 @@ onAuthStateChanged(auth,u=>{
   window.__sdAuth.check=async()=>{
     try{await Promise.race([getDocFromServer(doc(fs,"users/"+u.uid+"/docs","settings")),new Promise((_,rej)=>setTimeout(()=>rej({code:"timeout",message:"No answer from the database after 12 seconds."}),12000))]);return {ok:true}}
     catch(e){return {ok:false,code:e&&e.code||"error",message:e&&e.message||String(e)}}
+  };
+  /* Claude, through the server (the key stays there) */
+  const fns=getFunctions(app,"europe-west2");
+  window.__sdClaude=async prompt=>(await httpsCallable(fns,"claude",{timeout:130000})({prompt})).data.text;
+  /* notifications on this device */
+  const devRef=doc(fs,"users/"+u.uid+"/docs","devices");
+  window.__sdPush={
+    supported:async()=>!VAPID_KEY.startsWith("__")&&"Notification" in window&&"serviceWorker" in navigator&&await isSupported().catch(()=>false),
+    permission:()=>("Notification" in window)?Notification.permission:"unsupported",
+    isOn:()=>{try{return !!localStorage.getItem("sd-push")&&Notification.permission==="granted"}catch(_){return false}},
+    enable:async()=>{
+      const perm=await Notification.requestPermission();if(perm!=="granted")throw {code:"denied"};
+      const reg=await navigator.serviceWorker.register("sw.js");await navigator.serviceWorker.ready;
+      const tok=await getToken(getMessaging(app),{vapidKey:VAPID_KEY,serviceWorkerRegistration:reg});
+      await setDoc(devRef,{tokens:{[tok]:{added:new Date().toISOString(),device:navigator.userAgent.slice(0,140)}}},{merge:true});
+      try{localStorage.setItem("sd-push",tok)}catch(_){}return tok;
+    },
+    disable:async()=>{let tok=null;try{tok=localStorage.getItem("sd-push");localStorage.removeItem("sd-push")}catch(_){}
+      if(tok)await setDoc(devRef,{tokens:{[tok]:deleteField()}},{merge:true});try{await deleteToken(getMessaging(app))}catch(_){}}
   };
   window.__sdReady({db:makeDb(u.uid),mcp:makeTasks(fs,u.uid),user:{id:async()=>u.uid,isOwner:()=>true,canEdit:()=>true}});
 });

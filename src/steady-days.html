@@ -142,6 +142,8 @@ ul.list li.wrow{display:grid;gap:8px}
 .wmain{display:flex;align-items:center;gap:10px;min-width:0}
 .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
 .field{display:grid;gap:4px}
+.remp{white-space:nowrap}
+#nudge-time{width:auto}
 .pgrid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
 .yelist li{flex-wrap:wrap}.seg{display:flex;gap:4px;flex-wrap:wrap}.seg .chip{font-size:.78rem;padding:4px 8px}
 .vprog{display:block;height:4px;border-radius:999px;background:var(--line);overflow:hidden;margin-top:2px}
@@ -630,7 +632,7 @@ const ttOn=()=>MCP&&S.tt.state==="ok";
 const arr=p=>Array.isArray(p)?p:(p&&Array.isArray(p.result)?p.result:[]);
 const nt=t=>({id:t.id,pid:t.projectId||t.project_id||"",title:t.title||"(untitled)",content:t.content||t.desc||"",
   due:t.dueDate||t.due_date||null,priority:t.priority||0,parentId:t.parentId||t.parent_id||null,
-  columnId:t.columnId||t.column_id||"",created:t.createdTime||t.created_time||null,kind:t.kind||"TEXT",repeat:t.repeatFlag||t.repeat_flag||""});
+  columnId:t.columnId||t.column_id||"",remindAt:t.remindAt||null,created:t.createdTime||t.created_time||null,kind:t.kind||"TEXT",repeat:t.repeatFlag||t.repeat_flag||""});
 const byDue=(a,b)=>(a.due?Date.parse(a.due):Infinity)-(b.due?Date.parse(b.due):Infinity);
 async function call(tool,input,read){
   try{return (await MCP.callTool(TT,tool,input,read?{cache:false}:undefined)).payload}
@@ -908,8 +910,9 @@ async function addTask(listId,title,{dueToday=false}={}){
   if(dueToday){task.isAllDay=true;task.dueDate=dueTodayISO();task.startDate=task.dueDate;task.timeZone=TZ}
   try{await call("create_task",{task,client_timezone:TZ});toast("Added to TickTick")}
   catch(e){toast(ttErrToast(e));return}
-  if(listId&&S.tt.lists[listId])ttLoadList(listId);
-  if(dueToday)ttLoadToday();
+  /* show the new task straight away, even while you keep typing in the box */
+  if(listId&&S.tt.lists[listId])ttLoadList(listId).then(()=>render(true));
+  if(dueToday)ttLoadToday().then(()=>render(true));
 }
 async function completeTask(tid,pid,msg,extra){
   const t0=findTask(tid);const title=t0?t0.title:"task";const realPid=(t0&&t0.pid)||pid;
@@ -983,7 +986,13 @@ function dueLabel(t){
 const prioDot=t=>t.priority>=5?`<i class="prio p5" title="High priority"></i>`:t.priority>=3?`<i class="prio p3" title="Medium priority"></i>`:t.priority>=1?`<i class="prio p1" title="Low priority"></i>`:"";
 const ttTaskLi=(t,extra="",hideToday=false)=>{
   const dk=t.due&&key(new Date(t.due));const due=hideToday&&dk&&(dk===today()||dk===key())?"":dueLabel(t);
-  const meta=due+extra;
+  const rem=STANDALONE&&t.remindAt&&Date.parse(t.remindAt)>Date.now()-864e5?`<span class="pill soft remp">⏰ ${new Date(t.remindAt).toLocaleString("en-GB",{weekday:Date.parse(t.remindAt)-Date.now()>864e5?"short":undefined,hour:"2-digit",minute:"2-digit"})}</span>`:"";
+  const remBtn=STANDALONE?`<button type="button" class="linkbtn subtle tiny" data-act="remopen" data-id="${t.id}" data-pid="${esc(t.pid)}" aria-label="Set a reminder for ${esc(plainTitle(t.title))}">⏰</button>`:"";
+  const meta=due+rem+extra+remBtn;
+  if(S.remOpen===t.id){const dflt=t.remindAt?new Date(t.remindAt):(()=>{const d=t.due?new Date(t.due):new Date();d.setHours(new Date().getHours()+1,0,0,0);return d})();const v=new Date(dflt-dflt.getTimezoneOffset()*6e4).toISOString().slice(0,16);
+    return `<li class="trow editing"><form class="eform" data-form="remind" data-id="${t.id}" data-pid="${esc(t.pid)}"><span class="small"><b>${esc(plainTitle(t.title))}</b> · remind me at</span><div class="addrow"><input type="datetime-local" id="rem-at" value="${v}" aria-label="Reminder time"><button class="btn sm">Save</button></div>
+      <div class="btnrow">${t.remindAt?`<button type="button" class="btn ghost sm" data-act="remclear" data-id="${t.id}" data-pid="${esc(t.pid)}">Remove reminder</button>`:""}<button type="button" class="btn ghost sm" data-act="remopen" data-id="">Cancel</button></div>
+      ${window.__sdPush&&!window.__sdPush.isOn()?`<p class="muted small" style="margin:0">Turn on notifications in ⚙️ Settings so this reaches you.</p>`:""}</form></li>`}
   return `<li class="trow"><input type="checkbox" class="check" id="tt-${t.id}" data-act="ttdone" data-id="${t.id}" data-pid="${esc(t.pid)}" aria-label="Complete ${esc(plainTitle(t.title))}"><div class="tmain"><label for="tt-${t.id}">${prioDot(t)}${esc(plainTitle(t.title))}</label>${meta?`<div class="tmeta">${meta}</div>`:""}</div></li>`};
 
 /* ---------- render ---------- */
@@ -1661,7 +1670,7 @@ V.backlog=()=>{
 
 /* ---------- Prettify: Claude suggests tidier titles (and author/year for media); nothing changes until you accept ---------- */
 S.pretty=null;
-const PRETTY_ERR={not_granted:"Prettify needs permission to ask Claude. You can allow it from this page's permissions.",rate_limited:"Claude is busy right now. Try again in a little while.",session_expired:"Sign in to Claude again, then retry.",invalid_json:"The suggestions came back in a muddle. Try again.",refused:"Claude couldn't help with these items.",empty_completion:"No suggestions came back. Try again."};
+const PRETTY_ERR={server_missing:"Claude isn't set up on your server yet. Add the Claude key (see the setup steps), then try again.",not_granted:"Prettify needs permission to ask Claude. You can allow it from this page's permissions.",rate_limited:"Claude is busy right now. Try again in a little while.",session_expired:"Sign in to Claude again, then retry.",invalid_json:"The suggestions came back in a muddle. Try again.",refused:"Claude couldn't help with these items.",empty_completion:"No suggestions came back. Try again."};
 const prettyPool=doc=>doc==="wish"?openWish():S.backlog.items.filter(x=>x.status!=="dropped");
 const prettyNew=doc=>prettyPool(doc).filter(x=>!x.pretty);
 function prettyPrompt(doc,items){
@@ -1766,6 +1775,16 @@ async function exportData(){
 }
 
 /* ---------- Import: load a Steady Days export file into this account ---------- */
+let PUSH_OK=null;
+function notifRows(){
+  const P=window.__sdPush;if(!P)return "";if(PUSH_OK===null){P.supported().then(ok=>{PUSH_OK=ok;render(true)});return ""}
+  const on=P.isOn(),perm=P.permission();const st=S.settings;
+  const dev=!PUSH_OK?`<span class="muted small">Not available in this browser${/iPhone|iPad/.test(navigator.userAgent)?" (on iPhone, add Steady Days to your home screen first)":""}.</span>`
+    :`<button type="button" class="btn ${on?"ghost ":""}sm" data-act="${on?"pushoff":"pushon"}">${on?"Turn off":"Turn on"}</button>`;
+  return `<div class="setrow"><div><b>Notifications on this device</b><div class="muted small">${on?"On. Morning nudge and task reminders arrive here.":perm==="denied"?"Blocked in this browser's site settings.":"Off. Turn on to get the morning nudge and task reminders here."}</div></div>${dev}</div>
+    <div class="setrow"><div><b>Morning nudge</b><div class="muted small">Your pointer, Top 3 and planned meals, every morning. Set a reminder on any task with ⏰.</div></div>
+      <span class="btnrow"><input type="time" id="nudge-time" data-act="nudgetime" value="${esc(st.nudgeTime||"07:22")}" aria-label="Morning nudge time" ${st.nudgeOn===false?"disabled":""}><button type="button" class="switch" role="switch" aria-checked="${st.nudgeOn!==false}" aria-label="Morning nudge" data-act="nudgeon2"><span></span></button></span></div>`;
+}
 const DB_HELP={"failed-precondition":"the Firestore database doesn't seem to exist yet. In Firebase, open Build → Firestore Database and create it (London, production mode).","permission-denied":"the database refused access. Check the Firestore Rules from setup step 5 are published.","unavailable":"you seem to be offline, or the database can't be reached right now. Changes stay on this device and sync later.","timeout":"no answer from the database. Check your connection; if this stays, the Firestore database may not be created yet."};
 async function checkDb(){if(!window.__sdAuth||!window.__sdAuth.check)return;S.dbCheck=null;render(true);S.dbCheck=await window.__sdAuth.check();render(true)}
 /* ---------- Import: load a Steady Days export file into this account (shows each step in Settings) ---------- */
@@ -1900,11 +1919,50 @@ V.vision=()=>{
     <div class="addrow"><input type="text" id="vb-values" data-act="vvalues" value="${esc(S.vision.values||"")}" placeholder="Values, e.g. Peace · Honesty" aria-label="Values"></div>
     <div class="addrow"><input type="text" id="vb-motto" data-act="vmotto" value="${esc(S.vision.motto||"")}" placeholder="Motto, e.g. Step by step" aria-label="Motto"><input type="text" id="vb-year" data-act="vyear" value="${esc(S.vision.year||"")}" placeholder="Year" aria-label="Year" style="max-width:90px"></div>
     <label class="btn ghost sm filebtn" style="justify-self:start">${board?"Replace board picture":"Add your board picture"}<input type="file" accept="image/*" data-act="vboardpic" hidden></label>
+    ${SAMPLE?vsortPanel():""}
     ${arch.length?`<div class="wfoot"><span class="muted small">Past visions</span><span class="btnrow">${arch.map(y=>`<button type="button" class="chip" data-act="pastopen" data-y="${esc(y)}">${esc(y)}</button>`).join("")}</span></div>`:""}
     <div class="wfoot"><span class="muted small">Ready to close this year early, or late?</span><button type="button" class="btn ghost sm" data-act="yestart">Close ${esc(S.vision.year||"the year")}</button></div>
     <div class="wfoot"><span class="muted small">Not working for you? Start again with an empty board.</span><button type="button" class="btn ghost sm danger" data-act="vreset">${S.vReset?"Tap again to delete the board":"Delete this board"}</button></div>
   </section>`;
 };
+/* paste a written vision; Claude turns it into tiles (and lifetime dreams for the Bucket list) for you to review */
+function vsortPrompt(text){
+  return `You help someone turn their written yearly vision into tiles for a vision board app. Read every point carefully. Some points are very close: merge those into one tile and keep the nuance in the note.
+For each tile give:
+- "title": short, in the person's own words and language (don't translate)
+- "area": one of ${JSON.stringify(V_AREAS)}
+- "kind": "milestone" (happens once), "intention" (a way of living, never ticked off), "goal" (a number to reach) or "habit" (something repeated)
+- "note": optional nuance or detail from their text
+- for intentions, "prompt": a gentle one-line prompt for a daily reminder, e.g. "5 minutes of silence today?"
+- for goals: "metric": "weight" if it's body weight in kg, otherwise "manual"; "start" and "target" numbers if given; "unit"
+- for habits: "link": "exercise" (exercise/activity days), "bake" (baking), "backlog" (finishing books/games) or "" if none fits; "target": per month (per year for backlog)
+- "bucket": true if it's a lifetime dream rather than something for this year
+Leave out anything already on the board: ${JSON.stringify(vItems().map(x=>x.title))}.
+Return ONLY a JSON array of tiles.
+
+Their vision:
+${text}`;
+}
+async function runVsort(){
+  const text=(document.getElementById("vsort-text")||{}).value||S.vsortText||"";if(!text.trim()){toast("Paste your vision first");return}
+  S.vsortText=text;S.vsort={state:"loading"};render(true);
+  try{const out=await SAMPLE.json(vsortPrompt(text),{modelTier:"default"});
+    const rows=(Array.isArray(out)?out:[]).filter(x=>x&&x.title).map(x=>({on:true,t:{id:uid(),title:String(x.title).trim(),area:V_AREAS.includes(x.area)?x.area:V_AREAS[1],kind:["milestone","intention","goal","habit"].includes(x.kind)?x.kind:"milestone",note:String(x.note||""),prompt:x.prompt?String(x.prompt):undefined,
+      metric:x.kind==="goal"?(x.metric==="weight"?"weight":"manual"):undefined,start:+x.start>0?+x.start:undefined,target:+x.target>0?+x.target:undefined,unit:x.unit?String(x.unit):undefined,link:x.kind==="habit"&&["exercise","bake","backlog"].includes(x.link)?x.link:undefined,emoji:"✨",done:false,added:today()},bucket:!!x.bucket}));
+    S.vsort={state:"ready",rows};}
+  catch(e){S.vsort={state:"error",err:PRETTY_ERR[e&&e.code]||"Something went wrong. Try again in a moment."}}
+  render(true);
+}
+function vsortPanel(){
+  const V2=S.vsort;
+  if(!V2)return `<label class="field"><span class="small muted">Paste your written vision and let Claude turn it into tiles. You review everything before it's added.</span><textarea id="vsort-text" data-act="vsorttext" rows="4" placeholder="e.g. Visit Benin at least once. Exercise daily. More silences in my life…">${esc(S.vsortText||"")}</textarea></label><div><button type="button" class="btn ghost sm" data-act="vsortgo">✨ Sort with Claude</button></div>`;
+  if(V2.state==="loading")return `<p class="muted small" style="margin:0">Claude is reading your vision… this can take up to a minute.</p>`;
+  if(V2.state==="error")return `<p class="small" style="margin:0">${esc(V2.err)}</p><div><button type="button" class="linkbtn" data-act="vsortreset">Back</button></div>`;
+  const on=V2.rows.filter(r=>r.on).length;
+  return `<p class="small" style="margin:0"><b>${V2.rows.length} suggestion${V2.rows.length===1?"":"s"}.</b> Untick anything you don't want.</p>
+    <ul class="list prows">${V2.rows.map((r,i)=>`<li><label class="prow"><input type="checkbox" class="check" data-act="vsortrow" data-i="${i}" ${r.on?"checked":""}><span class="pdiff"><span class="pafter">${esc(r.t.title)}</span><span class="muted small">${r.bucket?"Bucket list":esc(r.t.area)} · ${esc((V_KINDS.find(k=>k[0]===r.t.kind)||[])[1]||"")}${r.t.prompt?` · “${esc(r.t.prompt)}”`:""}${r.t.note?` · ${esc(r.t.note)}`:""}</span></span></label></li>`).join("")}</ul>
+    <div class="btnrow"><button type="button" class="btn" data-act="vsortadd" ${on?"":"disabled"}>Add ${on}</button><button type="button" class="btn ghost" data-act="vsortreset">Cancel</button></div>`;
+}
 function vAddForm(){return `<form class="addrow vaddform" data-form="vadd"><input type="text" id="vadd-title" placeholder="e.g. Visit Kyoto, Run a half marathon" autocomplete="off"><select id="vadd-area" aria-label="Area">${V_AREAS.map(a=>`<option>${esc(a)}</option>`).join("")}</select><input type="text" id="vadd-emoji" placeholder="🌍" maxlength="4" aria-label="Emoji" style="max-width:64px"><button class="btn">Add</button></form>`}
 
 /* ---------- Long-term vision: a handful of pillars for the next 10-15 years ---------- */
@@ -2188,6 +2246,7 @@ function settingsPanel(){
   if(STANDALONE){const A=window.__sdAuth||{};const c=S.dbCheck;const I=S.imp;
     const dbLine=!c?"Checking the connection to your database…":c.ok?"✓ Connected to your database.":`⚠ Can't reach your database: ${esc(DB_HELP[c.code]||c.message||c.code)}`;
     body=`<div class="setrow"><div><b>Account</b><div class="muted small">Signed in${A.email?" as "+esc(A.email):""}.</div><div class="small ${c&&!c.ok?"warn":"muted"}">${dbLine}</div></div><button type="button" class="btn ghost sm" data-act="signout">Sign out</button></div>
+    ${notifRows()}
     <div class="setrow"><div><b>Bring in your data</b><div class="muted small">Choose a Steady Days export file (from Settings → Download in the Claude version). Entries with the same day are replaced.</div></div><label class="btn ghost sm filebtn">Choose file<input type="file" id="import-file" accept=".json,application/json,text/plain,*/*" hidden></label></div>
     ${I?`<div class="impbox ${I.state}"><p class="small" style="margin:0">${esc(I.msg)}</p>${I.state==="ready"?`<div class="btnrow"><button type="button" class="btn sm" data-act="impgo">Import now</button><button type="button" class="btn ghost sm" data-act="impcancel">Cancel</button></div>`:I.state==="done"||I.state==="error"?`<div><button type="button" class="linkbtn subtle" data-act="impcancel">OK</button></div>`:""}</div>`:""}`}
   else if(n.state==="error"||n.state==="missing")body=`<p class="muted small" style="margin:0">${n.state==="missing"?"The reminder task wasn't found. Ask Claude to set it up again.":"Couldn't reach your scheduled tasks from here. You can pause it in Claude under Scheduled."}</p>`;
@@ -2244,6 +2303,16 @@ document.addEventListener("click",e=>{
   if(a==="pnoteopen"){S.pnoteOpen=b.dataset.k||null;render(true);if(S.pnoteOpen){const el=document.getElementById("pnote-edit");if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length)}}}
   if(a==="signout"){if(window.__sdAuth&&window.__sdAuth.signOut)window.__sdAuth.signOut()}
   if(a==="impgo")runImport();
+  if(a==="vsortgo")runVsort();
+  if(a==="vsortreset"){S.vsort=null;render(true)}
+  if(a==="vsortadd"&&S.vsort){const rows=S.vsort.rows.filter(r=>r.on);const tiles=rows.filter(r=>!r.bucket).map(r=>JSON.parse(JSON.stringify(r.t))),dreams=rows.filter(r=>r.bucket).map(r=>({id:uid(),title:r.t.title,area:"exp",emoji:"",note:r.t.note||"",added:today(),lived:[]}));
+    if(tiles.length)editDoc("vision",d=>{d.items=[...(d.items||[]),...tiles]});if(dreams.length)editDoc("bucket",d=>{d.items=[...(d.items||[]),...dreams]});
+    S.vsort=null;S.vsortText="";toast(`Added ${tiles.length} tile${tiles.length===1?"":"s"}${dreams.length?` and ${dreams.length} dream${dreams.length===1?"":"s"}`:""}`)}
+  if(a==="remopen"){S.remOpen=id||null;render(true)}
+  if(a==="remclear"){S.remOpen=null;call("update_task",{task_id:id,task:{id,projectId:b.dataset.pid,remindAt:null},client_timezone:TZ}).then(()=>{toast("Reminder removed");ttLoadAll()}).catch(e=>toast(ttErrToast(e)))}
+  if(a==="pushon"){window.__sdPush.enable().then(()=>{toast("Notifications are on for this device");render(true)}).catch(e=>{toast(e&&e.code==="denied"?"Notifications are blocked. Allow them in your browser's site settings, then try again.":"Couldn't turn on notifications here.");render(true)})}
+  if(a==="pushoff"){window.__sdPush.disable().then(()=>{toast("Notifications are off for this device");render(true)})}
+  if(a==="nudgeon2"){editSettings(st=>{st.nudgeOn=st.nudgeOn===false;st.timeZone=TZ})}
   if(a==="arrange"){S.arrangeOpen=!S.arrangeOpen;render(true)}
   if(a==="arrmove"){const k=b.dataset.k,dd=+b.dataset.d;const o=todayOrder();const i=o.indexOf(k),j=i+dd;if(j<0||j>=o.length)return;[o[i],o[j]]=[o[j],o[i]];editSettings(st=>{st.todayOrder=o});
     requestAnimationFrame(()=>{const el=document.querySelector(`[data-act="arrmove"][data-k="${k}"][data-d="${dd}"]`);if(el&&!el.disabled)el.focus()})}
@@ -2400,6 +2469,7 @@ document.addEventListener("change",e=>{
   if(e.target&&e.target.dataset&&(e.target.dataset.act==="vpic"||e.target.dataset.act==="vboardpic")){const f=e.target.files&&e.target.files[0],act=e.target.dataset.act,vid=e.target.dataset.id;e.target.value="";if(!f)return;
     toast("Adding the picture…");shrinkImage(f,act==="vboardpic"?1400:420,act==="vboardpic"?0.72:0.7).then(url=>{if(act==="vboardpic")editDoc("visionimg",d=>{d.img=url});else editDoc("vision",d=>{const x=d.items.find(y=>y.id===vid);if(x)x.img=url});toast("Picture added")}).catch(()=>toast("That picture couldn't be read."));return}
   if(e.target&&e.target.id==="import-file"){const f=e.target.files&&e.target.files[0];e.target.value="";if(f)importData(f);return}
+  {const c=e.target.closest('[data-act="vsortrow"]');if(c&&S.vsort&&S.vsort.rows){const r=S.vsort.rows[+c.dataset.i];if(r){r.on=c.checked;render(true)}return}}
   {const c=e.target.closest('[data-act="prow"],[data-act="psplit"]');if(c&&S.pretty&&S.pretty.rows){const r=S.pretty.rows[+c.dataset.i];if(r){if(c.dataset.act==="prow")r.on=c.checked;else r.splitOn=c.checked;render(true)}return}}
   const b=e.target;if(!b.dataset||!b.dataset.act)return;const id=b.dataset.id;
   if(b.dataset.act==="habit")editDay(today(),d=>{if(b.checked)d.habits[id]=true;else delete d.habits[id]});
@@ -2412,6 +2482,8 @@ document.addEventListener("input",e=>{
   if(b.dataset.act==="note")editDay(vday(),d=>{d.note=b.value},{silent:true});
   if(b.dataset.act==="ex")editDay(vday(),d=>{d.body={...bodyOf(d),ex:b.value}},{silent:true});
   if(["vtitle","vnote","vmemory"].includes(b.dataset.act)){const vid=b.dataset.id,f2={vtitle:"title",vnote:"note",vmemory:"memory"}[b.dataset.act],val=b.value;if(f2!=="title"||val.trim())editDoc("vision",d=>{const x=d.items.find(y=>y.id===vid);if(x)x[f2]=f2==="title"?val.trim():val},{silent:true})}
+  if(b.dataset.act==="vsorttext"){S.vsortText=b.value}
+  if(b.dataset.act==="nudgetime"){const val=b.value;if(/^\d\d:\d\d$/.test(val))editSettings(st=>{st.nudgeTime=val;st.timeZone=TZ},{silent:true})}
   if(b.dataset.act==="pfield"){const pid=b.dataset.id,f2=b.dataset.f,val=b.value;if(f2!=="title"||val.trim())editDoc("longterm",d=>{const x=d.items.find(y=>y.id===pid);if(x)x[f2]=f2==="title"?val.trim():val},{silent:true})}
   if(b.dataset.act==="ltfield"){const f2=b.dataset.f,val=b.value;editDoc("longterm",d=>{d[f2]=val},{silent:true})}
   if(b.dataset.act==="yepillar"&&S.ye){S.ye.pillarNotes[b.dataset.id]=b.value}
@@ -2473,6 +2545,8 @@ document.addEventListener("submit",e=>{
   }
   if(f==="wishadd"){const t=v("wish-new"),k=v("wish-kind")||"want30";if(!t)return;clear("wish-new");addWish(t,k==="need"?"need":"want",k==="want60"?60:30)}
   if(f==="bladd"){const t=v("bl-new"),ty=v("bl-type")||"book";if(!t)return;clear("bl-new");editDoc("backlog",d=>{d.items.unshift({id:uid(),type:ty,title:t,status:"someday",added:today()})});toast("Added to your backlog")}
+  if(f==="remind"){const tid=form.dataset.id,pid=form.dataset.pid,val=v("rem-at");if(!val)return;const at=new Date(val);if(isNaN(at)){toast("Pick a date and time");return}S.remOpen=null;
+    call("update_task",{task_id:tid,task:{id:tid,projectId:pid,remindAt:at.toISOString()},client_timezone:TZ}).then(()=>{toast(`Reminder set for ${at.toLocaleString("en-GB",{weekday:"short",hour:"2-digit",minute:"2-digit"})}`);ttLoadAll()}).catch(e=>toast(ttErrToast(e)));return}
   if(f==="padd"){const t=v("padd-title");if(!t)return;const em=v("padd-emoji");S.pAdd=false;editDoc("longterm",d=>{d.items=[...(d.items||[]),{id:uid(),title:t,emoji:em,why:"",looks:"",years:{}}]});toast("Pillar added");return}
   if(f==="badd"){const t=v("badd-title");if(!t)return;const ar=v("badd-area")||"exp";clear("badd-title");editDoc("bucket",d=>{d.items=[...(d.items||[]),{id:uid(),title:t,area:ar,emoji:"",note:"",added:today(),lived:[]}]});toast("Added to your bucket list");return}
   if(f==="blive"){const bid=form.dataset.id,dt=v("bl-date")||today(),mem=v("bl-memory");S.bLiveForm=null;editDoc("bucket",d=>{const x=d.items.find(y=>y.id===bid);if(x)x.lived=[...(x.lived||[]),{date:dt,memory:mem}]});toast("You lived it. 🌿");return}
@@ -2614,7 +2688,7 @@ async function connectDb(){
     const col=db.collection("data/users/"+id);
     col.doc("settings").onSnapshot(snap=>{
       if(!pending.settings&&!inflight.settings){const d=snap.exists?snap.data():null;
-        S.settings={habits:d?.habits||[],reminders:d?.reminders||[],todos:d?.todos||[],projects:d?.projects||[],ttMap:d?.ttMap||null,favs:d?.favs||[],pnotes:d?.pnotes||{},todayOrder:d?.todayOrder||[],todayHidden:d?.todayHidden||[],exKinds:d?.exKinds||[],weighOff:!!d?.weighOff,skills:d?.skills||{},highlights:d?.highlights||{}};
+        S.settings={habits:d?.habits||[],reminders:d?.reminders||[],todos:d?.todos||[],projects:d?.projects||[],ttMap:d?.ttMap||null,favs:d?.favs||[],pnotes:d?.pnotes||{},nudgeOn:d?.nudgeOn,nudgeTime:d?.nudgeTime||"07:22",timeZone:d?.timeZone||TZ,todayOrder:d?.todayOrder||[],todayHidden:d?.todayHidden||[],exKinds:d?.exKinds||[],weighOff:!!d?.weighOff,skills:d?.skills||{},highlights:d?.highlights||{}};
         if(ttOn())ttLoadListsMissing();}
       S.settingsReady=true;render();
     },()=>{S.settingsReady=true;render()});
