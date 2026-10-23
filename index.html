@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261023000410"></script>
-<script type="module" src="boot.js?v=20261023000410"></script>
+<script src="shim.js?v=20261023212920"></script>
+<script type="module" src="boot.js?v=20261023212920"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -169,6 +169,18 @@ ul.list li.wrow{display:grid;gap:8px}
 .wmain{display:flex;align-items:center;gap:10px;min-width:0}
 .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
 .field{display:grid;gap:4px}
+.grocbtn{position:relative;font-size:1.05rem}
+.gcount{position:absolute;top:0;right:-2px;min-width:16px;height:16px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font:600 .62rem/16px var(--f-body);text-align:center;padding:0 3px}
+.gcount[hidden]{display:none}
+.groc{margin:0;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+.gaisle{display:grid;gap:2px}
+.glist li{align-items:center}
+.gdone label{text-decoration:line-through;color:var(--muted)}
+.gedit{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.gedit input[type=text]:first-child{flex:1 1 120px}
+.shopmode .glist li{padding:12px 0;font-size:1.08rem}
+.shopmode .check{width:26px;height:26px}
+li.done label{text-decoration:line-through;color:var(--muted)}
 .remp{white-space:nowrap}
 #nudge-time{width:auto}
 .pgrid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
@@ -433,7 +445,7 @@ body.has-undo .toast{bottom:calc(76px + env(safe-area-inset-bottom,0px))}
       <div class="eyebrow" id="dateline">Today</div>
       <h1 id="greeting">Steady Days</h1>
     </div>
-    <div class="hright"><div class="status" id="status">Connecting…</div><button type="button" class="gear" id="gear" data-act="settings" aria-label="Settings" aria-expanded="false"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z"/><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.6-2-3.4-2.4.9a7.7 7.7 0 0 0-2.6-1.5L14 2.4h-4l-.4 2.5a7.7 7.7 0 0 0-2.6 1.5l-2.4-.9-2 3.4 2 1.6a7.6 7.6 0 0 0 0 3l-2 1.6 2 3.4 2.4-.9a7.7 7.7 0 0 0 2.6 1.5l.4 2.5h4l.4-2.5a7.7 7.7 0 0 0 2.6-1.5l2.4.9 2-3.4Z"/></svg></button></div>
+    <div class="hright"><div class="status" id="status">Connecting…</div><button type="button" class="gear grocbtn" id="grocbtn" data-act="groc" aria-label="Groceries"><span aria-hidden="true">🛒</span><span class="gcount" id="gcount" hidden></span></button><button type="button" class="gear" id="gear" data-act="settings" aria-label="Settings" aria-expanded="false"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z"/><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.6-2-3.4-2.4.9a7.7 7.7 0 0 0-2.6-1.5L14 2.4h-4l-.4 2.5a7.7 7.7 0 0 0-2.6 1.5l-2.4-.9-2 3.4 2 1.6a7.6 7.6 0 0 0 0 3l-2 1.6 2 3.4 2.4-.9a7.7 7.7 0 0 0 2.6 1.5l.4 2.5h4l.4-2.5a7.7 7.7 0 0 0 2.6-1.5l2.4.9 2-3.4Z"/></svg></button></div>
   </header></div>
   <div class="banner" id="banner" hidden></div>
   <nav class="tabs" aria-label="Sections"><div class="row" id="tabs" role="tablist"></div></nav>
@@ -448,9 +460,9 @@ body.has-undo .toast{bottom:calc(76px + env(safe-area-inset-bottom,0px))}
 const STANDALONE=!!window.__sdStandalone;
 const TABS=[["today","Today"],["tasks","Tasks"],["journal","Journal"],["vision","Vision"],["lists","Lists"],["learn","Learn"]];
 /* each merged tab has a small switch at the top */
-const SUBS={tasks:[["todo","To-do"],["projects","Projects"]],journal:[["days","Days"],["week","Week"],["checkins","Check-ins"],["cooking","Cooking"],["dreams","Dreams"]],vision:[["year","This year"],["long","Long term"],["bucket","Bucket list"]],lists:[["lists","Lists"],["wishlist","Wishlist"],["backlog","Backlog"],["spending","Spending"]],learn:[["pointers","Pointers"],["reminders","Reminders"]]};
+const SUBS={tasks:[["todo","To-do"],["projects","Projects"]],journal:[["days","Days"],["week","Week"],["checkins","Check-ins"],["cooking","Cooking"],["dreams","Dreams"]],vision:[["year","This year"],["long","Long term"],["bucket","Bucket list"]],lists:[["lists","Lists"],["wishlist","Wishlist"],["backlog","Backlog"],["trips","Trips"],["spending","Spending"]],learn:[["pointers","Pointers"],["reminders","Reminders"]]};
 /* old tab names still work (saved tab, links, buttons) */
-const ROUTE={vision:["vision"],bucket:["vision","bucket"],dreams:["journal","dreams"],today:["today"],tasks:["tasks"],journal:["journal"],lists:["lists"],learn:["learn"],todo:["tasks","todo"],projects:["tasks","projects"],habits:["journal","checkins"],cooked:["journal","cooking"],purchases:["lists","spending"],wishlist:["lists","wishlist"],backlog:["lists","backlog"],reminders:["learn","reminders"],days:["journal","days"],week:["journal","week"],spending:["lists","spending"],pointers:["learn","pointers"],checkins:["journal","checkins"],cooking:["journal","cooking"]};
+const ROUTE={trips:["lists","trips"],vision:["vision"],bucket:["vision","bucket"],dreams:["journal","dreams"],today:["today"],tasks:["tasks"],journal:["journal"],lists:["lists"],learn:["learn"],todo:["tasks","todo"],projects:["tasks","projects"],habits:["journal","checkins"],cooked:["journal","cooking"],purchases:["lists","spending"],wishlist:["lists","wishlist"],backlog:["lists","backlog"],reminders:["learn","reminders"],days:["journal","days"],week:["journal","week"],spending:["lists","spending"],pointers:["learn","pointers"],checkins:["journal","checkins"],cooking:["journal","cooking"]};
 /* Pointers are paraphrased in plain words; source names the passage they draw on */
 const THEMES=[["tao","Taoism"],["stoic","Stoicism"],["focus","Focus"],["waste","Waste less"]];
 const POINTERS={
@@ -1038,9 +1050,11 @@ function render(force){
   deferred=false;
   const focusId=typing?a.id:null;
   renderTabs();header();setStatus();
-  $("#view").innerHTML=pageHtml()+(S.settingsOpen?`<div class="modal" role="dialog" aria-modal="true" aria-label="Settings"><button type="button" class="modal-bg" data-act="settings" aria-label="Close settings" tabindex="-1"></button><div class="modal-in">${settingsPanel()}</div></div>`:"");
-  document.body.classList.toggle("modal-open",!!(S.settingsOpen||S.vOpen&&S.tab==="vision"&&curSub("vision")==="year"||S.bOpen&&S.tab==="vision"||S.pOpen&&S.tab==="vision"||S.ye||S.pastView));
+  $("#view").innerHTML=pageHtml()+(S.settingsOpen?`<div class="modal" role="dialog" aria-modal="true" aria-label="Settings"><button type="button" class="modal-bg" data-act="settings" aria-label="Close settings" tabindex="-1"></button><div class="modal-in">${settingsPanel()}</div></div>`:"")
+    +(S.grocOpen?`<div class="modal" role="dialog" aria-modal="true" aria-label="Groceries"><button type="button" class="modal-bg" data-act="groc" aria-label="Close groceries" tabindex="-1"></button><div class="modal-in">${grocPanel()}</div></div>`:"");
+  document.body.classList.toggle("modal-open",!!(S.settingsOpen||S.grocOpen||S.vOpen&&S.tab==="vision"&&curSub("vision")==="year"||S.bOpen&&S.tab==="vision"||S.pOpen&&S.tab==="vision"||S.ye||S.pastView));
   const g=document.getElementById("gear");if(g)g.setAttribute("aria-expanded",String(!!S.settingsOpen));
+  {const gc=document.getElementById("gcount"),n=gItems().filter(x=>!x.done).length;if(gc){gc.hidden=!n;gc.textContent=n}}
   if(focusId){const el=document.getElementById(focusId);if(el)el.focus()}
 }
 const V={};
@@ -1192,11 +1206,11 @@ V.today=()=>{
   <span class="grp">Reflect</span>${reflectCard(d,true)}${footerExtras()}`;
   const R={pointer:()=>pointerCard(pointerOfDay(),true),vision:visionToday,"g-do":()=>`<span class="grp">Do</span>`,tasks:todayTasks,workout:workoutCard,
     "g-notice":()=>`<span class="grp">Notice</span>`,mood:()=>moodCard(d,false),checkin:checkinCard,weigh:weighCard,ate:ateCard,wishcheck:wishCheckCard,
-    "g-reflect":()=>`<span class="grp">Reflect</span>`,dream:dreamToday,reflect:()=>reflectCard(d,false),extras:footerExtras};
+    "g-reflect":()=>`<span class="grp">Reflect</span>`,dream:dreamToday,trip:tripToday,groc:grocToday,reflect:()=>reflectCard(d,false),extras:footerExtras};
   return recapPromptCard()+todayOrder().filter(k=>!(S.settings.todayHidden||[]).includes(k)).map(k=>R[k]()).join("\n");
 };
 /* Today's blocks, in your order (Settings → Arrange Today). New blocks appear in their default place. */
-const TODAY_BLOCKS=[["pointer","Today's pointer"],["vision","Vision tile"],["g-do","“Do” heading"],["tasks","Top 3 and today's tasks"],["workout","Steady 10 workout"],["g-notice","“Notice” heading"],["dream","Morning dream note (until noon)"],["mood","Mood"],["checkin","Check-in (exercise, water, fruit)"],["weigh","Weekly weigh-in"],["ate","What I ate"],["wishcheck","Wishlist “still want it?”"],["g-reflect","“Reflect” heading"],["reflect","Reflection and gratitude"],["extras","Links, project progress, past days"]];
+const TODAY_BLOCKS=[["pointer","Today's pointer"],["vision","Vision tile"],["trip","Trip countdown"],["g-do","“Do” heading"],["tasks","Top 3 and today's tasks"],["workout","Steady 10 workout"],["g-notice","“Notice” heading"],["dream","Morning dream note (until noon)"],["mood","Mood"],["checkin","Check-in (exercise, water, fruit)"],["weigh","Weekly weigh-in"],["ate","What I ate"],["groc","Groceries"],["wishcheck","Wishlist “still want it?”"],["g-reflect","“Reflect” heading"],["reflect","Reflection and gratitude"],["extras","Links, project progress, past days"]];
 function todayOrder(){
   const def=TODAY_BLOCKS.map(x=>x[0]);const mine=(S.settings.todayOrder||[]).filter(k=>def.includes(k));
   def.forEach((k,i)=>{if(!mine.includes(k)){const prev=def.slice(0,i).reverse().find(x=>mine.includes(x));mine.splice(prev?mine.indexOf(prev)+1:0,0,k)}});
@@ -1445,7 +1459,7 @@ V.lists=()=>{
   if(!MCP||S.tt.state==="off")return `<section class="block card"><h2>Lists</h2><p class="empty">Your TickTick lists show here when TickTick is available in this view.</p></section>`;
   if(S.tt.state==="error")return `<section class="block card"><h2>Lists</h2>${ttErrBox(S.tt.err)}</section>`;
   if(!S.tt.projects.length)return `<section class="block card"><h2>Lists</h2><p class="empty">Loading your lists…</p></section>`;
-  const m=ttMap();const roles=ROLES.filter(r=>m[r[0]]&&r[0]!=="wishlist"&&!(r[0]==="bucket"&&S.bucket.imported));
+  const m=ttMap();const roles=ROLES.filter(r=>m[r[0]]&&r[0]!=="wishlist"&&!(r[0]==="bucket"&&S.bucket.imported)&&!(r[0]==="travel"&&S.trips.imported));
   if(!roles.some(r=>r[0]===S.listRole)&&roles.length)S.listRole=roles[0][0];
   const role=S.listRole,id=m[role],L=id&&S.tt.lists[id];
   const ts=L?L.tasks.filter(t=>t.kind!=="NOTE"&&!L.tasks.some(x=>x.parentId===t.id)):[];
@@ -1527,7 +1541,7 @@ V.cooked=()=>{
 const ageDays=t=>t&&t.created?dayNum(today())-dayNum(key(new Date(t.created))):null;
 const norm=x=>String(x||"").replace(/\[([^\]]*)\]\([^)]*\)/g,"$1").trim().toLowerCase();
 const plainTitle=t=>String(t||"").replace(/\[([^\]]*)\]\([^)]*\)/g,"$1").trim();
-S.wish={items:[],imported:false};S.backlog={items:[]};S.vision={items:[]};S.visionimg={items:[]};S.bucket={items:[]};S.dreams={items:[]};S.longterm={items:[]};
+S.wish={items:[],imported:false};S.backlog={items:[]};S.vision={items:[]};S.visionimg={items:[]};S.bucket={items:[]};S.dreams={items:[]};S.longterm={items:[]};S.groceries={items:[]};S.trips={items:[]};
 function editDoc(id,fn,{silent=false}={}){const d=JSON.parse(JSON.stringify(S[id]));fn(d);S[id]=d;
   if(silent)saveLater(id,()=>queueWrite(id,{...S[id],kind:id}));else{queueWrite(id,{...d,kind:id});render(true)}}
 const daysTo=k=>dayNum(k)-dayNum(today());
@@ -1796,7 +1810,7 @@ async function exportData(){
   const tt=!STANDALONE&&S.tt&&S.tt.projects&&S.tt.projects.length?{projects:S.tt.projects.map(p=>({id:p.id,name:p.name})),lists:Object.fromEntries(Object.entries(S.tt.lists||{}).map(([k,L])=>[k,(L.tasks||[]).map(t=>({id:t.id,title:t.title,content:t.content,due:t.due,priority:t.priority,parentId:t.parentId,created:t.created}))]))}:null;
   const out={app:"Steady Days",format:1,exportedAt:new Date().toISOString(),timezone:TZ,
     settings:byId.settings?strip(byId.settings):S.settings,wishlist:byId.wish?strip(byId.wish):S.wish,backlog:byId.backlog?strip(byId.backlog):S.backlog,
-    days:days.map(d=>{const {id,...r}=d;return r}),tasks:tasksDump,vision:byId.vision?strip(byId.vision):(S.vision.items.length?S.vision:null),visionimg:byId.visionimg?strip(byId.visionimg):null,longterm:byId.longterm?strip(byId.longterm):(pItems().length?S.longterm:null),archives:Object.fromEntries(docs.filter(d=>d.kind==="varchive").map(d=>[d.id,strip(d)])),bucket:byId.bucket?strip(byId.bucket):(bItems().length?S.bucket:null),dreams:byId.dreams?strip(byId.dreams):((S.dreams.items||[]).length?S.dreams:null),ticktickSnapshot:tt};
+    days:days.map(d=>{const {id,...r}=d;return r}),tasks:tasksDump,vision:byId.vision?strip(byId.vision):(S.vision.items.length?S.vision:null),visionimg:byId.visionimg?strip(byId.visionimg):null,groceries:byId.groceries?strip(byId.groceries):(gItems().length?S.groceries:null),trips:byId.trips?strip(byId.trips):(trItems().length?S.trips:null),longterm:byId.longterm?strip(byId.longterm):(pItems().length?S.longterm:null),archives:Object.fromEntries(docs.filter(d=>d.kind==="varchive").map(d=>[d.id,strip(d)])),bucket:byId.bucket?strip(byId.bucket):(bItems().length?S.bucket:null),dreams:byId.dreams?strip(byId.dreams):((S.dreams.items||[]).length?S.dreams:null),ticktickSnapshot:tt};
   try{await DL.save({filename:`steady-days-${today()}.json`,data:new Blob([JSON.stringify(out,null,2)],{type:"application/json"})});toast("Saved. Keep it somewhere safe.")}
   catch(e){if(e&&e.code==="declined")return;toast(e&&e.code==="rate_limited"?"A save is already open":"Couldn't save the file here.")}
 }
@@ -1833,6 +1847,8 @@ async function runImport(){
   if(j.settings)steps.push(["settings",()=>col.doc("settings").set({...j.settings})]);
   if(j.wishlist)steps.push(["wishlist",()=>col.doc("wish").set({...j.wishlist,kind:"wish"})]);
   if(j.backlog)steps.push(["backlog",()=>col.doc("backlog").set({...j.backlog,kind:"backlog"})]);
+  if(j.groceries)steps.push(["groceries",()=>col.doc("groceries").set({...j.groceries,kind:"groceries"})]);
+  if(j.trips)steps.push(["trips",()=>col.doc("trips").set({...j.trips,kind:"trips"})]);
   if(j.longterm)steps.push(["long-term vision",()=>col.doc("longterm").set({...j.longterm,kind:"longterm"})]);
   if(j.links)steps.push(["links",async()=>{const ps=(j.longterm&&j.longterm.items)||pItems();const pid=t=>(ps.find(p=>p.title===t)||{}).id;
     editDoc("vision",d=>{(d.items||[]).forEach(x=>{const l=j.links.year&&j.links.year[x.title];if(l&&pid(l))x.pillar=pid(l)})});editDoc("bucket",d=>{(d.items||[]).forEach(x=>{const l=j.links.bucket&&j.links.bucket[x.title];if(l&&pid(l))x.pillar=pid(l)})})}]);
@@ -2140,6 +2156,123 @@ V.dreams=()=>{
     ${more?`<button class="btn ghost" data-act="showall" data-id="dreams">Show all ${list.length}</button>`:""}</section>`:""}`;
 };
 
+/* ---------- Groceries: one quick list, grouped by aisle, always a tap away (🛒 in the header) ---------- */
+const AISLES=[["veg","Fruit & veg","🥕"],["bakery","Bakery","🥖"],["dairy","Dairy & eggs","🥛"],["meat","Meat & fish","🐟"],["pantry","Pantry","🥫"],["frozen","Frozen","🧊"],["drinks","Drinks","🧃"],["household","Household","🧻"],["other","Other","🛒"]];
+const AISLE_WORDS={veg:"apple|banana|orange|lemon|lime|avocado|tomato|potato|onion|garlic|carrot|salad|lettuce|spinach|cucumber|pepper|courgette|zucchini|mushroom|broccoli|berries|strawberr|grape|pear|mango|pineapple|ginger|herb|basil|parsley|coriander|fruit|veg|pomme|banane|citron|avocat|tomate|patate|pomme de terre|oignon|ail|carotte|salade|laitue|épinard|concombre|poivron|champignon|brocoli|fraise|raisin|poire|mangue|ananas|gingembre|persil|fruits?|légume",
+  bakery:"bread|baguette|croissant|brioche|bagel|wrap|tortilla|bun|roll|pastry|pain|viennoiserie|pita",
+  dairy:"milk|cheese|butter|yogh?urt|cream|egg|feta|mozzarella|parmesan|lait|fromage|beurre|yaourt|crème|oeuf|œuf",
+  meat:"chicken|beef|pork|lamb|mince|sausage|bacon|ham|turkey|fish|salmon|tuna|cod|prawn|shrimp|poulet|boeuf|bœuf|porc|agneau|saucisse|jambon|dinde|poisson|saumon|thon|crevette",
+  pantry:"rice|pasta|noodle|flour|sugar|salt|oil|vinegar|sauce|ketchup|mayo|mustard|spice|cereal|oats|porridge|lentil|bean|chickpea|tin|can|honey|jam|peanut|nut|almond|coffee|tea|chocolate|biscuit|crisps|stock|yeast|riz|pâtes|farine|sucre|sel|huile|vinaigre|moutarde|épice|céréale|avoine|lentille|haricot|pois chiche|conserve|miel|confiture|café|thé|chocolat|biscuit|levure",
+  frozen:"frozen|ice cream|peas|surgelé|glace|petits pois",
+  drinks:"water|juice|soda|coke|beer|wine|squash|eau|jus|bière|vin",
+  household:"toilet|paper|tissue|soap|shampoo|toothpaste|detergent|washing|bin bag|sponge|nappies|diaper|wipes|cleaner|foil|cling|papier|savon|dentifrice|lessive|éponge|couches|lingettes|sac poubelle"};
+const gItems=()=>S.groceries.items||[];
+const gNorm=t=>String(t||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/s$/,"").trim();
+function gGuess(name){const n=String(name).toLowerCase();const learned=(S.groceries.aisleMap||{})[gNorm(name)];if(learned)return learned;
+  for(const [k,w] of Object.entries(AISLE_WORDS))if(new RegExp("(^|\\b|\\s)("+w+")","i").test(n))return k;return "other"}
+function gParse(t){t=String(t).trim();let m=/^(\d+(?:[.,]\d+)?\s*(?:x|×|kg|g|l|ml|cl|pack|packs)?)\s+(.+)$/i.exec(t);if(m)return {qty:m[1].replace(/\s+/g,""),name:m[2]};
+  m=/^(.+?)\s+(?:x|×)\s*(\d+)$/i.exec(t);if(m)return {qty:"×"+m[2],name:m[1]};return {qty:"",name:t}}
+function gAdd(text){const {qty,name}=gParse(text);if(!name)return;const nn=gNorm(name);
+  if(gItems().some(x=>!x.done&&gNorm(x.name)===nn)){toast(`${name} is already on the list`);return}
+  const h=(S.groceries.history||{})[nn];editDoc("groceries",d=>{d.items=[...(d.items||[]),{id:uid(),name:h?h.name:name,qty,aisle:h&&h.aisle||gGuess(name),added:today(),done:false}]})}
+function gUsuals(){const h=S.groceries.history||{};const on=new Set(gItems().filter(x=>!x.done).map(x=>gNorm(x.name)));return Object.entries(h).filter(([k])=>!on.has(k)).sort((a,b)=>b[1].count-a[1].count||(a[1].last<b[1].last?1:-1)).slice(0,10).map(([k,v])=>v)}
+function gSource(){if(!ttOn()||S.groceries.imported)return null;const p=S.tt.projects.find(x=>/shop|course|grocer/i.test(x.name||""));if(!p)return null;return {p,L:S.tt.lists[p.id]||null}}
+function grocPanel(){
+  const all=gItems(),open=all.filter(x=>!x.done),cart=all.filter(x=>x.done),mode=!!S.gShop;const src=gSource();
+  const plan=[0,1,2].flatMap(i=>{const k=addDays(today(),i);return (getDay(k).mealPlan||[]).map(m=>({k,t:m.text}))});
+  const row=x=>S.gEdit===x.id?`<li class="gedit"><input type="text" id="ge-name" data-act="gfield" data-f="name" data-id="${x.id}" value="${esc(x.name)}" aria-label="Item"><input type="text" id="ge-qty" data-act="gfield" data-f="qty" data-id="${x.id}" value="${esc(x.qty||"")}" placeholder="qty" aria-label="Quantity" style="max-width:70px"><select data-act="gaisle" data-id="${x.id}" aria-label="Aisle">${AISLES.map(([k,n])=>`<option value="${k}" ${x.aisle===k?"selected":""}>${n}</option>`).join("")}</select><button type="button" class="btn ghost sm" data-act="gedit" data-id="">Done</button><button type="button" class="x" data-act="gdel" data-id="${x.id}" aria-label="Remove ${esc(x.name)}">×</button></li>`
+    :`<li class="grow-row ${x.done?"gdone":""}"><input type="checkbox" class="check" id="g-${x.id}" data-act="gtick" data-id="${x.id}" ${x.done?"checked":""}><label for="g-${x.id}" class="grow">${esc(x.name)}${x.qty?` <span class="muted small">${esc(x.qty)}</span>`:""}</label>${mode?"":`<button type="button" class="linkbtn subtle tiny" data-act="gedit" data-id="${x.id}" aria-label="Edit ${esc(x.name)}">edit</button>`}</li>`;
+  const groups=AISLES.map(([k,n,e])=>{const xs=open.filter(x=>(x.aisle||"other")===k);return xs.length?`<div class="gaisle"><span class="eyebrow">${e} ${n}</span><ul class="list glist">${xs.map(row).join("")}</ul></div>`:""}).join("");
+  return `<section class="block card groc ${mode?"shopmode":""}"><div class="head"><h2>🛒 Groceries</h2><span class="btnrow"><button type="button" class="btn ${mode?"":"ghost "}sm" data-act="gshop" aria-pressed="${mode}">${mode?"Shopping ✓":"Shopping mode"}</button><button type="button" class="linkbtn" data-act="groc">Close</button></span></div>
+    ${mode?"":`<form class="addrow" data-form="gadd"><input type="text" id="gadd" list="g-hist" placeholder="Add an item, e.g. 2 avocados" autocomplete="off"><datalist id="g-hist">${Object.values(S.groceries.history||{}).map(h=>`<option value="${esc(h.name)}"></option>`).join("")}</datalist><button class="btn">Add</button></form>
+    ${gUsuals().length?`<div class="chips"><span class="muted small">Usuals</span>${gUsuals().map(h=>`<button type="button" class="chip" data-act="gusual" data-t="${esc(h.name)}">+ ${esc(h.name)}</button>`).join("")}</div>`:""}
+    ${plan.length?`<p class="muted small" style="margin:0">Planned meals: ${plan.map(x=>`${esc(x.t)} <span class="muted">(${fmtDay(x.k,{weekday:"short"})})</span>`).join(" · ")}</p>`:""}
+    ${src?`<div class="impbox"><p class="small" style="margin:0">Bring over your “${esc(src.p.name)}” list${src.L?` (${src.L.tasks.length})`:""}?</p><div><button type="button" class="btn ghost sm" data-act="${src.L?"gimport":"gload"}">${src.L?"Bring them over":"Look for it"}</button></div></div>`:""}`}
+    ${open.length?groups:`<p class="empty">${cart.length?"All in the trolley. 🌿":"Nothing to buy. Add something above, or tap a usual."}</p>`}
+    ${cart.length?`<div class="gaisle"><div class="head"><span class="eyebrow">In the trolley · ${cart.length}</span><button type="button" class="btn sm" data-act="gfinish">Done shopping</button></div><ul class="list glist">${cart.map(row).join("")}</ul></div>`:""}
+  </section>`;
+}
+function grocToday(){if(isPastView())return "";const n=gItems().filter(x=>!x.done).length;return `<button type="button" class="card foldrow" data-act="groc"><span class="fl">🛒 Groceries</span><span class="fv">${n?`${n} to buy`:"List is empty"}</span><span class="fa">Open</span></button>`}
+
+/* ---------- Trips: packing and planning, with to-dos that land on Today before you go ---------- */
+const PACK_TEMPLATES={Basics:["Passport / ID","Phone charger","Wallet & cards","Keys","Medication","Toothbrush & toiletries","Underwear & socks","Sleepwear","Headphones","Travel adapter"],
+  Beach:["Swimwear","Sunscreen","Sunglasses","Hat","Flip-flops","Beach towel","After-sun"],
+  City:["Comfortable walking shoes","Day bag","Light jacket","Power bank","Reusable water bottle"],
+  Cold:["Warm coat","Gloves","Scarf","Beanie","Thermal layers","Lip balm"],
+  "With a toddler":["Nappies / wipes","Snacks","Favourite toy or teddy","Spare clothes","Calpol / medicine","Bottle / cup","Buggy or carrier","Bedtime book"]};
+const trItems=()=>S.trips.items||[];
+const trFind=id=>trItems().find(x=>x.id===id);
+const nights=t=>t.start&&t.end?Math.max(0,dayNum(t.end)-dayNum(t.start)):null;
+function trStatus(t){if(t.memory||t.status==="past")return "past";if(!t.start)return "idea";if(t.end&&t.end<today())return "past";return "upcoming"}
+const trDue=(t,td)=>t.start?addDays(t.start,-(+td.daysBefore||0)):null;
+const trOpenTaskIds=()=>{const ids=new Set();Object.values(S.tt.lists||{}).forEach(L=>(L.tasks||[]).forEach(x=>ids.add(x.id)));(S.tt.today||[]).forEach(x=>ids.add(x.id));return ids};
+function trTodoDone(td){if(td.done)return true;if(!td.taskId)return false;const L=S.tt.lists.inbox;return !!(L&&!L.loading&&!L.err&&!trOpenTaskIds().has(td.taskId))}
+const packPct=t=>{const p=t.pack||[];return p.length?Math.round(p.filter(x=>x.done).length/p.length*100):0};
+/* create (or re-date) the real tasks behind "before you go" items once the trip has a start date */
+async function trSyncTasks(tid){const t=trFind(tid);if(!t||!t.start||!MCP)return;
+  for(const td of (t.todos||[])){const due=trDue(t,td);if(td.done)continue;
+    try{if(!td.taskId){const r=await call("create_task",{task:{title:`🧳 ${t.title}: ${td.title}`,isAllDay:true,dueDate:dueISO(due),startDate:dueISO(due),timeZone:TZ},client_timezone:TZ});const x=r&&(r.id?r:r.result);if(x&&x.id)editDoc("trips",d=>{const tt=d.items.find(y=>y.id===tid);const z=tt&&(tt.todos||[]).find(y=>y.id===td.id);if(z){z.taskId=x.id;z.due=due}},{silent:true})}
+      else if(td.due!==due){await call("update_task",{task_id:td.taskId,task:{id:td.taskId,projectId:"inbox",dueDate:dueISO(due),startDate:dueISO(due),isAllDay:true,timeZone:TZ},client_timezone:TZ});editDoc("trips",d=>{const tt=d.items.find(y=>y.id===tid);const z=tt&&(tt.todos||[]).find(y=>y.id===td.id);if(z)z.due=due},{silent:true})}}catch(e){}}
+  ttLoadAll();
+}
+function trCard(t){const st=trStatus(t),n=nights(t),td=(t.todos||[]),left=td.filter(x=>!trTodoDone(x)).length;
+  return `<li class="brow"><button type="button" class="etext grow brbtn" data-act="tropen" data-id="${t.id}"><span class="bem" aria-hidden="true">${t.img?`<img src="${esc(t.img)}" alt="">`:esc(t.emoji||"🧳")}</span><span class="tmain"><span>${esc(t.title)}</span>
+    <span class="muted small">${t.start?`${fmtDay(t.start,{day:"numeric",month:"short"})}${t.end?` – ${fmtDay(t.end,{day:"numeric",month:"short"})}`:""}${n!=null?` · ${n} night${n===1?"":"s"}`:""}`:"No dates yet"}${st==="upcoming"&&t.start>=today()?` · in ${dayNum(t.start)-dayNum(today())} days`:""}${st!=="idea"&&(t.pack||[]).length?` · ${packPct(t)}% packed`:""}${left&&st!=="past"?` · ${left} to-do${left>1?"s":""}`:""}</span></span></button></li>`}
+function tripToday(){if(isPastView())return "";const T=today();
+  const live=trItems().filter(t=>t.start&&t.start<=T&&(!t.end||t.end>=T)&&!t.memory)[0];
+  if(live){const dn=dayNum(T)-dayNum(live.start)+1,tot=live.end?dayNum(live.end)-dayNum(live.start)+1:null;return `<button type="button" class="card foldrow" data-act="tropen" data-id="${live.id}" data-go2="1"><span class="fl">${esc(live.emoji||"🧳")} ${esc(live.title)}</span><span class="fv">Enjoy it 🌿 · day ${dn}${tot?` of ${tot}`:""}</span><span class="fa">Open</span></button>`}
+  const after=trItems().filter(t=>t.end&&t.end<T&&!t.memory&&dayNum(T)-dayNum(t.end)<=7)[0];
+  if(after)return `<button type="button" class="card foldrow" data-act="tropen" data-id="${after.id}" data-go2="1"><span class="fl">${esc(after.emoji||"🧳")} ${esc(after.title)}</span><span class="fv">How was it?</span><span class="fa">Add a memory</span></button>`;
+  const soon=trItems().filter(t=>t.start&&t.start>T&&dayNum(t.start)-dayNum(T)<=14).sort((a,b)=>a.start<b.start?-1:1)[0];if(!soon)return "";
+  const d=dayNum(soon.start)-dayNum(T),left=(soon.todos||[]).filter(x=>!trTodoDone(x)).length;
+  return `<button type="button" class="card foldrow" data-act="tropen" data-id="${soon.id}" data-go2="1"><span class="fl">${esc(soon.emoji||"🧳")} ${esc(soon.title)}</span><span class="fv">in ${d} day${d===1?"":"s"}${left?` · ${left} to-do${left>1?"s":""}`:""}${(soon.pack||[]).length?` · ${packPct(soon)}% packed`:""}</span><span class="fa">Open</span></button>`}
+function trSource(){const id=ttOn()&&ttMap().travel;const L=id&&S.tt.lists[id];if(!L||L.err||S.trips.imported)return null;return L}
+function tripPage(t){
+  const st=trStatus(t),days=t.start&&t.end&&nights(t)<=60?[...Array(nights(t)+1)].map((_,i)=>addDays(t.start,i)):[];
+  const todos=(t.todos||[]).slice().sort((a,b)=>(+b.daysBefore||0)-(+a.daysBefore||0));const pack=t.pack||[];const plan=(t.plan||[]).slice().sort((a,b)=>((a.day||"9")+(a.time||"")).localeCompare((b.day||"9")+(b.time||"")));
+  const links=[...vItems().filter(x=>!x.done).map(x=>["v:"+x.id,"Vision: "+x.title]),...bItems().map(x=>["b:"+x.id,"Bucket list: "+x.title])];
+  const B=t.budget||{};const spent=(B.expenses||[]).reduce((a,x)=>a+(+x.amount||0),0);
+  const sec=(k,title,extra,body)=>`<section class="block card"><div class="head"><h2>${title}</h2>${extra||""}</div>${body}</section>`;
+  return `<div class="pastnote"><button type="button" class="btn ghost sm" data-act="trclose">← All trips</button><span class="mono muted small">${st==="idea"?"Idea":st==="past"?"Past":"Upcoming"}</span></div>
+  ${st==="past"&&!t.memory||t.end&&t.end<today()&&!t.memory?`<section class="block card import"><div class="head"><h2>How was ${esc(t.title)}?</h2></div><form data-form="trmemory" data-id="${t.id}" class="dform"><textarea id="tr-memory" rows="3" placeholder="A memory you want to keep"></textarea><div><button class="btn">Save memory</button></div></form>${t.link?`<p class="muted small" style="margin:0">This also ticks off its linked ${t.link.startsWith("v:")?"vision tile":"dream"}.</p>`:""}</section>`:""}
+  ${t.memory?`<section class="block card"><p class="vmotto" style="text-align:left">“${esc(t.memory)}”</p></section>`:""}
+  ${sec("basics",`${esc(t.emoji||"🧳")} ${esc(t.title)}`,"",`
+    <div class="addrow"><input type="text" id="tb-title" data-act="trfield" data-f="title" data-id="${t.id}" value="${esc(t.title)}" aria-label="Trip name"><input type="text" id="tb-emoji" data-act="trfield" data-f="emoji" data-id="${t.id}" value="${esc(t.emoji||"")}" placeholder="🧳" maxlength="4" aria-label="Emoji" style="max-width:64px"></div>
+    <div class="addrow"><input type="text" id="tb-place" data-act="trfield" data-f="place" data-id="${t.id}" value="${esc(t.place||"")}" placeholder="Where" aria-label="Place"></div>
+    <div class="addrow"><label class="kfl"><span>From</span><input type="date" data-act="trdate" data-f="start" data-id="${t.id}" value="${esc(t.start||"")}"></label><label class="kfl"><span>To</span><input type="date" data-act="trdate" data-f="end" data-id="${t.id}" value="${esc(t.end||"")}"></label></div>
+    ${links.length?`<label class="field"><span class="small muted">Part of your vision</span><select data-act="trlink" data-id="${t.id}"><option value="">Not linked</option>${links.map(([v,n])=>`<option value="${esc(v)}" ${t.link===v?"selected":""}>${esc(n)}</option>`).join("")}</select></label>`:""}`)}
+  ${sec("todo","Before you go",`<span class="mono muted">${todos.filter(trTodoDone).length}/${todos.length}</span>`,`
+    ${todos.length?`<ul class="list">${todos.map(td=>{const due=trDue(t,td),dn=trTodoDone(td);return `<li class="${dn?"done":""}"><input type="checkbox" class="check" id="trt-${td.id}" data-act="trtodo" data-trip="${t.id}" data-id="${td.id}" ${dn?"checked":""}><label class="grow" for="trt-${td.id}">${esc(td.title)}<span class="muted small"> · ${+td.daysBefore||0} day${(+td.daysBefore||0)===1?"":"s"} before${due?` (${fmtDay(due,{weekday:"short",day:"numeric",month:"short"})})`:""}</span></label><button type="button" class="x" data-act="trtododel" data-trip="${t.id}" data-id="${td.id}" aria-label="Remove">×</button></li>`}).join("")}</ul>`:`<p class="muted small" style="margin:0">Things to do before leaving. Each one lands on your Today list on its day.</p>`}
+    <form class="addrow" data-form="trtodo" data-id="${t.id}"><input type="text" id="trt-new" placeholder="e.g. Book airport parking" autocomplete="off"><label class="kfl" style="flex:0 0 96px"><span>Days before</span><input type="number" id="trt-days" min="0" value="7"></label><button class="btn">Add</button></form>
+    ${!t.start&&todos.length?`<p class="muted small" style="margin:0">Add the dates above and these will appear on Today on the right days.</p>`:""}`)}
+  ${sec("pack","Packing",pack.length?`<span class="mono muted">${packPct(t)}% packed</span>`:"",`
+    ${pack.length?`<div class="bar"><span style="width:${packPct(t)}%"></span></div><ul class="list">${pack.map(x=>`<li class="${x.done?"done":""}"><input type="checkbox" class="check" id="pk-${x.id}" data-act="trpack" data-trip="${t.id}" data-id="${x.id}" ${x.done?"checked":""}><label class="grow" for="pk-${x.id}">${esc(x.text)}</label><button type="button" class="x" data-act="trpackdel" data-trip="${t.id}" data-id="${x.id}" aria-label="Remove ${esc(x.text)}">×</button></li>`).join("")}</ul>`:""}
+    <form class="addrow" data-form="trpack" data-id="${t.id}"><input type="text" id="pk-new" placeholder="Add something to pack" autocomplete="off"><button class="btn">Add</button></form>
+    <div class="chips"><span class="muted small">Add a set</span>${Object.keys(PACK_TEMPLATES).map(k=>`<button type="button" class="chip" data-act="trtpl" data-id="${t.id}" data-k="${esc(k)}">+ ${esc(k)}</button>`).join("")}${trItems().filter(x=>x.id!==t.id&&(x.pack||[]).length).slice(0,2).map(x=>`<button type="button" class="chip" data-act="trcopy" data-id="${t.id}" data-from="${x.id}">Copy from ${esc(x.title)}</button>`).join("")}</div>
+    ${pack.some(x=>x.done)?`<div><button type="button" class="linkbtn subtle" data-act="trunpack" data-id="${t.id}">Untick all (for the trip home)</button></div>`:""}`)}
+  ${sec("plan","Plan","",`
+    ${plan.length?`<ul class="list">${plan.map(x=>`<li><span class="mono muted small" style="width:86px;flex:none">${x.day?fmtDay(x.day,{weekday:"short",day:"numeric"}):"Any day"}${x.time?` ${esc(x.time)}`:""}</span><span class="grow">${{booking:"🎫 ",place:"📍 ",note:""}[x.kind]||""}${esc(x.text)}</span><button type="button" class="x" data-act="trplandel" data-trip="${t.id}" data-id="${x.id}" aria-label="Remove">×</button></li>`).join("")}</ul>`:`<p class="muted small" style="margin:0">Places to see, bookings (times, confirmation codes, links) and notes, day by day.</p>`}
+    <form class="dform" data-form="trplan" data-id="${t.id}"><input type="text" id="pl-text" placeholder="e.g. Flight BA123 · ref XK7Q2P" autocomplete="off">
+      <div class="addrow"><select id="pl-day" aria-label="Day"><option value="">Any day</option>${days.map(k=>`<option value="${k}">${fmtDay(k,{weekday:"short",day:"numeric",month:"short"})}</option>`).join("")}</select><input type="time" id="pl-time" aria-label="Time" style="max-width:110px"><select id="pl-kind" aria-label="Kind"><option value="place">Place</option><option value="booking">Booking</option><option value="note">Note</option></select><button class="btn">Add</button></div></form>`)}
+  ${sec("budget","Budget",`<button type="button" class="switch" role="switch" aria-checked="${!!B.on}" aria-label="Track a budget" data-act="trbudget" data-id="${t.id}"><span></span></button>`,B.on?`
+    <div class="addrow"><label class="kfl"><span>Budget (£)</span><input type="number" step="any" data-act="trbudgettotal" data-id="${t.id}" id="trb-total" value="${esc(B.total??"")}"></label><div class="stat"><span class="eyebrow">Spent</span><span class="v">${money(spent)}</span></div>${+B.total?`<div class="stat"><span class="eyebrow">Left</span><span class="v">${money(+B.total-spent)}</span></div>`:""}</div>
+    ${(B.expenses||[]).length?`<ul class="list">${B.expenses.map(x=>`<li><span class="grow">${esc(x.text)}</span><span class="mono">${money(+x.amount||0)}</span><button type="button" class="x" data-act="trexpdel" data-trip="${t.id}" data-id="${x.id}" aria-label="Remove">×</button></li>`).join("")}</ul>`:""}
+    <form class="addrow" data-form="trexp" data-id="${t.id}"><input type="text" id="tre-text" placeholder="e.g. Hotel" autocomplete="off"><input type="number" step="0.01" id="tre-amt" placeholder="£" style="max-width:100px"><button class="btn">Add</button></form>`:`<p class="muted small" style="margin:0">Off. Switch on to track a total and a few expenses.</p>`)}
+  <div class="wfoot"><span></span><button type="button" class="btn ghost sm danger" data-act="trdel" data-id="${t.id}">${S.trDel===t.id?"Tap again to delete this trip":"Delete trip"}</button></div>`;
+}
+V.trips=()=>{
+  const t=S.tripOpen&&trFind(S.tripOpen);if(t)return tripPage(t);
+  const all=trItems();const up=all.filter(x=>trStatus(x)==="upcoming").sort((a,b)=>a.start<b.start?-1:1),ideas=all.filter(x=>trStatus(x)==="idea"),past=all.filter(x=>trStatus(x)==="past").sort((a,b)=>(a.start||"")<(b.start||"")?1:-1);
+  const src=trSource();
+  return `${recentBox(u=>u.kind==="doc"&&u.doc==="trips")}<section class="block card"><div class="head"><h2>Trips</h2><span class="mono muted">${up.length} upcoming</span></div>
+    <form class="addrow" data-form="tradd"><input type="text" id="tradd" placeholder="e.g. Kavala in May" autocomplete="off"><button class="btn">Add trip</button></form></section>
+  ${src&&src.tasks.length?`<section class="block card import"><div class="head"><h2>Bring over your travel ideas</h2><span class="mono muted">${src.tasks.length}</span></div><p class="small" style="margin:0">Your “${esc(projName(ttMap().travel))}” items become trip ideas you can plan later.</p><div><button type="button" class="btn" data-act="trimport">Bring them over</button></div></section>`:""}
+  ${up.length?`<section class="block card"><div class="head"><h2>Upcoming</h2></div><ul class="list">${up.map(trCard).join("")}</ul></section>`:""}
+  <section class="block card"><div class="head"><h2>Ideas</h2><span class="mono muted">${ideas.length}</span></div>${ideas.length?`<ul class="list">${ideas.map(trCard).join("")}</ul>`:`<p class="empty">Trips without dates live here until you plan them.</p>`}</section>
+  ${past.length?`<section class="block card"><div class="head"><h2>Past</h2></div><ul class="list">${past.map(trCard).join("")}</ul></section>`:""}`;
+};
+const editTrip=(id,fn,o)=>editDoc("trips",d=>{const t=d.items.find(x=>x.id===id);if(t)fn(t)},o);
+
 /* ---------- Purchases ---------- */
 V.purchases=()=>{
   const all=sortedDays().flatMap(d=>d.purchases.map(p=>({...p,date:d.date})));
@@ -2243,7 +2376,7 @@ V.journal=()=>{
 S.sub={};
 function go(id){const r=ROUTE[id]||["today"];S.tab=r[0];if(r[1])S.sub[r[0]]=r[1];try{localStorage.setItem("sd-tab",r[1]?r[1]:r[0])}catch(_){}}
 const curSub=t=>{const subs=SUBS[t];if(!subs)return null;const v=S.sub[t];return subs.some(x=>x[0]===v)?v:subs[0][0]};
-const PAGES={"vision:year":()=>V.vision(),"vision:long":()=>V.longterm(),"vision:bucket":()=>V.bucket(),"journal:dreams":()=>V.dreams(),"tasks:todo":()=>V.todo(),"tasks:projects":()=>V.projects(),"journal:days":()=>V.journal(),"journal:week":()=>recapCard()+highlightsCard(),"journal:checkins":()=>V.habits(),"journal:cooking":()=>V.cooked(),"lists:lists":()=>V.lists(),"lists:wishlist":()=>V.wishlist(),"lists:backlog":()=>V.backlog(),"lists:spending":()=>V.purchases(),"learn:pointers":()=>V.learn(),"learn:reminders":()=>V.reminders()};
+const PAGES={"lists:trips":()=>V.trips(),"vision:year":()=>V.vision(),"vision:long":()=>V.longterm(),"vision:bucket":()=>V.bucket(),"journal:dreams":()=>V.dreams(),"tasks:todo":()=>V.todo(),"tasks:projects":()=>V.projects(),"journal:days":()=>V.journal(),"journal:week":()=>recapCard()+highlightsCard(),"journal:checkins":()=>V.habits(),"journal:cooking":()=>V.cooked(),"lists:lists":()=>V.lists(),"lists:wishlist":()=>V.wishlist(),"lists:backlog":()=>V.backlog(),"lists:spending":()=>V.purchases(),"learn:pointers":()=>V.learn(),"learn:reminders":()=>V.reminders()};
 /* ---------- settings: the morning reminder lives in Claude as a scheduled task; Steady Days pauses/resumes it ---------- */
 const NUDGE_TASK="trig_01WNVxsADqavGjR9DpeSyvho";const CCR="Claude Code Remote";
 S.nudge={state:"idle",enabled:null,err:null};
@@ -2346,6 +2479,28 @@ document.addEventListener("click",e=>{
   if(a==="arrhide"){const k=b.dataset.k;editSettings(st=>{const h=new Set(st.todayHidden||[]);h.has(k)?h.delete(k):h.add(k);st.todayHidden=[...h]})}
   if(a==="arrreset"){editSettings(st=>{st.todayOrder=[];st.todayHidden=[]});toast("Today is back to its usual order")}
   if(a==="vopen"){S.vOpen=id;S.vDoneForm=null;S.vDel=null;if(b.dataset.go2){go("vision");S.sub.vision="year"}render(true)}
+  if(a==="groc"){S.grocOpen=!S.grocOpen;S.gEdit=null;if(!S.grocOpen&&S.gShop){S.gShop=false;keepAwake(false)}render(true);if(S.grocOpen){const el=document.getElementById("gadd");if(el&&!(window.matchMedia&&matchMedia("(pointer:coarse)").matches))el.focus()}}
+  if(a==="gshop"){S.gShop=!S.gShop;keepAwake(S.gShop);render(true)}
+  if(a==="gusual")gAdd(b.dataset.t);
+  if(a==="gedit"){S.gEdit=id||null;render(true)}
+  if(a==="gdel"){const i=gItems().findIndex(x=>x.id===id);if(i<0)return;S.gEdit=null;editDoc("groceries",d=>{d.items.splice(i,1)})}
+  if(a==="gfinish"){editDoc("groceries",d=>{const h=d.history||{};(d.items||[]).filter(x=>x.done).forEach(x=>{const k=gNorm(x.name);h[k]={name:x.name,aisle:x.aisle,count:((h[k]||{}).count||0)+1,last:today()}});d.history=h;d.items=(d.items||[]).filter(x=>!x.done)});toast("Shopping done. 🌿")}
+  if(a==="gimport"){const src=gSource();if(!src||!src.L)return;const have=new Set(gItems().map(x=>gNorm(x.name)));const add=src.L.tasks.filter(t=>t.kind!=="NOTE").map(t=>plainTitle(t.title)).filter(n=>n&&!have.has(gNorm(n))).map(n=>({id:uid(),...gParse(n),aisle:gGuess(gParse(n).name),added:today(),done:false}));
+    editDoc("groceries",d=>{d.items=[...(d.items||[]),...add];d.imported=true});toast(`Brought over ${add.length} item${add.length===1?"":"s"}`)}
+  if(a==="gload"){const src=gSource();if(src)ttLoadList(src.p.id).then(()=>render(true))}
+  if(a==="tropen"){S.tripOpen=id;S.trDel=null;if(b.dataset.go2){go("trips")}render(true);window.scrollTo({top:0});const L=S.tt.lists.inbox;if(!L&&MCP)ttLoadList("inbox").then(()=>render(true))}
+  if(a==="trclose"){S.tripOpen=null;render(true)}
+  if(a==="trimport"){const L=trSource();if(!L)return;const add=L.tasks.filter(t=>t.kind!=="NOTE").map(t=>({id:uid(),title:plainTitle(t.title),place:"",emoji:"🧳",note:String(t.content||""),todos:[],pack:[],plan:[],added:today()}));editDoc("trips",d=>{d.items=[...(d.items||[]),...add];d.imported=true});toast(`Brought over ${add.length} idea${add.length===1?"":"s"}`)}
+  if(a==="trtpl"){const k=b.dataset.k;editTrip(id,t=>{const have=new Set((t.pack||[]).map(x=>x.text.toLowerCase()));t.pack=[...(t.pack||[]),...PACK_TEMPLATES[k].filter(x=>!have.has(x.toLowerCase())).map(x=>({id:uid(),text:x,done:false}))]})}
+  if(a==="trcopy"){const from=trFind(b.dataset.from);if(!from)return;editTrip(id,t=>{const have=new Set((t.pack||[]).map(x=>x.text.toLowerCase()));t.pack=[...(t.pack||[]),...(from.pack||[]).filter(x=>!have.has(x.text.toLowerCase())).map(x=>({id:uid(),text:x.text,done:false}))]})}
+  if(a==="trunpack")editTrip(id,t=>{(t.pack||[]).forEach(x=>x.done=false)});
+  if(a==="trpackdel"){const tid=b.dataset.trip;editTrip(tid,t=>{t.pack=(t.pack||[]).filter(x=>x.id!==id)})}
+  if(a==="trplandel"){const tid=b.dataset.trip;editTrip(tid,t=>{t.plan=(t.plan||[]).filter(x=>x.id!==id)})}
+  if(a==="trexpdel"){const tid=b.dataset.trip;editTrip(tid,t=>{t.budget.expenses=(t.budget.expenses||[]).filter(x=>x.id!==id)})}
+  if(a==="trbudget")editTrip(id,t=>{t.budget={...(t.budget||{}),on:!(t.budget&&t.budget.on)}});
+  if(a==="trtododel"){const tid=b.dataset.trip;const t=trFind(tid);const td=t&&(t.todos||[]).find(x=>x.id===id);editTrip(tid,t2=>{t2.todos=(t2.todos||[]).filter(x=>x.id!==id)});if(td&&td.taskId&&!trTodoDone(td))call("update_task",{task_id:td.taskId,task:{id:td.taskId,projectId:"inbox",status:-1},client_timezone:TZ}).then(()=>ttLoadAll()).catch(()=>{})}
+  if(a!=="trdel")S.trDel=null;
+  if(a==="trdel"){if(S.trDel!==id){S.trDel=id;render(true);return}const i=trItems().findIndex(x=>x.id===id);const it=trItems()[i];S.trDel=null;S.tripOpen=null;editDoc("trips",d=>{d.items.splice(i,1)});pushUndo({kind:"doc",doc:"trips",item:it,index:i,label:`Deleted the trip “${it.title}”`})}
   if(a==="popen"){S.pOpen=id;S.pDel=null;if(b.dataset.go2){go("vision");S.sub.vision="long"}render(true)}
   if(a==="pclose"){S.pOpen=null;render(true)}
   if(a==="pzoom"){S.pZoom=!S.pZoom;render(true)}
@@ -2486,6 +2641,14 @@ document.addEventListener("click",e=>{
   if(a==="maptodo"){const m=ttMap();const cur=new Set(m.todo||[]);cur.has(id)?cur.delete(id):cur.add(id);editSettings(s=>{s.ttMap={...m,todo:[...cur]}});ttLoadLists()}
 });
 document.addEventListener("change",e=>{
+  {const d=e.target&&e.target.dataset||{};
+  if(d.act==="gtick"){const gid=d.id,on=e.target.checked;editDoc("groceries",x=>{const it=x.items.find(y=>y.id===gid);if(it)it.done=on});return}
+  if(d.act==="gaisle"){const gid=d.id,val=e.target.value;editDoc("groceries",x=>{const it=x.items.find(y=>y.id===gid);if(it){it.aisle=val;x.aisleMap={...(x.aisleMap||{}),[gNorm(it.name)]:val}}});return}
+  if(d.act==="trpack"){const tid=d.trip,pid=d.id,on=e.target.checked;editTrip(tid,t=>{const x=(t.pack||[]).find(y=>y.id===pid);if(x)x.done=on});return}
+  if(d.act==="trtodo"){const tid=d.trip,did=d.id,on=e.target.checked;const t=trFind(tid);const td=t&&(t.todos||[]).find(x=>x.id===did);editTrip(tid,t2=>{const x=(t2.todos||[]).find(y=>y.id===did);if(x)x.done=on});
+    if(td&&td.taskId)call(on?"complete_task":"update_task",on?{project_id:"inbox",task_id:td.taskId}:{task_id:td.taskId,task:{id:td.taskId,projectId:"inbox",status:0},client_timezone:TZ}).then(()=>ttLoadAll()).catch(()=>{});return}
+  if(d.act==="trdate"){const tid=d.id,f2=d.f,val=e.target.value;editTrip(tid,t=>{t[f2]=val;if(f2==="start"&&val&&(!t.end||t.end<val))t.end=val});trSyncTasks(tid);return}
+  if(d.act==="trlink"){const tid=d.id,val=e.target.value;editTrip(tid,t=>{t.link=val});return}}
   if(e.target&&e.target.dataset&&e.target.dataset.act==="bsel"){const bid=e.target.dataset.id,val=e.target.value,f2=e.target.dataset.f||"area";editDoc("bucket",d=>{const x=d.items.find(y=>y.id===bid);if(x)x[f2]=val});return}
   if(e.target&&e.target.dataset&&(e.target.dataset.act==="ppic"||e.target.dataset.act==="ltpic")){const f=e.target.files&&e.target.files[0],act=e.target.dataset.act,pid=e.target.dataset.id;e.target.value="";if(!f)return;
     shrinkImage(f,act==="ltpic"?1400:420,act==="ltpic"?0.72:0.7).then(url=>{if(act==="ltpic")editDoc("longterm",d=>{d.img=url});else editDoc("longterm",d=>{const x=d.items.find(y=>y.id===pid);if(x)x.img=url});toast("Picture added")}).catch(()=>toast("That picture couldn't be read."));return}
@@ -2509,6 +2672,9 @@ document.addEventListener("input",e=>{
   if(b.dataset.act==="note")editDay(vday(),d=>{d.note=b.value},{silent:true});
   if(b.dataset.act==="ex")editDay(vday(),d=>{d.body={...bodyOf(d),ex:b.value}},{silent:true});
   if(["vtitle","vnote","vmemory"].includes(b.dataset.act)){const vid=b.dataset.id,f2={vtitle:"title",vnote:"note",vmemory:"memory"}[b.dataset.act],val=b.value;if(f2!=="title"||val.trim())editDoc("vision",d=>{const x=d.items.find(y=>y.id===vid);if(x)x[f2]=f2==="title"?val.trim():val},{silent:true})}
+  if(b.dataset.act==="gfield"){const gid=b.dataset.id,f2=b.dataset.f,val=b.value;if(f2!=="name"||val.trim())editDoc("groceries",x=>{const it=x.items.find(y=>y.id===gid);if(it)it[f2]=val},{silent:true})}
+  if(b.dataset.act==="trfield"){const tid=b.dataset.id,f2=b.dataset.f,val=b.value;if(f2!=="title"||val.trim())editTrip(tid,t=>{t[f2]=val},{silent:true})}
+  if(b.dataset.act==="trbudgettotal"){const tid=b.dataset.id,val=b.value;editTrip(tid,t=>{t.budget={...(t.budget||{}),total:val===""?null:+val}},{silent:true})}
   if(b.dataset.act==="vsorttext"){S.vsortText=b.value}
   if(b.dataset.act==="nudgetime"){const val=b.value;if(/^\d\d:\d\d$/.test(val))editSettings(st=>{st.nudgeTime=val;st.timeZone=TZ},{silent:true})}
   if(b.dataset.act==="pfield"){const pid=b.dataset.id,f2=b.dataset.f,val=b.value;if(f2!=="title"||val.trim())editDoc("longterm",d=>{const x=d.items.find(y=>y.id===pid);if(x)x[f2]=f2==="title"?val.trim():val},{silent:true})}
@@ -2574,6 +2740,15 @@ document.addEventListener("submit",e=>{
   if(f==="bladd"){const t=v("bl-new"),ty=v("bl-type")||"book";if(!t)return;clear("bl-new");editDoc("backlog",d=>{d.items.unshift({id:uid(),type:ty,title:t,status:"someday",added:today()})});toast("Added to your backlog")}
   if(f==="remind"){const tid=form.dataset.id,pid=form.dataset.pid,val=v("rem-at");if(!val)return;const at=new Date(val);if(isNaN(at)){toast("Pick a date and time");return}S.remOpen=null;
     call("update_task",{task_id:tid,task:{id:tid,projectId:pid,remindAt:at.toISOString()},client_timezone:TZ}).then(()=>{toast(`Reminder set for ${at.toLocaleString("en-GB",{weekday:"short",hour:"2-digit",minute:"2-digit"})}`);ttLoadAll()}).catch(e=>toast(ttErrToast(e)));return}
+  if(f==="gadd"){const t=v("gadd");if(!t)return;clear("gadd");gAdd(t);setTimeout(()=>{const el=document.getElementById("gadd");if(el)el.focus()},0);return}
+  if(f==="tradd"){const t=v("tradd");if(!t)return;clear("tradd");const id=uid();editDoc("trips",d=>{d.items=[...(d.items||[]),{id,title:t,place:"",emoji:"🧳",todos:[],pack:[],plan:[],added:today()}]});S.tripOpen=id;render(true);return}
+  if(f==="trtodo"){const tid=form.dataset.id,t=v("trt-new"),n=Math.max(0,parseInt(v("trt-days"))||0);if(!t)return;clear("trt-new");editTrip(tid,x=>{x.todos=[...(x.todos||[]),{id:uid(),title:t,daysBefore:n,done:false}]});trSyncTasks(tid);return}
+  if(f==="trpack"){const tid=form.dataset.id,t=v("pk-new");if(!t)return;clear("pk-new");editTrip(tid,x=>{x.pack=[...(x.pack||[]),{id:uid(),text:t,done:false}]});setTimeout(()=>{const el=document.getElementById("pk-new");if(el)el.focus()},0);return}
+  if(f==="trplan"){const tid=form.dataset.id,t=v("pl-text");if(!t)return;const it={id:uid(),text:t,day:v("pl-day"),time:v("pl-time"),kind:v("pl-kind")||"place"};clear("pl-text");editTrip(tid,x=>{x.plan=[...(x.plan||[]),it]});return}
+  if(f==="trexp"){const tid=form.dataset.id,t=v("tre-text"),amt=parseFloat(v("tre-amt"));if(!t||!(amt>=0))return;clear("tre-text");clear("tre-amt");editTrip(tid,x=>{x.budget={...(x.budget||{on:true}),expenses:[...((x.budget||{}).expenses||[]),{id:uid(),text:t,amount:Math.round(amt*100)/100}]}});return}
+  if(f==="trmemory"){const tid=form.dataset.id,mem=v("tr-memory");const t=trFind(tid);if(!t)return;editTrip(tid,x=>{x.memory=mem||"✓";x.status="past"});
+    if(t.link){const [kind,lid]=t.link.split(":");const dt=t.end||today();if(kind==="v")editDoc("vision",d=>{const x=d.items.find(y=>y.id===lid);if(x&&!x.done){x.done=true;x.doneAt=dt;x.memory=mem}});else editDoc("bucket",d=>{const x=d.items.find(y=>y.id===lid);if(x)x.lived=[...(x.lived||[]),{date:dt,memory:mem}]})}
+    toast("Memory saved. 🌿");return}
   if(f==="padd"){const t=v("padd-title");if(!t)return;const em=v("padd-emoji");S.pAdd=false;editDoc("longterm",d=>{d.items=[...(d.items||[]),{id:uid(),title:t,emoji:em,why:"",looks:"",years:{}}]});toast("Pillar added");return}
   if(f==="badd"){const t=v("badd-title");if(!t)return;const ar=v("badd-area")||"exp";clear("badd-title");editDoc("bucket",d=>{d.items=[...(d.items||[]),{id:uid(),title:t,area:ar,emoji:"",note:"",added:today(),lived:[]}]});toast("Added to your bucket list");return}
   if(f==="blive"){const bid=form.dataset.id,dt=v("bl-date")||today(),mem=v("bl-memory");S.bLiveForm=null;editDoc("bucket",d=>{const x=d.items.find(y=>y.id===bid);if(x)x.lived=[...(x.lived||[]),{date:dt,memory:mem}]});toast("You lived it. 🌿");return}
@@ -2613,7 +2788,7 @@ document.addEventListener("submit",e=>{
   const first=form.querySelector("input[type=text]");if(first){setTimeout(()=>{const el=document.getElementById(first.id);if(el)el.focus()},0)}
 });
 /* Escape closes the settings pop-up or an open vision tile */
-document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(S.settingsOpen){S.settingsOpen=false;S.arrangeOpen=false;render(true)}else if(S.vOpen){S.vOpen=null;render(true)}else if(S.bOpen){S.bOpen=null;render(true)}else if(S.pOpen){S.pOpen=null;render(true)}else if(S.ye){S.ye=null;render(true)}else if(S.pastView){S.pastView=null;render(true)}else if(S.vZoom){S.vZoom=false;render(true)}});
+document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(S.grocOpen){S.grocOpen=false;S.gShop=false;keepAwake(false);render(true)}else if(S.settingsOpen){S.settingsOpen=false;S.arrangeOpen=false;render(true)}else if(S.vOpen){S.vOpen=null;render(true)}else if(S.bOpen){S.bOpen=null;render(true)}else if(S.pOpen){S.pOpen=null;render(true)}else if(S.ye){S.ye=null;render(true)}else if(S.pastView){S.pastView=null;render(true)}else if(S.vZoom){S.vZoom=false;render(true)}});
 /* new day: switch over by itself, even if the page stayed open */
 let lastDay=today();
 function checkNewDay(){
@@ -2694,6 +2869,8 @@ function startDemo(){
   S.bucket={imported:true,items:[{id:uid(),title:"See the northern lights",area:"places",emoji:"🌌",step:"Check the best months to go to Tromsø",lived:[]},{id:uid(),title:"Learn to surf",area:"skills",emoji:"🏄",lived:[]},
     {id:uid(),title:"Run a marathon",area:"exp",emoji:"🏅",lived:[{date:addDays(T,-200),memory:"Cried at the finish line"}]},{id:uid(),title:"Kyoto in autumn",area:"places",emoji:"🍁",repeat:true,lived:[{date:addDays(T,-900),memory:"The maple leaves"}]},{id:uid(),title:"Build a canoe",area:"make",emoji:"🛶",lived:[]}]};
   S.longterm={title:"10-year vision",horizon:String(new Date().getFullYear()+10),items:[{id:"lp1",title:"A home with a garden",emoji:"🏡",why:"Roots and room to grow",years:{}},{id:"lp2",title:"Fluent in Spanish",emoji:"🗣️",years:{}},{id:"lp3",title:"Strong and healthy at 50",emoji:"💪",why:"To keep up with the people I love",years:{}}]};
+  S.groceries={imported:true,items:[{id:uid(),name:"Avocados",qty:"2",aisle:"veg",done:false},{id:uid(),name:"Oat milk",qty:"",aisle:"dairy",done:false},{id:uid(),name:"Sourdough",qty:"",aisle:"bakery",done:false},{id:uid(),name:"Pasta",qty:"",aisle:"pantry",done:true}],history:{banana:{name:"Bananas",aisle:"veg",count:6,last:addDays(T,-3)},egg:{name:"Eggs",aisle:"dairy",count:5,last:addDays(T,-5)},coffee:{name:"Coffee",aisle:"pantry",count:3,last:addDays(T,-9)}}};
+  S.trips={imported:true,items:[{id:uid(),title:"Lisbon long weekend",place:"Lisbon",emoji:"🇵🇹",start:addDays(T,9),end:addDays(T,12),todos:[{id:uid(),title:"Book airport parking",daysBefore:7},{id:uid(),title:"Check passports",daysBefore:14,done:true}],pack:PACK_TEMPLATES.Basics.slice(0,6).map((x,i)=>({id:uid(),text:x,done:i<2})),plan:[{id:uid(),day:addDays(T,9),time:"09:40",kind:"booking",text:"Flight TP1351 · ref QX7P2L"},{id:uid(),day:addDays(T,10),kind:"place",text:"Belém tower and pastéis"}]},{id:uid(),title:"Kyoto in autumn",emoji:"🍁",todos:[],pack:[],plan:[]}]};
   S.dreams={imported:true,items:[{id:uid(),date:addDays(T,-1),text:"I was flying over a city made of bread. Nobody seemed surprised.",tags:["vivid","funny"]},{id:uid(),date:addDays(T,-4),text:"Back in my old school, looking for a classroom that kept moving.",tags:["recurring"]}]};
   S.vision.items.push({id:uid(),title:"More quiet moments",area:"Body & mind",emoji:"🕯️",kind:"intention",prompt:"5 minutes of silence today?"},{id:uid(),title:"Reach 76 kg",area:"Body & mind",emoji:"⚖️",kind:"goal",metric:"weight",start:79.2,target:76},{id:uid(),title:"Move most days",area:"Body & mind",emoji:"🏃",kind:"habit",link:"exercise",target:20});
   S.settingsReady=true;S.live=false;MCP=demoMcp(st);
@@ -2719,7 +2896,7 @@ async function connectDb(){
         if(ttOn())ttLoadListsMissing();}
       S.settingsReady=true;render();
     },()=>{S.settingsReady=true;render()});
-    ["wish","backlog","vision","visionimg","bucket","dreams","longterm"].forEach(id=>col.doc(id).onSnapshot(snap=>{
+    ["wish","backlog","vision","visionimg","bucket","dreams","longterm","groceries","trips"].forEach(id=>col.doc(id).onSnapshot(snap=>{
       if(!pending[id]&&!inflight[id]&&!debounced[id]){const d=snap.exists?snap.data():null;S[id]={...S[id],...(d||{}),items:(d&&d.items)||[]}}
       render();
     },()=>{}));
