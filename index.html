@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261023212920"></script>
-<script type="module" src="boot.js?v=20261023212920"></script>
+<script src="shim.js?v=20261023213636"></script>
+<script type="module" src="boot.js?v=20261023213636"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -169,6 +169,9 @@ ul.list li.wrow{display:grid;gap:8px}
 .wmain{display:flex;align-items:center;gap:10px;min-width:0}
 .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
 .field{display:grid;gap:4px}
+.nsheet textarea{min-height:40dvh}
+#n-q{width:100%}
+.nlist .tmain{gap:1px}
 .grocbtn{position:relative;font-size:1.05rem}
 .gcount{position:absolute;top:0;right:-2px;min-width:16px;height:16px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font:600 .62rem/16px var(--f-body);text-align:center;padding:0 3px}
 .gcount[hidden]{display:none}
@@ -460,9 +463,9 @@ body.has-undo .toast{bottom:calc(76px + env(safe-area-inset-bottom,0px))}
 const STANDALONE=!!window.__sdStandalone;
 const TABS=[["today","Today"],["tasks","Tasks"],["journal","Journal"],["vision","Vision"],["lists","Lists"],["learn","Learn"]];
 /* each merged tab has a small switch at the top */
-const SUBS={tasks:[["todo","To-do"],["projects","Projects"]],journal:[["days","Days"],["week","Week"],["checkins","Check-ins"],["cooking","Cooking"],["dreams","Dreams"]],vision:[["year","This year"],["long","Long term"],["bucket","Bucket list"]],lists:[["lists","Lists"],["wishlist","Wishlist"],["backlog","Backlog"],["trips","Trips"],["spending","Spending"]],learn:[["pointers","Pointers"],["reminders","Reminders"]]};
+const SUBS={tasks:[["todo","To-do"],["projects","Projects"]],journal:[["days","Days"],["week","Week"],["checkins","Check-ins"],["cooking","Cooking"],["dreams","Dreams"]],vision:[["year","This year"],["long","Long term"],["bucket","Bucket list"]],lists:[["lists","Lists"],["notes","Notes"],["wishlist","Wishlist"],["backlog","Backlog"],["trips","Trips"],["spending","Spending"]],learn:[["pointers","Pointers"],["reminders","Reminders"]]};
 /* old tab names still work (saved tab, links, buttons) */
-const ROUTE={trips:["lists","trips"],vision:["vision"],bucket:["vision","bucket"],dreams:["journal","dreams"],today:["today"],tasks:["tasks"],journal:["journal"],lists:["lists"],learn:["learn"],todo:["tasks","todo"],projects:["tasks","projects"],habits:["journal","checkins"],cooked:["journal","cooking"],purchases:["lists","spending"],wishlist:["lists","wishlist"],backlog:["lists","backlog"],reminders:["learn","reminders"],days:["journal","days"],week:["journal","week"],spending:["lists","spending"],pointers:["learn","pointers"],checkins:["journal","checkins"],cooking:["journal","cooking"]};
+const ROUTE={notes:["lists","notes"],trips:["lists","trips"],vision:["vision"],bucket:["vision","bucket"],dreams:["journal","dreams"],today:["today"],tasks:["tasks"],journal:["journal"],lists:["lists"],learn:["learn"],todo:["tasks","todo"],projects:["tasks","projects"],habits:["journal","checkins"],cooked:["journal","cooking"],purchases:["lists","spending"],wishlist:["lists","wishlist"],backlog:["lists","backlog"],reminders:["learn","reminders"],days:["journal","days"],week:["journal","week"],spending:["lists","spending"],pointers:["learn","pointers"],checkins:["journal","checkins"],cooking:["journal","cooking"]};
 /* Pointers are paraphrased in plain words; source names the passage they draw on */
 const THEMES=[["tao","Taoism"],["stoic","Stoicism"],["focus","Focus"],["waste","Waste less"]];
 const POINTERS={
@@ -1052,7 +1055,7 @@ function render(force){
   renderTabs();header();setStatus();
   $("#view").innerHTML=pageHtml()+(S.settingsOpen?`<div class="modal" role="dialog" aria-modal="true" aria-label="Settings"><button type="button" class="modal-bg" data-act="settings" aria-label="Close settings" tabindex="-1"></button><div class="modal-in">${settingsPanel()}</div></div>`:"")
     +(S.grocOpen?`<div class="modal" role="dialog" aria-modal="true" aria-label="Groceries"><button type="button" class="modal-bg" data-act="groc" aria-label="Close groceries" tabindex="-1"></button><div class="modal-in">${grocPanel()}</div></div>`:"");
-  document.body.classList.toggle("modal-open",!!(S.settingsOpen||S.grocOpen||S.vOpen&&S.tab==="vision"&&curSub("vision")==="year"||S.bOpen&&S.tab==="vision"||S.pOpen&&S.tab==="vision"||S.ye||S.pastView));
+  document.body.classList.toggle("modal-open",!!(S.settingsOpen||S.grocOpen||S.nOpen&&S.tab==="lists"||S.vOpen&&S.tab==="vision"&&curSub("vision")==="year"||S.bOpen&&S.tab==="vision"||S.pOpen&&S.tab==="vision"||S.ye||S.pastView));
   const g=document.getElementById("gear");if(g)g.setAttribute("aria-expanded",String(!!S.settingsOpen));
   {const gc=document.getElementById("gcount"),n=gItems().filter(x=>!x.done).length;if(gc){gc.hidden=!n;gc.textContent=n}}
   if(focusId){const el=document.getElementById(focusId);if(el)el.focus()}
@@ -1541,7 +1544,7 @@ V.cooked=()=>{
 const ageDays=t=>t&&t.created?dayNum(today())-dayNum(key(new Date(t.created))):null;
 const norm=x=>String(x||"").replace(/\[([^\]]*)\]\([^)]*\)/g,"$1").trim().toLowerCase();
 const plainTitle=t=>String(t||"").replace(/\[([^\]]*)\]\([^)]*\)/g,"$1").trim();
-S.wish={items:[],imported:false};S.backlog={items:[]};S.vision={items:[]};S.visionimg={items:[]};S.bucket={items:[]};S.dreams={items:[]};S.longterm={items:[]};S.groceries={items:[]};S.trips={items:[]};
+S.wish={items:[],imported:false};S.backlog={items:[]};S.vision={items:[]};S.visionimg={items:[]};S.bucket={items:[]};S.dreams={items:[]};S.longterm={items:[]};S.groceries={items:[]};S.trips={items:[]};S.notes={items:[]};
 function editDoc(id,fn,{silent=false}={}){const d=JSON.parse(JSON.stringify(S[id]));fn(d);S[id]=d;
   if(silent)saveLater(id,()=>queueWrite(id,{...S[id],kind:id}));else{queueWrite(id,{...d,kind:id});render(true)}}
 const daysTo=k=>dayNum(k)-dayNum(today());
@@ -1810,7 +1813,7 @@ async function exportData(){
   const tt=!STANDALONE&&S.tt&&S.tt.projects&&S.tt.projects.length?{projects:S.tt.projects.map(p=>({id:p.id,name:p.name})),lists:Object.fromEntries(Object.entries(S.tt.lists||{}).map(([k,L])=>[k,(L.tasks||[]).map(t=>({id:t.id,title:t.title,content:t.content,due:t.due,priority:t.priority,parentId:t.parentId,created:t.created}))]))}:null;
   const out={app:"Steady Days",format:1,exportedAt:new Date().toISOString(),timezone:TZ,
     settings:byId.settings?strip(byId.settings):S.settings,wishlist:byId.wish?strip(byId.wish):S.wish,backlog:byId.backlog?strip(byId.backlog):S.backlog,
-    days:days.map(d=>{const {id,...r}=d;return r}),tasks:tasksDump,vision:byId.vision?strip(byId.vision):(S.vision.items.length?S.vision:null),visionimg:byId.visionimg?strip(byId.visionimg):null,groceries:byId.groceries?strip(byId.groceries):(gItems().length?S.groceries:null),trips:byId.trips?strip(byId.trips):(trItems().length?S.trips:null),longterm:byId.longterm?strip(byId.longterm):(pItems().length?S.longterm:null),archives:Object.fromEntries(docs.filter(d=>d.kind==="varchive").map(d=>[d.id,strip(d)])),bucket:byId.bucket?strip(byId.bucket):(bItems().length?S.bucket:null),dreams:byId.dreams?strip(byId.dreams):((S.dreams.items||[]).length?S.dreams:null),ticktickSnapshot:tt};
+    days:days.map(d=>{const {id,...r}=d;return r}),tasks:tasksDump,vision:byId.vision?strip(byId.vision):(S.vision.items.length?S.vision:null),visionimg:byId.visionimg?strip(byId.visionimg):null,notes:byId.notes?strip(byId.notes):(nItems().length?S.notes:null),groceries:byId.groceries?strip(byId.groceries):(gItems().length?S.groceries:null),trips:byId.trips?strip(byId.trips):(trItems().length?S.trips:null),longterm:byId.longterm?strip(byId.longterm):(pItems().length?S.longterm:null),archives:Object.fromEntries(docs.filter(d=>d.kind==="varchive").map(d=>[d.id,strip(d)])),bucket:byId.bucket?strip(byId.bucket):(bItems().length?S.bucket:null),dreams:byId.dreams?strip(byId.dreams):((S.dreams.items||[]).length?S.dreams:null),ticktickSnapshot:tt};
   try{await DL.save({filename:`steady-days-${today()}.json`,data:new Blob([JSON.stringify(out,null,2)],{type:"application/json"})});toast("Saved. Keep it somewhere safe.")}
   catch(e){if(e&&e.code==="declined")return;toast(e&&e.code==="rate_limited"?"A save is already open":"Couldn't save the file here.")}
 }
@@ -1847,6 +1850,7 @@ async function runImport(){
   if(j.settings)steps.push(["settings",()=>col.doc("settings").set({...j.settings})]);
   if(j.wishlist)steps.push(["wishlist",()=>col.doc("wish").set({...j.wishlist,kind:"wish"})]);
   if(j.backlog)steps.push(["backlog",()=>col.doc("backlog").set({...j.backlog,kind:"backlog"})]);
+  if(j.notes)steps.push(["notes",()=>col.doc("notes").set({...j.notes,kind:"notes"})]);
   if(j.groceries)steps.push(["groceries",()=>col.doc("groceries").set({...j.groceries,kind:"groceries"})]);
   if(j.trips)steps.push(["trips",()=>col.doc("trips").set({...j.trips,kind:"trips"})]);
   if(j.longterm)steps.push(["long-term vision",()=>col.doc("longterm").set({...j.longterm,kind:"longterm"})]);
@@ -2273,6 +2277,33 @@ V.trips=()=>{
 };
 const editTrip=(id,fn,o)=>editDoc("trips",d=>{const t=d.items.find(x=>x.id===id);if(t)fn(t)},o);
 
+/* ---------- Notes: free-form notes in folders (your old TickTick note lists move in here) ---------- */
+const nItems=()=>S.notes.items||[];
+const nFolders=()=>[...new Set(nItems().map(x=>x.folder||"Notes"))].sort();
+function nSources(){if(!ttOn()||S.notes.imported)return [];return S.tt.projects.filter(p=>p.kind==="NOTE")}
+async function importNotes(){const ps=nSources();if(!ps.length)return;toast("Gathering your notes…");const add=[];
+  for(const p of ps){try{if(!S.tt.lists[p.id])await ttLoadList(p.id);const L=S.tt.lists[p.id];(L&&L.tasks||[]).forEach(t=>add.push({id:uid(),title:plainTitle(t.title),body:String(t.content||"").replace(/!\[[^\]]*\]\([^)]*\)/g,"[picture not carried over]").trim(),folder:String(p.name||"Notes").replace(/^[^\p{L}\p{N}]+/u,"")||"Notes",created:t.created?key(new Date(t.created)):today(),updated:t.created?key(new Date(t.created)):today()}))}catch(_){}}
+  editDoc("notes",d=>{d.items=[...(d.items||[]),...add];d.imported=true});toast(`Brought over ${add.length} note${add.length===1?"":"s"}`)}
+function noteSheet(n){
+  return `<div class="vsheet" role="dialog" aria-label="Note"><button type="button" class="modal-bg" data-act="nclose" aria-label="Close" tabindex="-1"></button><div class="vsheet-in nsheet">
+    <input type="text" id="nt-title" data-act="nfield" data-f="title" data-id="${n.id}" value="${esc(n.title||"")}" placeholder="Title" aria-label="Title" class="vtitle-in">
+    <textarea id="nt-body" data-act="nfield" data-f="body" data-id="${n.id}" rows="12" placeholder="Write anything…">${esc(n.body||"")}</textarea>
+    <div class="addrow"><input type="text" id="nt-folder" data-act="nfield" data-f="folder" data-id="${n.id}" value="${esc(n.folder||"Notes")}" list="nt-folders" aria-label="Folder" placeholder="Folder"><datalist id="nt-folders">${nFolders().map(f=>`<option value="${esc(f)}"></option>`).join("")}</datalist>
+      <button type="button" class="btn ghost sm" data-act="npin" data-id="${n.id}" aria-pressed="${!!n.pinned}">${n.pinned?"📌 Pinned":"Pin"}</button></div>
+    <div class="wfoot"><button type="button" class="linkbtn subtle" data-act="ndel" data-id="${n.id}">${S.nDel===n.id?"Tap again to delete":"Delete"}</button><span class="muted small">Saved as you type · ${fmtDay(n.updated||today(),{day:"numeric",month:"short"})}</span><button type="button" class="btn ghost sm" data-act="nclose">Done</button></div>
+  </div></div>`;
+}
+V.notes=()=>{
+  const all=nItems(),f=S.nFolder||"all",q=(S.nQuery||"").toLowerCase();const open=S.nOpen&&all.find(x=>x.id===S.nOpen);
+  const list=all.filter(x=>(f==="all"||(x.folder||"Notes")===f)&&(!q||(x.title+" "+x.body).toLowerCase().includes(q))).sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)||((a.updated||"")<(b.updated||"")?1:-1));
+  const src=nSources();const more=!S.showAll.notes&&list.length>30;
+  return `${open?noteSheet(open):""}${recentBox(u=>u.kind==="doc"&&u.doc==="notes")}<section class="block card"><div class="head"><h2>Notes</h2><button type="button" class="btn sm" data-act="nnew">+ New note</button></div>
+    ${all.length>4?`<input type="search" id="n-q" data-act="nq" value="${esc(S.nQuery||"")}" placeholder="Search notes" aria-label="Search notes">`:""}
+    ${nFolders().length>1?`<div class="chips"><button class="chip" data-act="nfolder" data-f="all" aria-pressed="${f==="all"}">All</button>${nFolders().map(x=>`<button class="chip" data-act="nfolder" data-f="${esc(x)}" aria-pressed="${f===x}">${esc(x)}</button>`).join("")}</div>`:""}</section>
+  ${src.length?`<section class="block card import"><div class="head"><h2>Bring over your notes</h2></div><p class="small" style="margin:0">From ${src.map(p=>"“"+esc(p.name)+"”").join(" and ")}. Each list becomes a folder. Pictures inside notes can't come across.</p><div><button type="button" class="btn" data-act="nimport">Bring them over</button></div></section>`:""}
+  <section class="block card">${list.length?`<ul class="list nlist">${(more?list.slice(0,30):list).map(n=>`<li><button type="button" class="etext grow brbtn" data-act="nopen" data-id="${n.id}"><span class="tmain"><span>${n.pinned?"📌 ":""}<b>${esc(n.title||"Untitled")}</b></span><span class="muted small">${esc(String(n.body||"").split("\n").find(Boolean)||"")}</span><span class="muted small">${esc(n.folder||"Notes")} · ${fmtDay(n.updated||n.created||today(),{day:"numeric",month:"short"})}</span></span></button></li>`).join("")}</ul>${more?`<button class="btn ghost" data-act="showall" data-id="notes">Show all ${list.length}</button>`:""}`:`<p class="empty">${all.length?"No notes match.":"Notes you write will live here."}</p>`}</section>`;
+};
+
 /* ---------- Purchases ---------- */
 V.purchases=()=>{
   const all=sortedDays().flatMap(d=>d.purchases.map(p=>({...p,date:d.date})));
@@ -2376,7 +2407,7 @@ V.journal=()=>{
 S.sub={};
 function go(id){const r=ROUTE[id]||["today"];S.tab=r[0];if(r[1])S.sub[r[0]]=r[1];try{localStorage.setItem("sd-tab",r[1]?r[1]:r[0])}catch(_){}}
 const curSub=t=>{const subs=SUBS[t];if(!subs)return null;const v=S.sub[t];return subs.some(x=>x[0]===v)?v:subs[0][0]};
-const PAGES={"lists:trips":()=>V.trips(),"vision:year":()=>V.vision(),"vision:long":()=>V.longterm(),"vision:bucket":()=>V.bucket(),"journal:dreams":()=>V.dreams(),"tasks:todo":()=>V.todo(),"tasks:projects":()=>V.projects(),"journal:days":()=>V.journal(),"journal:week":()=>recapCard()+highlightsCard(),"journal:checkins":()=>V.habits(),"journal:cooking":()=>V.cooked(),"lists:lists":()=>V.lists(),"lists:wishlist":()=>V.wishlist(),"lists:backlog":()=>V.backlog(),"lists:spending":()=>V.purchases(),"learn:pointers":()=>V.learn(),"learn:reminders":()=>V.reminders()};
+const PAGES={"lists:notes":()=>V.notes(),"lists:trips":()=>V.trips(),"vision:year":()=>V.vision(),"vision:long":()=>V.longterm(),"vision:bucket":()=>V.bucket(),"journal:dreams":()=>V.dreams(),"tasks:todo":()=>V.todo(),"tasks:projects":()=>V.projects(),"journal:days":()=>V.journal(),"journal:week":()=>recapCard()+highlightsCard(),"journal:checkins":()=>V.habits(),"journal:cooking":()=>V.cooked(),"lists:lists":()=>V.lists(),"lists:wishlist":()=>V.wishlist(),"lists:backlog":()=>V.backlog(),"lists:spending":()=>V.purchases(),"learn:pointers":()=>V.learn(),"learn:reminders":()=>V.reminders()};
 /* ---------- settings: the morning reminder lives in Claude as a scheduled task; Steady Days pauses/resumes it ---------- */
 const NUDGE_TASK="trig_01WNVxsADqavGjR9DpeSyvho";const CCR="Claude Code Remote";
 S.nudge={state:"idle",enabled:null,err:null};
@@ -2479,6 +2510,14 @@ document.addEventListener("click",e=>{
   if(a==="arrhide"){const k=b.dataset.k;editSettings(st=>{const h=new Set(st.todayHidden||[]);h.has(k)?h.delete(k):h.add(k);st.todayHidden=[...h]})}
   if(a==="arrreset"){editSettings(st=>{st.todayOrder=[];st.todayHidden=[]});toast("Today is back to its usual order")}
   if(a==="vopen"){S.vOpen=id;S.vDoneForm=null;S.vDel=null;if(b.dataset.go2){go("vision");S.sub.vision="year"}render(true)}
+  if(a==="nnew"){const id=uid();const folder=S.nFolder&&S.nFolder!=="all"?S.nFolder:"Notes";editDoc("notes",d=>{d.items=[...(d.items||[]),{id,title:"",body:"",folder,created:today(),updated:today()}]});S.nOpen=id;render(true);const el=document.getElementById("nt-title");if(el)el.focus()}
+  if(a==="nopen"){S.nOpen=id;S.nDel=null;render(true)}
+  if(a==="nclose"){const n=nItems().find(x=>x.id===S.nOpen);S.nOpen=null;if(n&&!String(n.title||"").trim()&&!String(n.body||"").trim())editDoc("notes",d=>{d.items=d.items.filter(x=>x.id!==n.id)});else render(true)}
+  if(a==="nfolder"){S.nFolder=b.dataset.f;render(true)}
+  if(a==="npin")editDoc("notes",d=>{const x=d.items.find(y=>y.id===id);if(x)x.pinned=!x.pinned});
+  if(a==="nimport")importNotes();
+  if(a!=="ndel")S.nDel=null;
+  if(a==="ndel"){if(S.nDel!==id){S.nDel=id;render(true);return}const i=nItems().findIndex(x=>x.id===id);const it=nItems()[i];S.nOpen=null;S.nDel=null;editDoc("notes",d=>{d.items.splice(i,1)});pushUndo({kind:"doc",doc:"notes",item:it,index:i,label:`Deleted the note “${it.title||"Untitled"}”`})}
   if(a==="groc"){S.grocOpen=!S.grocOpen;S.gEdit=null;if(!S.grocOpen&&S.gShop){S.gShop=false;keepAwake(false)}render(true);if(S.grocOpen){const el=document.getElementById("gadd");if(el&&!(window.matchMedia&&matchMedia("(pointer:coarse)").matches))el.focus()}}
   if(a==="gshop"){S.gShop=!S.gShop;keepAwake(S.gShop);render(true)}
   if(a==="gusual")gAdd(b.dataset.t);
@@ -2672,6 +2711,8 @@ document.addEventListener("input",e=>{
   if(b.dataset.act==="note")editDay(vday(),d=>{d.note=b.value},{silent:true});
   if(b.dataset.act==="ex")editDay(vday(),d=>{d.body={...bodyOf(d),ex:b.value}},{silent:true});
   if(["vtitle","vnote","vmemory"].includes(b.dataset.act)){const vid=b.dataset.id,f2={vtitle:"title",vnote:"note",vmemory:"memory"}[b.dataset.act],val=b.value;if(f2!=="title"||val.trim())editDoc("vision",d=>{const x=d.items.find(y=>y.id===vid);if(x)x[f2]=f2==="title"?val.trim():val},{silent:true})}
+  if(b.dataset.act==="nfield"){const nid=b.dataset.id,f2=b.dataset.f,val=b.value;editDoc("notes",d=>{const x=d.items.find(y=>y.id===nid);if(x){x[f2]=f2==="folder"?(val.trim()||"Notes"):val;x.updated=today()}},{silent:true})}
+  if(b.dataset.act==="nq"){S.nQuery=b.value;render(true)}
   if(b.dataset.act==="gfield"){const gid=b.dataset.id,f2=b.dataset.f,val=b.value;if(f2!=="name"||val.trim())editDoc("groceries",x=>{const it=x.items.find(y=>y.id===gid);if(it)it[f2]=val},{silent:true})}
   if(b.dataset.act==="trfield"){const tid=b.dataset.id,f2=b.dataset.f,val=b.value;if(f2!=="title"||val.trim())editTrip(tid,t=>{t[f2]=val},{silent:true})}
   if(b.dataset.act==="trbudgettotal"){const tid=b.dataset.id,val=b.value;editTrip(tid,t=>{t.budget={...(t.budget||{}),total:val===""?null:+val}},{silent:true})}
@@ -2788,7 +2829,7 @@ document.addEventListener("submit",e=>{
   const first=form.querySelector("input[type=text]");if(first){setTimeout(()=>{const el=document.getElementById(first.id);if(el)el.focus()},0)}
 });
 /* Escape closes the settings pop-up or an open vision tile */
-document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(S.grocOpen){S.grocOpen=false;S.gShop=false;keepAwake(false);render(true)}else if(S.settingsOpen){S.settingsOpen=false;S.arrangeOpen=false;render(true)}else if(S.vOpen){S.vOpen=null;render(true)}else if(S.bOpen){S.bOpen=null;render(true)}else if(S.pOpen){S.pOpen=null;render(true)}else if(S.ye){S.ye=null;render(true)}else if(S.pastView){S.pastView=null;render(true)}else if(S.vZoom){S.vZoom=false;render(true)}});
+document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(S.grocOpen){S.grocOpen=false;S.gShop=false;keepAwake(false);render(true)}else if(S.settingsOpen){S.settingsOpen=false;S.arrangeOpen=false;render(true)}else if(S.vOpen){S.vOpen=null;render(true)}else if(S.bOpen){S.bOpen=null;render(true)}else if(S.nOpen){S.nOpen=null;render(true)}else if(S.pOpen){S.pOpen=null;render(true)}else if(S.ye){S.ye=null;render(true)}else if(S.pastView){S.pastView=null;render(true)}else if(S.vZoom){S.vZoom=false;render(true)}});
 /* new day: switch over by itself, even if the page stayed open */
 let lastDay=today();
 function checkNewDay(){
@@ -2869,6 +2910,7 @@ function startDemo(){
   S.bucket={imported:true,items:[{id:uid(),title:"See the northern lights",area:"places",emoji:"🌌",step:"Check the best months to go to Tromsø",lived:[]},{id:uid(),title:"Learn to surf",area:"skills",emoji:"🏄",lived:[]},
     {id:uid(),title:"Run a marathon",area:"exp",emoji:"🏅",lived:[{date:addDays(T,-200),memory:"Cried at the finish line"}]},{id:uid(),title:"Kyoto in autumn",area:"places",emoji:"🍁",repeat:true,lived:[{date:addDays(T,-900),memory:"The maple leaves"}]},{id:uid(),title:"Build a canoe",area:"make",emoji:"🛶",lived:[]}]};
   S.longterm={title:"10-year vision",horizon:String(new Date().getFullYear()+10),items:[{id:"lp1",title:"A home with a garden",emoji:"🏡",why:"Roots and room to grow",years:{}},{id:"lp2",title:"Fluent in Spanish",emoji:"🗣️",years:{}},{id:"lp3",title:"Strong and healthy at 50",emoji:"💪",why:"To keep up with the people I love",years:{}}]};
+  S.notes={imported:true,items:[{id:uid(),title:"Gift ideas",body:"Mum: a good teapot\nSam: climbing chalk bag",folder:"Notes",pinned:true,created:addDays(T,-20),updated:addDays(T,-2)},{id:uid(),title:"Book quotes",body:"“Be where your feet are.”",folder:"Journaling",created:addDays(T,-40),updated:addDays(T,-40)}]};
   S.groceries={imported:true,items:[{id:uid(),name:"Avocados",qty:"2",aisle:"veg",done:false},{id:uid(),name:"Oat milk",qty:"",aisle:"dairy",done:false},{id:uid(),name:"Sourdough",qty:"",aisle:"bakery",done:false},{id:uid(),name:"Pasta",qty:"",aisle:"pantry",done:true}],history:{banana:{name:"Bananas",aisle:"veg",count:6,last:addDays(T,-3)},egg:{name:"Eggs",aisle:"dairy",count:5,last:addDays(T,-5)},coffee:{name:"Coffee",aisle:"pantry",count:3,last:addDays(T,-9)}}};
   S.trips={imported:true,items:[{id:uid(),title:"Lisbon long weekend",place:"Lisbon",emoji:"🇵🇹",start:addDays(T,9),end:addDays(T,12),todos:[{id:uid(),title:"Book airport parking",daysBefore:7},{id:uid(),title:"Check passports",daysBefore:14,done:true}],pack:PACK_TEMPLATES.Basics.slice(0,6).map((x,i)=>({id:uid(),text:x,done:i<2})),plan:[{id:uid(),day:addDays(T,9),time:"09:40",kind:"booking",text:"Flight TP1351 · ref QX7P2L"},{id:uid(),day:addDays(T,10),kind:"place",text:"Belém tower and pastéis"}]},{id:uid(),title:"Kyoto in autumn",emoji:"🍁",todos:[],pack:[],plan:[]}]};
   S.dreams={imported:true,items:[{id:uid(),date:addDays(T,-1),text:"I was flying over a city made of bread. Nobody seemed surprised.",tags:["vivid","funny"]},{id:uid(),date:addDays(T,-4),text:"Back in my old school, looking for a classroom that kept moving.",tags:["recurring"]}]};
@@ -2896,7 +2938,7 @@ async function connectDb(){
         if(ttOn())ttLoadListsMissing();}
       S.settingsReady=true;render();
     },()=>{S.settingsReady=true;render()});
-    ["wish","backlog","vision","visionimg","bucket","dreams","longterm","groceries","trips"].forEach(id=>col.doc(id).onSnapshot(snap=>{
+    ["wish","backlog","vision","visionimg","bucket","dreams","longterm","groceries","trips","notes"].forEach(id=>col.doc(id).onSnapshot(snap=>{
       if(!pending[id]&&!inflight[id]&&!debounced[id]){const d=snap.exists?snap.data():null;S[id]={...S[id],...(d||{}),items:(d&&d.items)||[]}}
       render();
     },()=>{}));
