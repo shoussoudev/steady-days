@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261024054722"></script>
-<script type="module" src="boot.js?v=20261024054722"></script>
+<script src="shim.js?v=20261024054757"></script>
+<script type="module" src="boot.js?v=20261024054757"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -1748,10 +1748,6 @@ V.backlog=()=>{
     <div class="head"><h2>Now</h2><span class="eyebrow">Physical copies · up to ${NOW_MAX} of each</span></div>
     ${now.length?`<ul class="list">${now.map(blRow).join("")}</ul>`:`<p class="empty">Nothing on the go. Tap Start on something below when you're ready.</p>`}
   </section>
-  ${fol.length||blFollowable(f)?`<section class="block card"><div class="head"><h2>Following</h2><span class="topmeta"><span class="mono muted">${fol.length}</span><button type="button" class="linkbtn" data-act="showall" data-id="blfollow" aria-expanded="${openF}">${openF?"Hide":"Show"}</button></span></div>
-    ${!openF?`<p class="muted small" style="margin:0">${fol.length?`${folG.map(([n,a])=>`${a.length} ${n.toLowerCase()}`).join(" · ")}`:"Manga and webtoons you read digitally."}${S.backlog.mbSync&&S.backlog.mbSync.at?` · synced ${shortDay(S.backlog.mbSync.at.slice(0,10))}`:""}</p>`
-      :fol.length?folG.map(([n,a])=>sub(folG.length>1||n!=="Reading"?n:"",a)).join(""):`<p class="empty">Nothing followed yet. Connect MangaBaka in Settings, or tap “Follow digitally” on a manga.</p>`}
-  </section>`:""}
   <section class="block card">
     <div class="head"><h2>Up next</h2><span class="mono muted">${next.length}</span></div>
     ${next.length?`<ul class="list">${next.map(blRow).join("")}</ul>`:`<p class="empty">Pick what comes next: tap “↑ Up next” on anything in your shelf.</p>`}
@@ -1762,6 +1758,10 @@ V.backlog=()=>{
       :!openS?`<p class="muted small" style="margin:0">${shelfG.map(([n,a])=>n?`${n} ${a.length}`:`${a.length} waiting`).join(" · ")}</p>`
       :`${some.length>20?`<input type="search" id="bl-q" data-act="blq" placeholder="Search your shelf" autocomplete="off" aria-label="Search your shelf">`:""}<div id="bl-shelf">${shelfG.map(([n,a])=>sub(n,a.slice().sort((x,y)=>(y.added||"").localeCompare(x.added||"")))).join("")}</div>`}
   </section>
+  ${fol.length||blFollowable(f)?`<section class="block card"><div class="head"><h2>Following</h2><span class="topmeta"><span class="mono muted">${fol.length}</span><button type="button" class="linkbtn" data-act="showall" data-id="blfollow" aria-expanded="${openF}">${openF?"Hide":"Show"}</button></span></div>
+    ${!openF?`<p class="muted small" style="margin:0">${fol.length?`${folG.map(([n,a])=>`${a.length} ${n.toLowerCase()}`).join(" · ")}`:"Manga and webtoons you read digitally."}${S.backlog.mbSync&&S.backlog.mbSync.at?` · synced ${shortDay(S.backlog.mbSync.at.slice(0,10))}`:""}</p>`
+      :fol.length?folG.map(([n,a])=>sub(folG.length>1||n!=="Reading"?n:"",a)).join(""):`<p class="empty">Nothing followed yet. Connect MangaBaka in Settings, or tap “Follow digitally” on a manga.</p>`}
+  </section>`:""}
 `;
 };
 
