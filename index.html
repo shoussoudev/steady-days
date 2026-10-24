@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261024061422"></script>
-<script type="module" src="boot.js?v=20261024061422"></script>
+<script src="shim.js?v=20261024061514"></script>
+<script type="module" src="boot.js?v=20261024061514"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -1217,7 +1217,7 @@ V.today=()=>{
   return recapPromptCard()+todayOrder().filter(k=>!(S.settings.todayHidden||[]).includes(k)).map(k=>R[k]()).join("\n");
 };
 /* Today's blocks, in your order (Settings → Arrange Today). New blocks appear in their default place. */
-const TODAY_BLOCKS=[["pointer","Today's pointer"],["vision","Vision tile"],["trip","Trip countdown"],["g-do","“Do” heading"],["tasks","Top 3 and today's tasks"],["workout","Steady 10 workout"],["study","Japanese: WaniKani & Bunpro"],["g-notice","“Notice” heading"],["dream","Morning dream note (until noon)"],["mood","Mood"],["checkin","Check-in (exercise, water, fruit)"],["weigh","Weekly weigh-in"],["ate","What I ate"],["groc","Groceries"],["wishcheck","Wishlist “still want it?”"],["g-reflect","“Reflect” heading"],["reflect","Reflection and gratitude"],["extras","Links, project progress, past days"]];
+const TODAY_BLOCKS=[["pointer","Today's pointer"],["vision","Vision tile"],["trip","Trip countdown"],["g-do","“Do” heading"],["tasks","Top 3 and today's tasks"],["workout","Steady 10 workout"],["g-notice","“Notice” heading"],["dream","Morning dream note (until noon)"],["mood","Mood"],["checkin","Check-in (exercise, water, fruit)"],["weigh","Weekly weigh-in"],["ate","What I ate"],["groc","Groceries"],["wishcheck","Wishlist “still want it?”"],["study","Japanese: WaniKani & Bunpro"],["g-reflect","“Reflect” heading"],["reflect","Reflection and gratitude"],["extras","Links, project progress, past days"]];
 function todayOrder(){
   const def=TODAY_BLOCKS.map(x=>x[0]);const mine=(S.settings.todayOrder||[]).filter(k=>def.includes(k));
   def.forEach((k,i)=>{if(!mine.includes(k)){const prev=def.slice(0,i).reverse().find(x=>mine.includes(x));mine.splice(prev?mine.indexOf(prev)+1:0,0,k)}});
