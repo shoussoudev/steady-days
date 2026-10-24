@@ -78,7 +78,7 @@ onAuthStateChanged(auth,u=>{
   };
   /* Claude, through the server (the key stays there) */
   const fns=getFunctions(app,"europe-west2");
-  window.__sdClaude=async prompt=>(await httpsCallable(fns,"claude",{timeout:130000})({prompt})).data.text;
+  window.__sdClaude=async(prompt,tier)=>(await httpsCallable(fns,"claude",{timeout:130000})({prompt,tier:tier||"default"})).data.text;
   /* notifications on this device */
   const devRef=doc(fs,"users/"+u.uid+"/docs","devices");
   window.__sdPush={

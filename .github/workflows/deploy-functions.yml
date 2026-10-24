@@ -27,7 +27,7 @@ jobs:
       - name: Settings for the functions
         if: env.HAS_SA == 'true'
         run: |
-          printf 'ALLOWED_EMAILS=%s\nCLAUDE_MODEL=%s\n' "${{ secrets.ALLOWED_EMAILS }}" "${{ vars.CLAUDE_MODEL || 'claude-sonnet-5-5' }}" > functions/.env
+          printf 'ALLOWED_EMAILS=%s\nCLAUDE_MODEL=%s\nCLAUDE_MODEL_QUICK=%s\n' "${{ secrets.ALLOWED_EMAILS }}" "${{ vars.CLAUDE_MODEL || 'claude-sonnet-5-5' }}" "${{ vars.CLAUDE_MODEL_QUICK || 'claude-haiku-5-5' }}" > functions/.env
       - name: Sign in to Google Cloud
         if: env.HAS_SA == 'true'
         uses: google-github-actions/auth@v2
@@ -57,3 +57,7 @@ jobs:
             echo "::error title=Deploy failed::$msg"
             exit 1
           fi
+      - name: Keep only recent copies of the server code (saves storage)
+        if: env.HAS_SA == 'true'
+        continue-on-error: true
+        run: npx -y firebase-tools@15 functions:artifacts:setpolicy --location europe-west2 --days 3 --project "$PROJECT" --non-interactive --force

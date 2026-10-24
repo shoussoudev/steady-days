@@ -14,6 +14,8 @@ const REGION = "europe-west2";
 const ANTHROPIC_API_KEY = defineSecret("ANTHROPIC_API_KEY");
 const ALLOWED_EMAILS = defineString("ALLOWED_EMAILS", {default: ""});
 const CLAUDE_MODEL = defineString("CLAUDE_MODEL", {default: "claude-sonnet-5-5"});
+/* lighter, cheaper model for simple jobs like tidying titles */
+const CLAUDE_MODEL_QUICK = defineString("CLAUDE_MODEL_QUICK", {default: "claude-haiku-5-5"});
 const APP_URL = "https://shoussoudev.github.io/steady-days/";
 
 /* local date and time in a time zone, e.g. {date:"2026-10-22", hm:"07:22"} */
@@ -106,7 +108,7 @@ export const claude = onCall({region: REGION, secrets: [ANTHROPIC_API_KEY], time
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {"content-type": "application/json", "x-api-key": ANTHROPIC_API_KEY.value(), "anthropic-version": "2023-06-01"},
-    body: JSON.stringify({model: CLAUDE_MODEL.value(), max_tokens: 4000, messages: [{role: "user", content: prompt}]})
+    body: JSON.stringify({model: (req.data && req.data.tier === "quick") ? CLAUDE_MODEL_QUICK.value() : CLAUDE_MODEL.value(), max_tokens: 4000, messages: [{role: "user", content: prompt}]})
   });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) {

@@ -142,6 +142,7 @@ ul.list li.wrow{display:grid;gap:8px}
 .wmain{display:flex;align-items:center;gap:10px;min-width:0}
 .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
 .field{display:grid;gap:4px}
+.backupnudge{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-top:1px dashed var(--line);padding-top:8px}
 .nsheet textarea{min-height:40dvh}
 #n-q{width:100%}
 .nlist .tmain{gap:1px}
@@ -1712,7 +1713,7 @@ async function runPretty(doc,all){
     const rows=[];
     for(let i=0;i<items.length;i+=40){
       const chunk=items.slice(i,i+40);
-      const out=await SAMPLE.json(prettyPrompt(doc,chunk),{modelTier:"default"});
+      const out=await SAMPLE.json(prettyPrompt(doc,chunk),{modelTier:"quick"});
       (Array.isArray(out)?out:[]).forEach(o=>{const it=chunk.find(x=>x.id===o.id);if(!it||!o||typeof o.title!=="string")return;
         const title=o.title.trim()||it.title;const by=doc==="backlog"?String(o.by||"").trim():"";const year=doc==="backlog"&&+o.year>0?Math.round(+o.year):null;
         const split=doc==="wish"&&Array.isArray(o.split)?o.split.map(t=>String(t).trim()).filter(Boolean).slice(0,60):[];
@@ -1787,7 +1788,7 @@ async function exportData(){
   const out={app:"Steady Days",format:1,exportedAt:new Date().toISOString(),timezone:TZ,
     settings:byId.settings?strip(byId.settings):S.settings,wishlist:byId.wish?strip(byId.wish):S.wish,backlog:byId.backlog?strip(byId.backlog):S.backlog,
     days:days.map(d=>{const {id,...r}=d;return r}),tasks:tasksDump,vision:byId.vision?strip(byId.vision):(S.vision.items.length?S.vision:null),visionimg:byId.visionimg?strip(byId.visionimg):null,notes:byId.notes?strip(byId.notes):(nItems().length?S.notes:null),groceries:byId.groceries?strip(byId.groceries):(gItems().length?S.groceries:null),trips:byId.trips?strip(byId.trips):(trItems().length?S.trips:null),longterm:byId.longterm?strip(byId.longterm):(pItems().length?S.longterm:null),archives:Object.fromEntries(docs.filter(d=>d.kind==="varchive").map(d=>[d.id,strip(d)])),bucket:byId.bucket?strip(byId.bucket):(bItems().length?S.bucket:null),dreams:byId.dreams?strip(byId.dreams):((S.dreams.items||[]).length?S.dreams:null),ticktickSnapshot:tt};
-  try{await DL.save({filename:`steady-days-${today()}.json`,data:new Blob([JSON.stringify(out,null,2)],{type:"application/json"})});toast("Saved. Keep it somewhere safe.")}
+  try{await DL.save({filename:`steady-days-${today()}.json`,data:new Blob([JSON.stringify(out,null,2)],{type:"application/json"})});toast("Saved. Keep it somewhere safe.");editSettings(st=>{st.lastBackup=today()},{silent:true})}
   catch(e){if(e&&e.code==="declined")return;toast(e&&e.code==="rate_limited"?"A save is already open":"Couldn't save the file here.")}
 }
 
@@ -2324,6 +2325,7 @@ function weekMoments(days){
   });
   return out;
 }
+function recapCardWithBackup(){return recapCard()}
 function recapCard(){
   const ws=S.recapWeek||weekStart(today());const days=[...Array(7)].map((_,i)=>addDays(ws,i));const tk=today();
   const seen=days.filter(k=>k<=tk);const D=seen.map(getDay);
@@ -2360,6 +2362,9 @@ function highlightsCard(){
   return `<section class="block card"><div class="head"><h2>Highlights</h2><span class="mono muted">${h.length}</span></div>
     <ul class="list">${h.map(([ws,x])=>`<li class="mrow"><span class="hlstar">★</span><div class="tmain"><span>${esc(x.text)}</span><span class="muted small">Week of ${fmtDay(ws,{day:"numeric",month:"short"})} · ${esc(x.kind)}, ${fmtDay(x.k,{weekday:"long"})}</span></div></li>`).join("")}</ul></section>`;
 }
+/* weekly nudge to save a copy of your data, shown with the recap until you've backed up this week */
+function backupNudge(){if(!DL||S.demo)return "";const lb=S.settings.lastBackup;const days=lb?dayNum(today())-dayNum(lb):null;if(days!=null&&days<6)return "";
+  return `<div class="backupnudge"><span class="small">💾 ${lb?`Last backup ${days} day${days===1?"":"s"} ago.`:"No backup yet."} Save a copy of your data while you're here?</span><button type="button" class="btn ghost sm" data-act="export">Download backup</button></div>`}
 function recapPromptCard(){
   const tk=today(),dow=dowOf(tk),h=new Date().getHours();
   const ws=dow===1?weekStart(addDays(tk,-1)):weekStart(tk);
@@ -2367,7 +2372,7 @@ function recapPromptCard(){
   if(!show||isPastView())return "";
   return `<section class="block card recapcta"><div class="head"><h2>${dow===0?"Your week in review":"Last week in review"}</h2></div>
     <p class="muted small" style="margin:0">Look back at your week and pick the moment that meant the most.</p>
-    <div><button type="button" class="btn" data-act="openrecap" data-w="${ws}">Open weekly recap</button></div></section>`;
+    <div><button type="button" class="btn" data-act="openrecap" data-w="${ws}">Open weekly recap</button></div>${backupNudge()}</section>`;
 }
 
 /* ---------- Journal ---------- */
@@ -2390,7 +2395,7 @@ V.journal=()=>{
 S.sub={};
 function go(id){const r=ROUTE[id]||["today"];S.tab=r[0];if(r[1])S.sub[r[0]]=r[1];try{localStorage.setItem("sd-tab",r[1]?r[1]:r[0])}catch(_){}}
 const curSub=t=>{const subs=SUBS[t];if(!subs)return null;const v=S.sub[t];return subs.some(x=>x[0]===v)?v:subs[0][0]};
-const PAGES={"lists:notes":()=>V.notes(),"lists:trips":()=>V.trips(),"vision:year":()=>V.vision(),"vision:long":()=>V.longterm(),"vision:bucket":()=>V.bucket(),"journal:dreams":()=>V.dreams(),"tasks:todo":()=>V.todo(),"tasks:projects":()=>V.projects(),"journal:days":()=>V.journal(),"journal:week":()=>recapCard()+highlightsCard(),"journal:checkins":()=>V.habits(),"journal:cooking":()=>V.cooked(),"lists:lists":()=>V.lists(),"lists:wishlist":()=>V.wishlist(),"lists:backlog":()=>V.backlog(),"lists:spending":()=>V.purchases(),"learn:pointers":()=>V.learn(),"learn:reminders":()=>V.reminders()};
+const PAGES={"lists:notes":()=>V.notes(),"lists:trips":()=>V.trips(),"vision:year":()=>V.vision(),"vision:long":()=>V.longterm(),"vision:bucket":()=>V.bucket(),"journal:dreams":()=>V.dreams(),"tasks:todo":()=>V.todo(),"tasks:projects":()=>V.projects(),"journal:days":()=>V.journal(),"journal:week":()=>recapCard()+(backupNudge()?`<section class="block card">${backupNudge()}</section>`:"")+highlightsCard(),"journal:checkins":()=>V.habits(),"journal:cooking":()=>V.cooked(),"lists:lists":()=>V.lists(),"lists:wishlist":()=>V.wishlist(),"lists:backlog":()=>V.backlog(),"lists:spending":()=>V.purchases(),"learn:pointers":()=>V.learn(),"learn:reminders":()=>V.reminders()};
 /* ---------- settings: the morning reminder lives in Claude as a scheduled task; Steady Days pauses/resumes it ---------- */
 const NUDGE_TASK="trig_01WNVxsADqavGjR9DpeSyvho";const CCR="Claude Code Remote";
 S.nudge={state:"idle",enabled:null,err:null};
@@ -2918,7 +2923,7 @@ async function connectDb(){
     const col=db.collection("data/users/"+id);
     col.doc("settings").onSnapshot(snap=>{
       if(!pending.settings&&!inflight.settings){const d=snap.exists?snap.data():null;
-        S.settings={habits:d?.habits||[],reminders:d?.reminders||[],todos:d?.todos||[],projects:d?.projects||[],ttMap:d?.ttMap||null,favs:d?.favs||[],pnotes:d?.pnotes||{},claudeCredit:d?.claudeCredit??null,nudgeOn:d?.nudgeOn,nudgeTime:d?.nudgeTime||"07:22",timeZone:d?.timeZone||TZ,todayOrder:d?.todayOrder||[],todayHidden:d?.todayHidden||[],exKinds:d?.exKinds||[],weighOff:!!d?.weighOff,skills:d?.skills||{},highlights:d?.highlights||{}};
+        S.settings={habits:d?.habits||[],reminders:d?.reminders||[],todos:d?.todos||[],projects:d?.projects||[],ttMap:d?.ttMap||null,favs:d?.favs||[],pnotes:d?.pnotes||{},lastBackup:d?.lastBackup||null,claudeCredit:d?.claudeCredit??null,nudgeOn:d?.nudgeOn,nudgeTime:d?.nudgeTime||"07:22",timeZone:d?.timeZone||TZ,todayOrder:d?.todayOrder||[],todayHidden:d?.todayHidden||[],exKinds:d?.exKinds||[],weighOff:!!d?.weighOff,skills:d?.skills||{},highlights:d?.highlights||{}};
         if(ttOn())ttLoadListsMissing();}
       S.settingsReady=true;render();
     },()=>{S.settingsReady=true;render()});
