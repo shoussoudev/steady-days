@@ -199,7 +199,10 @@ const has = sec => { const v = sec.value(); return !!v && v !== "not-set"; };
 async function refreshStudy(uid, minAge) {
   const ref = db.doc(`users/${uid}/docs/study`);
   const cur = (await ref.get()).data() || {};
-  if (cur.at && Date.now() - Date.parse(cur.at) < minAge * 60e3) return cur;
+  const E = cur.errors || {};
+  /* a token that was missing or refused last time may have been added since: don't wait for the cache */
+  const retry = (E.wk && has(WANIKANI_TOKEN)) || (E.bp && has(BUNPRO_TOKEN));
+  if (!retry && cur.at && Date.now() - Date.parse(cur.at) < minAge * 60e3) return cur;
   const out = {at: new Date().toISOString(), wk: null, bp: null, errors: {}};
   if (has(WANIKANI_TOKEN)) { try { out.wk = await fetchWaniKani(WANIKANI_TOKEN.value()); } catch (e) { out.errors.wk = e.code || "unavailable"; out.wk = cur.wk || null; } }
   else out.errors.wk = "no-token";
@@ -220,6 +223,6 @@ async function refreshStudyForOwner(minAge) {
 export const studyRefresh = onCall({region: REGION, secrets: [WANIKANI_TOKEN, BUNPRO_TOKEN], timeoutSeconds: 30, memory: "256MiB"}, async (req) => {
   const email = req.auth && req.auth.token && req.auth.token.email;
   if (!email || String(email).toLowerCase() !== owner()) throw new HttpsError("permission-denied", "Study counts aren't enabled for this account.");
-  const st = await refreshStudy(req.auth.uid, 5);
+  const st = await refreshStudy(req.auth.uid, req.data && req.data.force ? 0 : 5);
   return {at: st.at};
 });

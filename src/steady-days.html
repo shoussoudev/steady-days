@@ -2252,7 +2252,7 @@ function studyToday(){if(isPastView())return "";studyAsk();if(!studyOn())return 
 const STUDY_ERR={"no-token":"not connected","bad-token":"token not accepted — add a fresh one","unavailable":"didn't answer last time"};
 function studyRow(){if(!window.__sdStudy)return "";const E=(S.study&&S.study.errors)||{};const one=(n,k,ok)=>`${n}: ${E[k]?STUDY_ERR[E[k]]||E[k]:ok?"connected":"not connected"}`;
   return `<div class="setrow"><div><b>Japanese study</b><div class="muted small">${one("WaniKani","wk",S.study.wk)} · ${one("Bunpro","bp",S.study.bp)}${S.study.at?` · updated ${new Date(S.study.at).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})}`:""}</div>
-    <div class="muted small">Counts refresh every 30 minutes and show on Today. Tokens live in GitHub secrets (WANIKANI_TOKEN, BUNPRO_TOKEN).</div></div></div>`}
+    <div class="muted small">Counts refresh every 30 minutes and show on Today. Tokens live in GitHub secrets (WANIKANI_TOKEN, BUNPRO_TOKEN).</div></div><button type="button" class="btn ghost sm" data-act="studyrefresh" ${S.studyBusy?"disabled":""}>${S.studyBusy?"Checking…":"Refresh"}</button></div>`}
 function grocToday(){if(isPastView())return "";const n=gItems().filter(x=>!x.done).length;return `<button type="button" class="card foldrow" data-act="groc"><span class="fl">🛒 Groceries</span><span class="fv">${n?`${n} to buy`:"List is empty"}</span><span class="fa">Open</span></button>`}
 
 /* ---------- Trips: packing and planning, with to-dos that land on Today before you go ---------- */
@@ -2725,6 +2725,7 @@ document.addEventListener("click",e=>{
   if(a==="blstart"){const it=S.backlog.items.find(x=>x.id===id);if(!it)return;const n=S.backlog.items.filter(x=>x.type===it.type&&x.status==="now").length;const T=blT(it.type);
     if(n>=NOW_MAX){toast(`You already have ${NOW_MAX} ${T[0]==="series"?"things to watch":T[0]==="manga"?"manga":T[2].toLowerCase()} on the go. Finish, pause or drop one first.`);return}
     editDoc("backlog",d=>{const x=d.items.find(y=>y.id===id);Object.assign(x,{status:"now",started:today()})});toast(`Enjoy! Now ${T[4]}: ${it.title}`)}
+  if(a==="studyrefresh"&&window.__sdStudy){S.studyBusy=true;render(true);window.__sdStudy(true).then(()=>{S.studyBusy=false;render(true)}).catch(()=>{S.studyBusy=false;toast("Couldn't reach the server just now.");render(true)})}
   if(a==="mbsync"&&window.__sdMangaBaka){S.mbBusy=true;render(true);window.__sdMangaBaka().then(r=>{S.mbBusy=false;if(r&&r.error)toast(MB_ERR[r.error]||"Sync didn't work");else toast(`MangaBaka synced: ${r.added||0} new, ${r.updated||0} updated, ${r.moved||0} moved`);render(true)}).catch(e=>{S.mbBusy=false;toast(/permission/.test(e&&e.code||"")?"MangaBaka sync is only for the owner account.":"Sync didn't work. Is the server deployed?");render(true)})}
   if(a==="blnext"){editDoc("backlog",d=>{const x=d.items.find(y=>y.id===id);if(x){if(x.next)delete x.next;else x.next=true}})}
   if(a==="blfollow"){editDoc("backlog",d=>{const x=d.items.find(y=>y.id===id);if(x){x.status="following";delete x.next;x.chAt=today()}});toast("Now in Following")}
