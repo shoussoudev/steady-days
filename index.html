@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261024050536"></script>
-<script type="module" src="boot.js?v=20261024050536"></script>
+<script src="shim.js?v=20261024051238"></script>
+<script type="module" src="boot.js?v=20261024051238"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -2253,13 +2253,13 @@ const PACK_TEMPLATES={Basics:["Passport / ID","Phone charger","Wallet & cards","
 const trItems=()=>S.trips.items||[];
 const trFind=id=>trItems().find(x=>x.id===id);
 const nights=t=>t.start&&t.end?Math.max(0,dayNum(t.end)-dayNum(t.start)):null;
-function trStatus(t){if(t.memory||t.status==="past")return "past";if(!t.start)return "idea";if(t.end&&t.end<today())return "past";return "upcoming"}
+function trStatus(t){if(t.memory||t.status==="past")return "past";if(t.status==="idea")return "idea";if(t.status==="upcoming")return t.end&&t.end<today()?"past":"upcoming";if(!t.start)return "idea";if(t.end&&t.end<today())return "past";return "upcoming"}
 const trDue=(t,td)=>t.start?addDays(t.start,-(+td.daysBefore||0)):null;
 const trOpenTaskIds=()=>{const ids=new Set();Object.values(S.tt.lists||{}).forEach(L=>(L.tasks||[]).forEach(x=>ids.add(x.id)));(S.tt.today||[]).forEach(x=>ids.add(x.id));return ids};
 function trTodoDone(td){if(td.done)return true;if(!td.taskId)return false;const L=S.tt.lists.inbox;return !!(L&&!L.loading&&!L.err&&!trOpenTaskIds().has(td.taskId))}
 const packPct=t=>{const p=t.pack||[];return p.length?Math.round(p.filter(x=>x.done).length/p.length*100):0};
 /* create (or re-date) the real tasks behind "before you go" items once the trip has a start date */
-async function trSyncTasks(tid){const t=trFind(tid);if(!t||!t.start||!MCP)return;
+async function trSyncTasks(tid){const t=trFind(tid);if(!t||!t.start||!MCP||trStatus(t)!=="upcoming")return;
   for(const td of (t.todos||[])){const due=trDue(t,td);if(td.done)continue;
     try{if(!td.taskId){const r=await call("create_task",{task:{title:`🧳 ${t.title}: ${td.title}`,isAllDay:true,dueDate:dueISO(due),startDate:dueISO(due),timeZone:TZ},client_timezone:TZ});const x=r&&(r.id?r:r.result);if(x&&x.id)editDoc("trips",d=>{const tt=d.items.find(y=>y.id===tid);const z=tt&&(tt.todos||[]).find(y=>y.id===td.id);if(z){z.taskId=x.id;z.due=due}},{silent:true})}
       else if(td.due!==due){await call("update_task",{task_id:td.taskId,task:{id:td.taskId,projectId:"inbox",dueDate:dueISO(due),startDate:dueISO(due),isAllDay:true,timeZone:TZ},client_timezone:TZ});editDoc("trips",d=>{const tt=d.items.find(y=>y.id===tid);const z=tt&&(tt.todos||[]).find(y=>y.id===td.id);if(z)z.due=due},{silent:true})}}catch(e){}}
@@ -2269,11 +2269,11 @@ function trCard(t){const st=trStatus(t),n=nights(t),td=(t.todos||[]),left=td.fil
   return `<li class="brow"><button type="button" class="etext grow brbtn" data-act="tropen" data-id="${t.id}"><span class="bem" aria-hidden="true">${t.img?`<img src="${esc(t.img)}" alt="">`:esc(t.emoji||"🧳")}</span><span class="tmain"><span>${esc(t.title)}</span>
     <span class="muted small">${t.start?`${fmtDay(t.start,{day:"numeric",month:"short"})}${t.end?` – ${fmtDay(t.end,{day:"numeric",month:"short"})}`:""}${n!=null?` · ${n} night${n===1?"":"s"}`:""}`:"No dates yet"}${st==="upcoming"&&t.start>=today()?` · in ${dayNum(t.start)-dayNum(today())} days`:""}${st!=="idea"&&(t.pack||[]).length?` · ${packPct(t)}% packed`:""}${left&&st!=="past"?` · ${left} to-do${left>1?"s":""}`:""}</span></span></button></li>`}
 function tripToday(){if(isPastView())return "";const T=today();
-  const live=trItems().filter(t=>t.start&&t.start<=T&&(!t.end||t.end>=T)&&!t.memory)[0];
+  const live=trItems().filter(t=>trStatus(t)!=="idea"&&t.start&&t.start<=T&&(!t.end||t.end>=T)&&!t.memory)[0];
   if(live){const dn=dayNum(T)-dayNum(live.start)+1,tot=live.end?dayNum(live.end)-dayNum(live.start)+1:null;return `<button type="button" class="card foldrow" data-act="tropen" data-id="${live.id}" data-go2="1"><span class="fl">${esc(live.emoji||"🧳")} ${esc(live.title)}</span><span class="fv">Enjoy it 🌿 · day ${dn}${tot?` of ${tot}`:""}</span><span class="fa">Open</span></button>`}
   const after=trItems().filter(t=>t.end&&t.end<T&&!t.memory&&dayNum(T)-dayNum(t.end)<=7)[0];
   if(after)return `<button type="button" class="card foldrow" data-act="tropen" data-id="${after.id}" data-go2="1"><span class="fl">${esc(after.emoji||"🧳")} ${esc(after.title)}</span><span class="fv">How was it?</span><span class="fa">Add a memory</span></button>`;
-  const soon=trItems().filter(t=>t.start&&t.start>T&&dayNum(t.start)-dayNum(T)<=14).sort((a,b)=>a.start<b.start?-1:1)[0];if(!soon)return "";
+  const soon=trItems().filter(t=>trStatus(t)==="upcoming"&&t.start&&t.start>T&&dayNum(t.start)-dayNum(T)<=14).sort((a,b)=>a.start<b.start?-1:1)[0];if(!soon)return "";
   const d=dayNum(soon.start)-dayNum(T),left=(soon.todos||[]).filter(x=>!trTodoDone(x)).length;
   return `<button type="button" class="card foldrow" data-act="tropen" data-id="${soon.id}" data-go2="1"><span class="fl">${esc(soon.emoji||"🧳")} ${esc(soon.title)}</span><span class="fv">in ${d} day${d===1?"":"s"}${left?` · ${left} to-do${left>1?"s":""}`:""}${(soon.pack||[]).length?` · ${packPct(soon)}% packed`:""}</span><span class="fa">Open</span></button>`}
 function trSource(){const id=ttOn()&&ttMap().travel;const L=id&&S.tt.lists[id];if(!L||L.err||S.trips.imported)return null;return L}
@@ -2283,7 +2283,7 @@ function tripPage(t){
   const links=[...vItems().filter(x=>!x.done).map(x=>["v:"+x.id,"Vision: "+x.title]),...bItems().map(x=>["b:"+x.id,"Bucket list: "+x.title])];
   const B=t.budget||{};const spent=(B.expenses||[]).reduce((a,x)=>a+(+x.amount||0),0);
   const sec=(k,title,extra,body)=>`<section class="block card"><div class="head"><h2>${title}</h2>${extra||""}</div>${body}</section>`;
-  return `<div class="pastnote"><button type="button" class="btn ghost sm" data-act="trclose">← All trips</button><span class="mono muted small">${st==="idea"?"Idea":st==="past"?"Past":"Upcoming"}</span></div>
+  return `<div class="pastnote"><button type="button" class="btn ghost sm" data-act="trclose">← All trips</button><div class="seg" role="group" aria-label="Trip status">${[["idea","Idea"],["upcoming","Planned"],["past","Past"]].map(([k,n])=>`<button type="button" data-act="trstatus" data-id="${t.id}" data-k="${k}" aria-pressed="${st===k}">${n}</button>`).join("")}</div></div>
   ${st==="past"&&!t.memory||t.end&&t.end<today()&&!t.memory?`<section class="block card import"><div class="head"><h2>How was ${esc(t.title)}?</h2></div><form data-form="trmemory" data-id="${t.id}" class="dform"><textarea id="tr-memory" rows="3" placeholder="A memory you want to keep"></textarea><div><button class="btn">Save memory</button></div></form>${t.link?`<p class="muted small" style="margin:0">This also ticks off its linked ${t.link.startsWith("v:")?"vision tile":"dream"}.</p>`:""}</section>`:""}
   ${t.memory?`<section class="block card"><p class="vmotto" style="text-align:left">“${esc(t.memory)}”</p></section>`:""}
   ${sec("basics",`${esc(t.emoji||"🧳")} ${esc(t.title)}`,"",`
@@ -2589,6 +2589,7 @@ document.addEventListener("click",e=>{
   if(a==="trpackdel"){const tid=b.dataset.trip;editTrip(tid,t=>{t.pack=(t.pack||[]).filter(x=>x.id!==id)})}
   if(a==="trplandel"){const tid=b.dataset.trip;editTrip(tid,t=>{t.plan=(t.plan||[]).filter(x=>x.id!==id)})}
   if(a==="trexpdel"){const tid=b.dataset.trip;editTrip(tid,t=>{t.budget.expenses=(t.budget.expenses||[]).filter(x=>x.id!==id)})}
+  if(a==="trstatus"){const k=b.dataset.k;editTrip(id,t=>{t.status=k;if(k!=="past")delete t.memory});if(k==="upcoming")trSyncTasks(id)}
   if(a==="trbudget")editTrip(id,t=>{t.budget={...(t.budget||{}),on:!(t.budget&&t.budget.on)}});
   if(a==="trtododel"){const tid=b.dataset.trip;const t=trFind(tid);const td=t&&(t.todos||[]).find(x=>x.id===id);editTrip(tid,t2=>{t2.todos=(t2.todos||[]).filter(x=>x.id!==id)});if(td&&td.taskId&&!trTodoDone(td))call("update_task",{task_id:td.taskId,task:{id:td.taskId,projectId:"inbox",status:-1},client_timezone:TZ}).then(()=>ttLoadAll()).catch(()=>{})}
   if(a!=="trdel")S.trDel=null;
@@ -2838,7 +2839,7 @@ document.addEventListener("submit",e=>{
   if(f==="remind"){const tid=form.dataset.id,pid=form.dataset.pid,val=v("rem-at");if(!val)return;const at=new Date(val);if(isNaN(at)){toast("Pick a date and time");return}S.remOpen=null;
     call("update_task",{task_id:tid,task:{id:tid,projectId:pid,remindAt:at.toISOString()},client_timezone:TZ}).then(()=>{toast(`Reminder set for ${at.toLocaleString("en-GB",{weekday:"short",hour:"2-digit",minute:"2-digit"})}`);ttLoadAll()}).catch(e=>toast(ttErrToast(e)));return}
   if(f==="gadd"){const t=v("gadd");if(!t)return;clear("gadd");gAdd(t);setTimeout(()=>{const el=document.getElementById("gadd");if(el)el.focus()},0);return}
-  if(f==="tradd"){const t=v("tradd");if(!t)return;clear("tradd");const id=uid();editDoc("trips",d=>{d.items=[...(d.items||[]),{id,title:t,place:"",emoji:"🧳",todos:[],pack:[],plan:[],added:today()}]});S.tripOpen=id;render(true);return}
+  if(f==="tradd"){const t=v("tradd");if(!t)return;clear("tradd");const id=uid();editDoc("trips",d=>{d.items=[...(d.items||[]),{id,title:t,status:"idea",place:"",emoji:"🧳",todos:[],pack:[],plan:[],added:today()}]});S.tripOpen=id;render(true);return}
   if(f==="trtodo"){const tid=form.dataset.id,t=v("trt-new"),n=Math.max(0,parseInt(v("trt-days"))||0);if(!t)return;clear("trt-new");editTrip(tid,x=>{x.todos=[...(x.todos||[]),{id:uid(),title:t,daysBefore:n,done:false}]});trSyncTasks(tid);return}
   if(f==="trpack"){const tid=form.dataset.id,t=v("pk-new");if(!t)return;clear("pk-new");editTrip(tid,x=>{x.pack=[...(x.pack||[]),{id:uid(),text:t,done:false}]});setTimeout(()=>{const el=document.getElementById("pk-new");if(el)el.focus()},0);return}
   if(f==="trplan"){const tid=form.dataset.id,t=v("pl-text");if(!t)return;const it={id:uid(),text:t,day:v("pl-day"),time:v("pl-time"),kind:v("pl-kind")||"place"};clear("pl-text");editTrip(tid,x=>{x.plan=[...(x.plan||[]),it]});return}
