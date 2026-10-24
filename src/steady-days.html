@@ -187,10 +187,14 @@ li.done label{text-decoration:line-through;color:var(--muted)}
 body.modal-open{overflow:hidden}
 .arrange{display:grid;gap:8px;border-top:1px solid var(--line);padding-top:10px}
 .arrlist{list-style:none;margin:0;padding:0;display:grid;gap:4px}
-.arrlist li{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--line)}
+.arrlist li{display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid var(--line);background:var(--card,var(--bg));border-radius:8px}
+.arrlist li.isgrp{margin-top:10px;border-bottom:2px solid var(--line)}
+.arrlist li.dragging{box-shadow:0 6px 18px rgba(0,0,0,.18);position:relative;z-index:2;opacity:.95}
+.arrgrip{cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;font-size:1.2rem;line-height:1;padding:8px 6px;color:var(--muted)}
+.arrbtn{background:none;border:1px solid var(--line);border-radius:8px;width:32px;height:32px;cursor:pointer;color:inherit}.arrbtn:disabled{opacity:.3;cursor:default}
 .arrlist li.isgrp span{font-family:var(--f-mono);font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
-.arrlist li.off span{opacity:.45;text-decoration:line-through}
-.arrlist .btn.sm{min-width:34px}
+.arrlist li.off .grow{opacity:.45}
+
 .arrlist li .grow{flex:1;min-width:0}
 @media (max-width:420px){nav.tabs button{padding:7px 7px;font-size:.84rem}nav.tabs{gap:0}}
 .vtoday{display:flex;gap:12px;align-items:center;padding:10px 12px}
@@ -1029,12 +1033,14 @@ function render(force){
   if(typing&&!force){deferred=true;return}
   deferred=false;
   const focusId=typing?a.id:null;
+  const keepScroll=[...document.querySelectorAll("#view .modal, #view .modal-in")].map(m=>m.scrollTop);
   renderTabs();header();setStatus();
   $("#view").innerHTML=pageHtml()+(S.settingsOpen?`<div class="modal" role="dialog" aria-modal="true" aria-label="Settings"><button type="button" class="modal-bg" data-act="settings" aria-label="Close settings" tabindex="-1"></button><div class="modal-in">${settingsPanel()}</div></div>`:"")
     +(S.grocOpen?`<div class="modal" role="dialog" aria-modal="true" aria-label="Groceries"><button type="button" class="modal-bg" data-act="groc" aria-label="Close groceries" tabindex="-1"></button><div class="modal-in">${grocPanel()}</div></div>`:"");
   document.body.classList.toggle("modal-open",!!(S.settingsOpen||S.grocOpen||S.nOpen&&S.tab==="lists"||S.vOpen&&S.tab==="vision"&&curSub("vision")==="year"||S.bOpen&&S.tab==="vision"||S.pOpen&&S.tab==="vision"||S.ye||S.pastView));
   const g=document.getElementById("gear");if(g)g.setAttribute("aria-expanded",String(!!S.settingsOpen));
   {const gc=document.getElementById("gcount"),n=gItems().filter(x=>!x.done).length;if(gc){gc.hidden=!n;gc.textContent=n}}
+  document.querySelectorAll("#view .modal, #view .modal-in").forEach((m,i)=>{if(keepScroll[i])m.scrollTop=keepScroll[i]});
   if(focusId){const el=document.getElementById(focusId);if(el)el.focus()}
 }
 const V={};
@@ -1198,13 +1204,23 @@ function todayOrder(){
 }
 function arrangePanel(){
   const order=todayOrder(),hidden=S.settings.todayHidden||[];const name=k=>(TODAY_BLOCKS.find(x=>x[0]===k)||[k,k])[1];
-  return `<div class="arrange"><div class="head"><h3>Arrange Today</h3><button type="button" class="linkbtn" data-act="arrange">Done</button></div>
-    <p class="muted small" style="margin:0">Move blocks up or down, or hide the ones you don't use. Cards that only show at certain times (weigh-in, wishlist) keep that timing.</p>
-    <ul class="arrlist">${order.map((k,i)=>`<li class="${hidden.includes(k)?"off":""} ${k.startsWith("g-")?"isgrp":""}"><span class="grow">${esc(name(k))}</span>
-      <button type="button" class="btn ghost sm" data-act="arrmove" data-k="${k}" data-d="-1" ${i?"":"disabled"} aria-label="Move ${esc(name(k))} up">↑</button><button type="button" class="btn ghost sm" data-act="arrmove" data-k="${k}" data-d="1" ${i<order.length-1?"":"disabled"} aria-label="Move ${esc(name(k))} down">↓</button>
-      <button type="button" class="btn ghost sm" data-act="arrhide" data-k="${k}" aria-pressed="${hidden.includes(k)}">${hidden.includes(k)?"Show":"Hide"}</button></li>`).join("")}</ul>
+  return `<div class="arrange"><div class="head"><h3>Arrange Today</h3><button type="button" class="btn sm" data-act="arrange">Done</button></div>
+    <p class="muted small" style="margin:0">Drag ⠿ to move a block, or use the arrows. The switch shows or hides it. Some cards (weigh-in, wishlist) still only appear at their usual times.</p>
+    <ul class="arrlist" id="arrlist">${order.map((k,i)=>{const off=hidden.includes(k),grp=k.startsWith("g-");return `<li data-k="${k}" class="${off?"off":""} ${grp?"isgrp":""}">
+      <span class="arrgrip" aria-hidden="true" title="Drag to move">⠿</span><span class="grow">${esc(grp?name(k).replace(/[“”]| heading/g,""):name(k))}</span>
+      <button type="button" class="arrbtn" data-act="arrmove" data-k="${k}" data-d="-1" ${i?"":"disabled"} aria-label="Move ${esc(name(k))} up">↑</button><button type="button" class="arrbtn" data-act="arrmove" data-k="${k}" data-d="1" ${i<order.length-1?"":"disabled"} aria-label="Move ${esc(name(k))} down">↓</button>
+      <button type="button" class="switch" role="switch" aria-checked="${!off}" aria-label="Show ${esc(name(k))}" data-act="arrhide" data-k="${k}"><span></span></button></li>`}).join("")}</ul>
     <div><button type="button" class="linkbtn subtle" data-act="arrreset">Back to the default order</button></div></div>`;
 }
+/* drag to reorder (mouse and touch): the row follows your finger, the order saves when you let go */
+document.addEventListener("pointerdown",e=>{const g=e.target.closest&&e.target.closest(".arrgrip");if(!g)return;const li=g.closest("li"),ul=li&&li.parentElement;if(!ul)return;
+  e.preventDefault();li.classList.add("dragging");const scroller=li.closest(".modal");let lastY=e.clientY;
+  const move=ev=>{lastY=ev.clientY;const sibs=[...ul.children].filter(x=>x!==li);let before=null;for(const x of sibs){const r=x.getBoundingClientRect();if(lastY<r.top+r.height/2){before=x;break}}
+    if(before!==li.nextElementSibling||(!before&&ul.lastElementChild!==li))ul.insertBefore(li,before);
+    if(scroller){const r=scroller.getBoundingClientRect();if(lastY<r.top+50)scroller.scrollTop-=12;else if(lastY>r.bottom-50)scroller.scrollTop+=12}};
+  const up=()=>{document.removeEventListener("pointermove",move);document.removeEventListener("pointerup",up);document.removeEventListener("pointercancel",up);li.classList.remove("dragging");
+    const o=[...ul.children].map(x=>x.dataset.k);if(o.join()!==todayOrder().join())editSettings(st=>{st.todayOrder=o});};
+  document.addEventListener("pointermove",move);document.addEventListener("pointerup",up);document.addEventListener("pointercancel",up)});
 
 function todayTasks(){
   if(MCP&&S.tt.state!=="off"){
