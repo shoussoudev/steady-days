@@ -9,12 +9,29 @@ export async function fetchWaniKani(token, now = Date.now(), fetchImpl = fetch) 
     return (await r.json()).data || {};
   };
   const [sum, user] = await Promise.all([get("summary"), get("user")]);
+  /* recent mistakes ≈ items whose last answer (in the past 24 h) was wrong: an incorrect answer resets the streak to 1 */
+  let mistakes = 0;
+  try {
+    let url = `review_statistics?updated_after=${new Date(now - 24 * 3600e3).toISOString()}`;
+    for (let i = 0; url && i < 4; i++) {
+      const r = await fetchImpl(url.startsWith("http") ? url : `https://api.wanikani.com/v2/${url}`, {headers: h});
+      if (!r.ok) break;
+      const j = await r.json();
+      for (const x of j.data || []) {
+        const d = x.data || {};
+        const wrongM = d.meaning_current_streak === 1 && d.meaning_incorrect > 0;
+        const wrongR = d.reading_current_streak === 1 && d.reading_incorrect > 0;
+        if (!d.hidden && (wrongM || wrongR)) mistakes++;
+      }
+      url = j.pages && j.pages.next_url;
+    }
+  } catch (_) { mistakes = null; }
   const count = (buckets, upTo) => (buckets || []).filter(b => Date.parse(b.available_at) <= upTo).reduce((a, b) => a + (b.subject_ids || []).length, 0);
   return {
     reviews: count(sum.reviews, now), lessons: count(sum.lessons, now),
     soon: count(sum.reviews, now + 24 * 3600e3) - count(sum.reviews, now),
     next: sum.next_reviews_at || null, level: user.level || null,
-    vacation: !!user.current_vacation_started_at
+    vacation: !!user.current_vacation_started_at, mistakes
   };
 }
 
