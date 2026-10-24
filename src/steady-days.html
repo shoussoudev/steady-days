@@ -205,7 +205,7 @@ body.modal-open{overflow:hidden}
 .strow .fl{font-weight:600;flex:0 0 84px}
 .jptoday{display:grid;gap:6px;border-top:1px solid var(--line);padding-top:8px}.study>.jptoday:first-child,.study>.head+.jptoday{border-top:0;padding-top:0}.jptoday .head{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .jpp{display:grid;gap:6px}.jphead{display:grid;gap:1px}.jppat{font-size:1.15rem;font-weight:600}.jpex{display:grid;gap:1px;padding-left:10px;border-left:3px solid var(--line)}.jpex [lang=ja]{font-size:1.02rem}
-.jpbtns{display:flex;align-items:center;gap:6px;flex:none}.jplearn{font-size:.78rem;padding:4px 8px}.jpfoot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}.jpdone .jppat{opacity:.6}.strow .fv{flex:1;min-width:0}.strow .fa{color:var(--muted)}.study.clear .strow b{font-weight:500}.stlinks{padding:0 0 6px}.stlinks .chip{text-decoration:none;color:inherit}
+.jpbtns{display:flex;align-items:center;gap:6px;flex:none}.jplearn{font-size:.78rem;padding:4px 8px}.jpfoot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}.jpdone .jppat{opacity:.6}.jpdeep{display:grid;gap:10px;background:var(--bg);border-radius:10px;padding:10px 12px;margin-top:6px}.jpdeep p{margin:2px 0 0}.jpdeep ul{margin:4px 0 0;padding-left:18px}.jpdeep .jpex{margin-top:6px}.jpacts{display:inline-flex;gap:14px;align-items:center}.strow .fv{flex:1;min-width:0}.strow .fa{color:var(--muted)}.study.clear .strow b{font-weight:500}.stlinks{padding:0 0 6px}.stlinks .chip{text-decoration:none;color:inherit}
 .vtitle{font-weight:600}.vtt .vtitle{text-align:left;padding:0}
 .vimg{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;background:var(--accent-soft)}
 .vemoji{display:grid;place-items:center;width:100%;aspect-ratio:1;border-radius:12px;background:var(--accent-soft);font-size:2.2rem}
@@ -1555,7 +1555,7 @@ V.cooked=()=>{
 const ageDays=t=>t&&t.created?dayNum(today())-dayNum(key(new Date(t.created))):null;
 const norm=x=>String(x||"").replace(/\[([^\]]*)\]\([^)]*\)/g,"$1").trim().toLowerCase();
 const plainTitle=t=>String(t||"").replace(/\[([^\]]*)\]\([^)]*\)/g,"$1").trim();
-S.study={};S.wish={items:[],imported:false};S.backlog={items:[]};S.vision={items:[]};S.visionimg={items:[]};S.bucket={items:[]};S.dreams={items:[]};S.longterm={items:[]};S.groceries={items:[]};S.trips={items:[]};S.notes={items:[]};
+S.study={};S.jpdeep={items:[]};S.wish={items:[],imported:false};S.backlog={items:[]};S.vision={items:[]};S.visionimg={items:[]};S.bucket={items:[]};S.dreams={items:[]};S.longterm={items:[]};S.groceries={items:[]};S.trips={items:[]};S.notes={items:[]};
 function editDoc(id,fn,{silent=false}={}){const d=JSON.parse(JSON.stringify(S[id]));fn(d);S[id]=d;
   if(silent)saveLater(id,()=>queueWrite(id,{...S[id],kind:id}));else{queueWrite(id,{...d,kind:id});render(true)}}
 const daysTo=k=>dayNum(k)-dayNum(today());
@@ -2279,16 +2279,48 @@ function jpOfDay(){const L=JP_N5.length,n=dayNum(today())+(S.jpShift||0);for(let
 function jpButtons(g){const f=jpFav(g[0]),l=jpLearned(g[0]);
   return `<span class="jpbtns"><button type="button" class="favbtn" data-act="jpfav" data-id="${g[0]}" aria-pressed="${f}" aria-label="${f?"Remove from favourites":"Add to favourites"}">${f?"★":"☆"}</button><button type="button" class="chip jplearn" data-act="jplearn" data-id="${g[0]}" aria-pressed="${l}">${l?"✓ Learned":"Mark learned"}</button></span>`}
 function jpPoint(g){return `<div class="jpp"><div class="jphead"><span class="jppat" lang="ja">${esc(g[1])}</span><span class="muted small">${esc(g[2])}</span></div><div class="jpex"><span lang="ja">${esc(g[3])}</span><span class="muted small">${esc(g[4])}</span></div></div>`}
+/* "Go deeper": Claude writes a short lesson on one point; it's saved so it opens instantly next time */
+const jpDeepOf=id=>(S.jpdeep.items||[]).find(x=>x.id===id);
+function jpDeepPrompt(g){return `You are a patient Japanese teacher. Write a short, accurate lesson on this JLPT N5 grammar point for an English-speaking adult learner.
+Grammar point: ${g[1]} (${g[2]}). Example already shown: ${g[3]} (${g[4]}).
+Return ONLY a JSON object with these keys:
+"formation": how to build it (which word forms it attaches to), one or two sentences;
+"nuance": when and why to use it, register (polite/casual), and anything that surprises learners, two to four sentences;
+"examples": an array of 4 objects {"jp": a natural sentence using only N5-level vocabulary, "kana": the same sentence in hiragana/katakana only, "en": a natural English translation};
+"mistakes": an array of 1 to 3 short strings with common learner mistakes and the fix;
+"related": an array of 1 to 3 strings naming related grammar points and how they differ, in one short sentence each.
+Plain text inside the strings, no markdown.`}
+function jpDeepPanel(g){const D=jpDeepOf(g[0]),st=(S.jpDeepState||{})[g[0]];if(S.jpDeepOpen!==g[0])return "";
+  if(st&&st.loading)return `<div class="jpdeep"><p class="muted small" style="margin:0">Asking Claude for a closer look…</p></div>`;
+  if(st&&st.err)return `<div class="jpdeep"><p class="small" style="margin:0">${esc(st.err)}</p><div><button type="button" class="linkbtn" data-act="jpdeep" data-id="${g[0]}" data-retry="1">Try again</button></div></div>`;
+  if(!D)return "";const d=D.d||{};const L=a=>Array.isArray(a)?a:[];
+  return `<div class="jpdeep">
+    ${d.formation?`<div><span class="eyebrow">How it's built</span><p>${esc(d.formation)}</p></div>`:""}
+    ${d.nuance?`<div><span class="eyebrow">When to use it</span><p>${esc(d.nuance)}</p></div>`:""}
+    ${L(d.examples).length?`<div><span class="eyebrow">More examples</span>${L(d.examples).map(x=>`<div class="jpex"><span lang="ja">${esc(x.jp||"")}</span>${x.kana&&x.kana!==x.jp?`<span class="muted small" lang="ja">${esc(x.kana)}</span>`:""}<span class="muted small">${esc(x.en||"")}</span></div>`).join("")}</div>`:""}
+    ${L(d.mistakes).length?`<div><span class="eyebrow">Watch out for</span><ul>${L(d.mistakes).map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`:""}
+    ${L(d.related).length?`<div><span class="eyebrow">Related</span><ul>${L(d.related).map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`:""}
+    <div class="jpfoot"><span class="muted small">Written by Claude · double-check anything that feels off</span><button type="button" class="linkbtn subtle" data-act="jpdeep" data-id="${g[0]}" data-retry="1">Rewrite</button></div></div>`}
+function jpDeepBtn(g){if(!SAMPLE&&!jpDeepOf(g[0]))return "";const open=S.jpDeepOpen===g[0];return `<button type="button" class="linkbtn subtle" data-act="jpdeep" data-id="${g[0]}" aria-expanded="${open}">${open?"Close":"Go deeper"}</button>`}
+async function jpDeepAsk(id,force){const g=JP_N5.find(x=>x[0]===id);if(!g)return;S.jpDeepOpen=id;
+  if(jpDeepOf(id)&&!force){render(true);return}
+  if(!SAMPLE){render(true);return}
+  S.jpDeepState={...(S.jpDeepState||{}),[id]:{loading:true}};render(true);
+  try{const out=await SAMPLE.json(jpDeepPrompt(g),{modelTier:"default"});
+    if(!out||typeof out!=="object"||Array.isArray(out))throw {code:"bad"};
+    editDoc("jpdeep",d=>{d.items=(d.items||[]).filter(x=>x.id!==id);d.items.push({id,d:out,at:today()})});S.jpDeepState={...S.jpDeepState,[id]:null}}
+  catch(e){S.jpDeepState={...S.jpDeepState,[id]:{err:PRETTY_ERR[e&&e.code]||"Claude couldn't write that just now. Try again in a moment."}}}
+  render(true)}
 function jpToday(){const g=jpOfDay();const total=JP_N5.length,done=(S.settings.jpLearned||[]).filter(id=>JP_N5.some(x=>x[0]===id)).length;
   if(!g)return `<div class="jptoday"><span class="eyebrow">Grammar · N5</span><p class="small" style="margin:0">All ${total} N5 points marked learned 🌿</p></div>`;
   return `<div class="jptoday"><div class="head"><span class="eyebrow">Grammar point · N5</span>${jpButtons(g)}</div>${jpPoint(g)}
-    <div class="jpfoot"><button type="button" class="linkbtn subtle" data-act="jpnext">Another</button><button type="button" class="linkbtn subtle" data-act="jpall">All points · ${done}/${total} learned</button></div></div>`}
+    ${jpDeepPanel(g)}<div class="jpfoot"><span class="jpacts"><button type="button" class="linkbtn subtle" data-act="jpnext">Another</button>${jpDeepBtn(g)}</span><button type="button" class="linkbtn subtle" data-act="jpall">All points · ${done}/${total} learned</button></div></div>`}
 V.japanese=()=>{const f=S.jpFilter||"todo";const L=JP_N5.filter(g=>f==="all"?true:f==="fav"?jpFav(g[0]):f==="learned"?jpLearned(g[0]):!jpLearned(g[0]));
   const n=k=>JP_N5.filter(g=>k==="fav"?jpFav(g[0]):k==="learned"?jpLearned(g[0]):!jpLearned(g[0])).length;
   return `<section class="block card study">${jpToday()}</section>
   <section class="block card"><div class="head"><h2>N5 grammar</h2><span class="eyebrow">One shows on Today each day</span></div>
     <div class="chips">${[["todo",`To learn · ${n("todo")}`],["fav",`★ Favourites · ${n("fav")}`],["learned",`✓ Learned · ${n("learned")}`],["all",`All · ${JP_N5.length}`]].map(([k,t])=>`<button class="chip" data-act="jpfilter" data-t="${k}" aria-pressed="${f===k}">${t}</button>`).join("")}</div>
-    <ul class="list">${L.map(g=>`<li style="align-items:flex-start" class="${jpLearned(g[0])?"jpdone":""}"><div class="grow">${jpPoint(g)}</div>${jpButtons(g)}</li>`).join("")||`<li class="empty">${f==="fav"?"Tap ☆ on a grammar point to keep it here.":f==="learned"?"Points you mark as learned collect here.":"Nothing left to learn at N5. Well done."}</li>`}</ul>
+    <ul class="list">${L.map(g=>`<li style="align-items:flex-start" class="${jpLearned(g[0])?"jpdone":""}"><div class="grow">${jpPoint(g)}${jpDeepPanel(g)}<div>${jpDeepBtn(g)}</div></div>${jpButtons(g)}</li>`).join("")||`<li class="empty">${f==="fav"?"Tap ☆ on a grammar point to keep it here.":f==="learned"?"Points you mark as learned collect here.":"Nothing left to learn at N5. Well done."}</li>`}</ul>
   </section>`};
 /* ---------- Japanese study: counts come from the server (WaniKani + Bunpro), refreshed every 30 minutes ---------- */
 const studyOn=()=>!!(S.study&&S.study.at&&(S.study.wk||S.study.bp));
@@ -2593,6 +2625,7 @@ document.addEventListener("click",e=>{
   if(a==="jpfav"){const id=b.dataset.id,on=jpFav(id);editSettings(st=>{st.jpFav=(st.jpFav||[]).filter(x=>x!==id);if(!on)st.jpFav.push(id)})}
   if(a==="jplearn"){const id=b.dataset.id,on=jpLearned(id);editSettings(st=>{st.jpLearned=(st.jpLearned||[]).filter(x=>x!==id);if(!on)st.jpLearned.push(id)});if(!on)toast("Marked learned. It steps out of the daily rotation.")}
   if(a==="jpall"){go("japanese");render(true);window.scrollTo({top:0})}
+  if(a==="jpdeep"){const id=b.dataset.id;if(S.jpDeepOpen===id&&!b.dataset.retry){S.jpDeepOpen=null;render(true)}else jpDeepAsk(id,!!b.dataset.retry)}
   if(a==="jpnext"){const cur=jpOfDay();let k=0;do{S.jpShift=(S.jpShift||0)+1;k++}while(cur&&jpOfDay()===cur&&k<JP_N5.length);render(true)}
   if(a==="jpfilter"){S.jpFilter=b.dataset.t;render(true)}
   if(a==="learntheme"){S.learnTheme=b.dataset.t;render(true)}
@@ -3069,12 +3102,12 @@ async function connectDb(){
     const col=db.collection("data/users/"+id);
     col.doc("settings").onSnapshot(snap=>{
       if(!pending.settings&&!inflight.settings){const d=snap.exists?snap.data():null;
-        S.settings={habits:d?.habits||[],reminders:d?.reminders||[],todos:d?.todos||[],projects:d?.projects||[],ttMap:d?.ttMap||null,favs:d?.favs||[],pnotes:d?.pnotes||{},lastBackup:d?.lastBackup||null,claudeCredit:d?.claudeCredit??null,nudgeOn:d?.nudgeOn,nudgeTime:d?.nudgeTime||"07:22",timeZone:d?.timeZone||TZ,todayOrder:d?.todayOrder||[],todayHidden:d?.todayHidden||[],exKinds:d?.exKinds||[],weighOff:!!d?.weighOff,skills:d?.skills||{},highlights:d?.highlights||{}};
+        S.settings={...(d||{}),habits:d?.habits||[],reminders:d?.reminders||[],todos:d?.todos||[],projects:d?.projects||[],ttMap:d?.ttMap||null,favs:d?.favs||[],pnotes:d?.pnotes||{},lastBackup:d?.lastBackup||null,claudeCredit:d?.claudeCredit??null,nudgeOn:d?.nudgeOn,nudgeTime:d?.nudgeTime||"07:22",timeZone:d?.timeZone||TZ,todayOrder:d?.todayOrder||[],todayHidden:d?.todayHidden||[],exKinds:d?.exKinds||[],weighOff:!!d?.weighOff,skills:d?.skills||{},highlights:d?.highlights||{}};
         if(ttOn())ttLoadListsMissing();}
       S.settingsReady=true;render();
     },()=>{S.settingsReady=true;render()});
     col.doc("study").onSnapshot(snap=>{S.study=snap.exists?snap.data():{};render()},()=>{});
-    ["wish","backlog","vision","visionimg","bucket","dreams","longterm","groceries","trips","notes"].forEach(id=>col.doc(id).onSnapshot(snap=>{
+    ["wish","backlog","vision","visionimg","bucket","dreams","longterm","groceries","trips","notes","jpdeep"].forEach(id=>col.doc(id).onSnapshot(snap=>{
       if(!pending[id]&&!inflight[id]&&!debounced[id]){const d=snap.exists?snap.data():null;S[id]={...S[id],...(d||{}),items:(d&&d.items)||[]}}
       render();
     },()=>{}));
