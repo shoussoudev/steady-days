@@ -1191,15 +1191,23 @@ V.today=()=>{
   <span class="grp">Notice</span>${moodCard(d,true)}${checkinCard()}${ateCard()}
   <span class="grp">Reflect</span>${reflectCard(d,true)}${footerExtras()}`;
   const R={pointer:()=>pointerCard(pointerOfDay(),true),vision:visionToday,"g-do":()=>`<span class="grp">Do</span>`,tasks:todayTasks,workout:workoutCard,study:studyToday,
-    "g-notice":()=>`<span class="grp">Notice</span>`,mood:()=>moodCard(d,false),checkin:checkinCard,weigh:weighCard,ate:ateCard,wishcheck:wishCheckCard,
+    "g-notice":()=>`<span class="grp">Notice</span>`,"g-feel":()=>`<span class="grp">Feel</span>`,mood:()=>moodCard(d,false),checkin:checkinCard,weigh:weighCard,ate:ateCard,wishcheck:wishCheckCard,
     "g-reflect":()=>`<span class="grp">Reflect</span>`,dream:dreamToday,trip:tripToday,groc:grocToday,reflect:()=>reflectCard(d,false),extras:footerExtras};
-  return recapPromptCard()+todayOrder().filter(k=>!(S.settings.todayHidden||[]).includes(k)).map(k=>R[k]()).join("\n");
+  const parts=todayOrder().filter(k=>!(S.settings.todayHidden||[]).includes(k)).map(k=>[k,R[k]()]);
+  /* a heading only shows when something under it does */
+  const shown=parts.filter(([k,h],i)=>{if(!k.startsWith("g-"))return !!h;for(let j=i+1;j<parts.length&&!parts[j][0].startsWith("g-");j++)if(parts[j][1])return true;return false});
+  return recapPromptCard()+shown.map(x=>x[1]).join("\n");
 };
 /* Today's blocks, in your order (Settings → Arrange Today). New blocks appear in their default place. */
-const TODAY_BLOCKS=[["pointer","Today's pointer"],["vision","Vision tile"],["trip","Trip countdown"],["g-do","“Do” heading"],["tasks","Top 3 and today's tasks"],["workout","Steady 10 workout"],["g-notice","“Notice” heading"],["dream","Morning dream note (until noon)"],["mood","Mood"],["checkin","Check-in (exercise, water, fruit)"],["weigh","Weekly weigh-in"],["ate","What I ate"],["groc","Groceries"],["wishcheck","Wishlist “still want it?”"],["study","Japanese: WaniKani & Bunpro"],["g-reflect","“Reflect” heading"],["reflect","Reflection and gratitude"],["extras","Links, project progress, past days"]];
+const TODAY_BLOCKS=[["pointer","Today's pointer"],["vision","Vision tile"],["trip","Trip countdown"],["g-do","“Do” heading"],["tasks","Top 3 and today's tasks"],["workout","Steady 10 workout"],["g-feel","“Feel” heading"],["dream","Morning dream note (until noon)"],["mood","Mood"],["g-notice","“Notice” heading"],["checkin","Check-in (exercise, water, fruit)"],["weigh","Weekly weigh-in"],["ate","What I ate"],["groc","Groceries"],["wishcheck","Wishlist “still want it?”"],["study","Japanese: WaniKani & Bunpro"],["g-reflect","“Reflect” heading"],["reflect","Reflection and gratitude"],["extras","Links, project progress, past days"]];
 function todayOrder(){
   const def=TODAY_BLOCKS.map(x=>x[0]);const mine=(S.settings.todayOrder||[]).filter(k=>def.includes(k));
-  def.forEach((k,i)=>{if(!mine.includes(k)){const prev=def.slice(0,i).reverse().find(x=>mine.includes(x));mine.splice(prev?mine.indexOf(prev)+1:0,0,k)}});
+  /* older saved orders: the Feel section (dream + mood) takes Notice's old spot, Notice moves below mood */
+  if(mine.length&&!mine.includes("g-feel")&&mine.includes("g-notice")&&mine.includes("dream")&&mine.includes("mood")){
+    const ni=mine.indexOf("g-notice");if(ni<mine.indexOf("dream")&&ni<mine.indexOf("mood")){mine[ni]="g-feel";const last=Math.max(mine.indexOf("dream"),mine.indexOf("mood"));mine.splice(last+1,0,"g-notice")}}
+  def.forEach((k,i)=>{if(mine.includes(k))return;
+    if(k.startsWith("g-")){const nxt=def[i+1];if(nxt&&mine.includes(nxt)){mine.splice(mine.indexOf(nxt),0,k);return}}
+    const prev=def.slice(0,i).reverse().find(x=>mine.includes(x));mine.splice(prev?mine.indexOf(prev)+1:0,0,k)});
   return mine;
 }
 function arrangePanel(){
