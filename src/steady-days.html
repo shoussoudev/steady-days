@@ -196,7 +196,7 @@ body.modal-open{overflow:hidden}
 .vtoday{display:flex;gap:12px;align-items:center;padding:10px 12px}
 .vtile-open{background:none;border:0;padding:0;cursor:pointer;flex:none}
 .vtt{display:grid;gap:2px;min-width:0}
-.vtitle{font-weight:600}
+.vtitle{font-weight:600}.vtt .vtitle{text-align:left;padding:0}
 .vimg{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;background:var(--accent-soft)}
 .vemoji{display:grid;place-items:center;width:100%;aspect-ratio:1;border-radius:12px;background:var(--accent-soft);font-size:2.2rem}
 .vsm{width:64px;height:64px;font-size:1.6rem}
@@ -1949,13 +1949,12 @@ function kindFields(it){
 }
 function visionToday(){
   if(!isPastView()&&new Date().getDate()===1&&pItems().length){const ps=pItems();const p=ps[(new Date().getMonth()+new Date().getFullYear()*12)%ps.length];
-    return `<section class="card vtoday"><button type="button" class="vtile-open" data-act="popen" data-id="${p.id}" data-go2="1" aria-label="Open “${esc(p.title)}”">${pThumb(p,"vsm")}</button><div class="vtt"><span class="eyebrow">Your long-term vision</span><span class="vtitle">${esc(p.title)}</span>${p.why?`<span class="muted small">${esc(p.why)}</span>`:p.looks?`<span class="muted small">${esc(p.looks)}</span>`:""}</div></section>`}
+    return `<section class="card vtoday"><div class="vtt"><span class="eyebrow">Your long-term vision</span><button type="button" class="etext vtitle" data-act="popen" data-id="${p.id}" data-go2="1">${esc(p.title)}</button>${p.why?`<span class="muted small">${esc(p.why)}</span>`:p.looks?`<span class="muted small">${esc(p.looks)}</span>`:""}</div></section>`}
   const all=vItems();if(!all.length||isPastView())return "";
   const n=dayNum(today());const done=all.filter(x=>x.done&&kindOf(x)==="milestone"),intents=all.filter(x=>kindOf(x)==="intention"),open=all.filter(x=>!x.done&&kindOf(x)!=="intention");
   const celebrate=done.length&&(n%7===0||!open.length&&!intents.length);const useInt=!celebrate&&intents.length&&(n%7===2||n%7===5||!open.length);
   const pool=celebrate?done:useInt?intents:open;if(!pool.length)return "";const it=pool[((Math.floor(n/ (useInt?3:1))%pool.length)+pool.length)%pool.length];const pr=vProgress(it);
-  return `<section class="card vtoday"><button type="button" class="vtile-open" data-act="vopen" data-id="${it.id}" data-go2="1" aria-label="Open “${esc(it.title)}” in your vision board">${vThumb(it,"vsm")}</button>
-    <div class="vtt"><span class="eyebrow">${celebrate?"It happened ✓":useInt?"An intention for today":"From your vision"} · ${esc(it.area||"")}</span><span class="vtitle">${esc(it.title)}</span>
+  return `<section class="card vtoday"><div class="vtt"><span class="eyebrow">${celebrate?"It happened ✓":useInt?"An intention for today":"From your vision"} · ${esc(it.area||"")}</span><button type="button" class="etext vtitle" data-act="vopen" data-id="${it.id}" data-go2="1" title="Open in your vision board">${esc(it.title)}</button>
     ${useInt&&it.prompt?`<span class="small">${esc(it.prompt)}</span>`:pr?`${progBar(pr)}<span class="muted small">${esc(pr.label)}</span>`:celebrate&&it.memory?`<span class="muted small">${esc(it.memory)}</span>`:it.note?`<span class="muted small">${esc(it.note.split("\n")[0])}</span>`:S.vision.motto?`<span class="muted small">${esc(S.vision.motto)}</span>`:""}</div></section>`;
 }
 function vDetail(it){
