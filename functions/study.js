@@ -1,5 +1,30 @@
 /* Japanese study counts for Today: WaniKani (official API v2) and Bunpro (the API its own website uses).
    Read-only: nothing is ever changed on either site. */
+/* kanji you know on WaniKani (Guru or higher), as one string of characters, for furigana in the daily reading */
+export async function fetchKnownKanji(token, level, fetchImpl = fetch) {
+  const h = {Authorization: `Bearer ${token}`, "Wanikani-Revision": "20170710"};
+  const all = async first => {
+    const out = [];
+    let url = first;
+    for (let i = 0; url && i < 20; i++) {
+      const r = await fetchImpl(url, {headers: h});
+      if (!r.ok) throw Object.assign(new Error(`WaniKani ${r.status}`), {code: "unavailable"});
+      const j = await r.json();
+      out.push(...(j.data || []));
+      url = j.pages && j.pages.next_url;
+    }
+    return out;
+  };
+  const lv = Math.max(1, Math.min(60, level || 60));
+  const levels = Array.from({length: lv}, (_, i) => i + 1).join(",");
+  const [subs, asg] = await Promise.all([
+    all(`https://api.wanikani.com/v2/subjects?types=kanji&levels=${levels}`),
+    all("https://api.wanikani.com/v2/assignments?subject_types=kanji&srs_stages=5,6,7,8,9")
+  ]);
+  const chars = new Map(subs.map(x => [x.id, x.data && x.data.characters]));
+  return [...new Set(asg.map(a => chars.get(a.data && a.data.subject_id)).filter(Boolean))].join("");
+}
+
 export async function fetchWaniKani(token, now = Date.now(), fetchImpl = fetch) {
   const h = {Authorization: `Bearer ${token}`, "Wanikani-Revision": "20170710"};
   const get = async path => {

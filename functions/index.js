@@ -12,7 +12,7 @@ import {getMessaging} from "firebase-admin/messaging";
 import {getAuth} from "firebase-admin/auth";
 import {randomUUID} from "node:crypto";
 import {fetchLibrary, mergeLibrary} from "./mangabaka.js";
-import {fetchWaniKani, fetchBunpro} from "./study.js";
+import {fetchWaniKani, fetchBunpro, fetchKnownKanji} from "./study.js";
 
 initializeApp();
 const db = getFirestore();
@@ -205,6 +205,13 @@ async function refreshStudy(uid, minAge) {
   if (!retry && cur.at && Date.now() - Date.parse(cur.at) < minAge * 60e3) return cur;
   const out = {at: new Date().toISOString(), wk: null, bp: null, errors: {}};
   if (has(WANIKANI_TOKEN)) { try { out.wk = await fetchWaniKani(WANIKANI_TOKEN.value()); } catch (e) { out.errors.wk = e.code || "unavailable"; out.wk = cur.wk || null; } }
+  /* known kanji change slowly: refresh twice a day */
+  out.known = cur.known || "";
+  out.knownAt = cur.knownAt || null;
+  if (has(WANIKANI_TOKEN) && out.wk && (!cur.knownAt || Date.now() - Date.parse(cur.knownAt) > 12 * 3600e3 || (cur.errors && cur.errors.known))) {
+    try { out.known = await fetchKnownKanji(WANIKANI_TOKEN.value(), out.wk.level); out.knownAt = out.at; }
+    catch (e) { out.errors.known = e.code || "unavailable"; }
+  }
   else out.errors.wk = "no-token";
   if (has(BUNPRO_TOKEN)) { try { out.bp = await fetchBunpro(BUNPRO_TOKEN.value()); } catch (e) { out.errors.bp = e.code || "unavailable"; out.bp = cur.bp || null; } }
   else out.errors.bp = "no-token";
