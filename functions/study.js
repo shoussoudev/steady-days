@@ -37,7 +37,14 @@ export function parseBunproDue(j) {
 }
 
 export async function fetchBunpro(token, fetchImpl = fetch) {
-  const r = await fetchImpl("https://api.bunpro.jp/api/frontend/user/due", {headers: {Authorization: `Bearer ${token}`, accept: "application/json"}});
+  /* the site sends "Token token=…"; accept the whole header, just the value, or a Bearer token */
+  const t = String(token).trim().replace(/^Bearer\s+/i, "");
+  const tries = /^Token\s/i.test(t) ? [t] : /^token=/i.test(t) ? [`Token ${t}`] : [`Token token=${t}`, `Bearer ${t}`];
+  let r;
+  for (const auth of tries) {
+    r = await fetchImpl("https://api.bunpro.jp/api/frontend/user/due", {headers: {Authorization: auth, accept: "application/json"}});
+    if (r.status !== 401 && r.status !== 403) break;
+  }
   if (r.status === 401 || r.status === 403) throw Object.assign(new Error("Bunpro refused the token"), {code: "bad-token"});
   if (!r.ok) throw Object.assign(new Error(`Bunpro ${r.status}`), {code: "unavailable"});
   const j = await r.json();
