@@ -2713,7 +2713,7 @@ document.addEventListener("change",e=>{
   if(d.act==="trpack"){const tid=d.trip,pid=d.id,on=e.target.checked;editTrip(tid,t=>{const x=(t.pack||[]).find(y=>y.id===pid);if(x)x.done=on});return}
   if(d.act==="trtodo"){const tid=d.trip,did=d.id,on=e.target.checked;const t=trFind(tid);const td=t&&(t.todos||[]).find(x=>x.id===did);editTrip(tid,t2=>{const x=(t2.todos||[]).find(y=>y.id===did);if(x)x.done=on});
     if(td&&td.taskId)call(on?"complete_task":"update_task",on?{project_id:"inbox",task_id:td.taskId}:{task_id:td.taskId,task:{id:td.taskId,projectId:"inbox",status:0},client_timezone:TZ}).then(()=>ttLoadAll()).catch(()=>{});return}
-  if(d.act==="trdate"){const tid=d.id,f2=d.f,val=e.target.value;editTrip(tid,t=>{t[f2]=val;if(f2==="start"&&val&&(!t.end||t.end<val))t.end=val});trSyncTasks(tid);return}
+  if(d.act==="trdate"){const tid=d.id,f2=d.f,val=e.target.value;editTrip(tid,t=>{if(!t.status)t.status=trStatus(t);t[f2]=val;if(f2==="start"&&val&&(!t.end||t.end<val))t.end=val});trSyncTasks(tid);return}
   if(d.act==="trlink"){const tid=d.id,val=e.target.value;editTrip(tid,t=>{t.link=val});return}}
   if(e.target&&e.target.dataset&&e.target.dataset.act==="bsel"){const bid=e.target.dataset.id,val=e.target.value,f2=e.target.dataset.f||"area";editDoc("bucket",d=>{const x=d.items.find(y=>y.id===bid);if(x)x[f2]=val});return}
   if(e.target&&e.target.dataset&&(e.target.dataset.act==="ppic"||e.target.dataset.act==="ltpic")){const f=e.target.files&&e.target.files[0],act=e.target.dataset.act,pid=e.target.dataset.id;e.target.value="";if(!f)return;
