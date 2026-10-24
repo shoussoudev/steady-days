@@ -113,5 +113,15 @@ export const claude = onCall({region: REGION, secrets: [ANTHROPIC_API_KEY], time
     console.error("Anthropic error", r.status, j);
     throw new HttpsError(r.status === 429 ? "resource-exhausted" : "unavailable", (j.error && j.error.message) || `Claude returned ${r.status}`);
   }
+  /* keep a running tally of usage so Settings can show it (prices are an estimate per million tokens) */
+  try {
+    const u = j.usage || {}, inT = (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0), outT = u.output_tokens || 0;
+    const m = String(j.model || CLAUDE_MODEL.value()).toLowerCase();
+    const [pi, po] = /haiku/.test(m) ? [1, 5] : /opus/.test(m) ? [5, 25] : [3, 15];
+    const cost = (inT * pi + outT * po) / 1e6;
+    const month = new Date().toISOString().slice(0, 7), inc = FieldValue.increment;
+    const add = {calls: inc(1), input: inc(inT), output: inc(outT), cost: inc(cost)};
+    await db.doc(`users/${req.auth.uid}/docs/usage`).set({months: {[month]: add}, total: add, last: {at: new Date().toISOString(), model: j.model || CLAUDE_MODEL.value(), input: inT, output: outT, cost}}, {merge: true});
+  } catch (e) { console.error("usage tally failed", e); }
   return {text: (j.content || []).filter(c => c.type === "text").map(c => c.text).join("")};
 });

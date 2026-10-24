@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261023213636"></script>
-<script type="module" src="boot.js?v=20261023213636"></script>
+<script src="shim.js?v=20261024045131"></script>
+<script type="module" src="boot.js?v=20261024045131"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -1820,6 +1820,16 @@ async function exportData(){
 
 /* ---------- Import: load a Steady Days export file into this account ---------- */
 let PUSH_OK=null;
+/* Claude usage, tallied by the server on every call; cost is an estimate from published prices */
+async function loadUsage(){if(!S.live||!S.db)return;try{const snap=await S.db.collection("data/users/"+S.uid).doc("usage").get();S.usage=snap.exists?snap.data():{}}catch(_){S.usage={err:true}}render(true)}
+function usageRow(){
+  if(!window.__sdClaude)return "";const U=S.usage;const usd=x=>"$"+(Math.round((+x||0)*100)/100).toFixed(2);
+  const mk=new Date().toISOString().slice(0,7),m=(U&&U.months&&U.months[mk])||{},t=(U&&U.total)||{};const bought=+S.settings.claudeCredit||0;
+  const body=!U?"Loading…":U.err?"Couldn't read usage just now.":!t.calls?"No Claude calls yet.":`This month: ${m.calls||0} call${m.calls===1?"":"s"} · about ${usd(m.cost)}<br>All time: ${t.calls} call${t.calls===1?"":"s"} · about ${usd(t.cost)} · ${Math.round(((t.input||0)+(t.output||0))/1000)}k tokens${bought?`<br><b>About ${usd(Math.max(0,bought-(t.cost||0)))} left</b> of the ${usd(bought)} you added`:""}`;
+  return `<div class="setrow"><div><b>Claude usage</b><div class="muted small">${body}</div>
+      <div class="addrow" style="margin-top:6px"><label class="kfl" style="flex:0 0 150px"><span>Credit you've added ($)</span><input type="number" step="0.01" min="0" id="claude-credit" data-act="claudecredit" value="${esc(S.settings.claudeCredit??"")}"></label></div>
+      <div class="muted small">Estimates from token counts. Exact balance: <a href="https://console.anthropic.com/settings/billing" target="_blank" rel="noopener">Anthropic console → Billing ↗</a></div></div></div>`;
+}
 function notifRows(){
   const P=window.__sdPush;if(!P)return "";if(PUSH_OK===null){P.supported().then(ok=>{PUSH_OK=ok;render(true)});return ""}
   const on=P.isOn(),perm=P.permission();const st=S.settings;
@@ -2437,7 +2447,7 @@ function settingsPanel(){
   if(STANDALONE){const A=window.__sdAuth||{};const c=S.dbCheck;const I=S.imp;
     const dbLine=!c?"Checking the connection to your database…":c.ok?"✓ Connected to your database.":`⚠ Can't reach your database: ${esc(DB_HELP[c.code]||c.message||c.code)}`;
     body=`<div class="setrow"><div><b>Account</b><div class="muted small">Signed in${A.email?" as "+esc(A.email):""}.</div><div class="small ${c&&!c.ok?"warn":"muted"}">${dbLine}</div></div><button type="button" class="btn ghost sm" data-act="signout">Sign out</button></div>
-    ${notifRows()}
+    ${notifRows()}${usageRow()}
     <div class="setrow"><div><b>Bring in your data</b><div class="muted small">Choose a Steady Days export file (from Settings → Download in the Claude version). Entries with the same day are replaced.</div></div><label class="btn ghost sm filebtn">Choose file<input type="file" id="import-file" accept=".json,application/json,text/plain,*/*" hidden></label></div>
     ${I?`<div class="impbox ${I.state}"><p class="small" style="margin:0">${esc(I.msg)}</p>${I.state==="ready"?`<div class="btnrow"><button type="button" class="btn sm" data-act="impgo">Import now</button><button type="button" class="btn ghost sm" data-act="impcancel">Cancel</button></div>`:I.state==="done"||I.state==="error"?`<div><button type="button" class="linkbtn subtle" data-act="impcancel">OK</button></div>`:""}</div>`:""}`}
   else if(n.state==="error"||n.state==="missing")body=`<p class="muted small" style="margin:0">${n.state==="missing"?"The reminder task wasn't found. Ask Claude to set it up again.":"Couldn't reach your scheduled tasks from here. You can pause it in Claude under Scheduled."}</p>`;
@@ -2588,7 +2598,7 @@ document.addEventListener("click",e=>{
   if(a==="demostart"){try{localStorage.setItem("sd-demo","1")}catch(_){}location.reload()}
   if(a==="demoexit"){if(!S.demoConfirm){S.demoConfirm=true;render(true);return}try{localStorage.removeItem("sd-demo")}catch(_){}location.reload()}
   if(a==="impcancel"){S.imp=null;render(true)}
-  if(a==="settings"){S.settingsOpen=!S.settingsOpen;if(S.settingsOpen&&STANDALONE&&!S.demo)checkDb();if(S.settingsOpen&&S.nudge.state!=="ok"&&!STANDALONE&&!S.demo)loadNudge();else render(true);if(!S.settingsOpen)S.arrangeOpen=false}
+  if(a==="settings"){S.settingsOpen=!S.settingsOpen;if(S.settingsOpen&&STANDALONE&&!S.demo){checkDb();loadUsage()}if(S.settingsOpen&&S.nudge.state!=="ok"&&!STANDALONE&&!S.demo)loadNudge();else render(true);if(!S.settingsOpen)S.arrangeOpen=false}
   if(a==="nudgeswitch"){if(S.nudge.enabled!=null)setNudge(!S.nudge.enabled)}
   if(a!=="therapyrm")S.confirmTher=false;
   if(a==="therapyrm"){if(!S.confirmTher){S.confirmTher=true;render(true);return}S.confirmTher=false;S.open.therapy=false;editDay(vday(),d=>{delete d.therapy});toast("Therapy session removed")}
@@ -2711,6 +2721,7 @@ document.addEventListener("input",e=>{
   if(b.dataset.act==="note")editDay(vday(),d=>{d.note=b.value},{silent:true});
   if(b.dataset.act==="ex")editDay(vday(),d=>{d.body={...bodyOf(d),ex:b.value}},{silent:true});
   if(["vtitle","vnote","vmemory"].includes(b.dataset.act)){const vid=b.dataset.id,f2={vtitle:"title",vnote:"note",vmemory:"memory"}[b.dataset.act],val=b.value;if(f2!=="title"||val.trim())editDoc("vision",d=>{const x=d.items.find(y=>y.id===vid);if(x)x[f2]=f2==="title"?val.trim():val},{silent:true})}
+  if(b.dataset.act==="claudecredit"){const val=b.value;editSettings(st=>{st.claudeCredit=val===""?null:+val},{silent:true})}
   if(b.dataset.act==="nfield"){const nid=b.dataset.id,f2=b.dataset.f,val=b.value;editDoc("notes",d=>{const x=d.items.find(y=>y.id===nid);if(x){x[f2]=f2==="folder"?(val.trim()||"Notes"):val;x.updated=today()}},{silent:true})}
   if(b.dataset.act==="nq"){S.nQuery=b.value;render(true)}
   if(b.dataset.act==="gfield"){const gid=b.dataset.id,f2=b.dataset.f,val=b.value;if(f2!=="name"||val.trim())editDoc("groceries",x=>{const it=x.items.find(y=>y.id===gid);if(it)it[f2]=val},{silent:true})}
@@ -2934,7 +2945,7 @@ async function connectDb(){
     const col=db.collection("data/users/"+id);
     col.doc("settings").onSnapshot(snap=>{
       if(!pending.settings&&!inflight.settings){const d=snap.exists?snap.data():null;
-        S.settings={habits:d?.habits||[],reminders:d?.reminders||[],todos:d?.todos||[],projects:d?.projects||[],ttMap:d?.ttMap||null,favs:d?.favs||[],pnotes:d?.pnotes||{},nudgeOn:d?.nudgeOn,nudgeTime:d?.nudgeTime||"07:22",timeZone:d?.timeZone||TZ,todayOrder:d?.todayOrder||[],todayHidden:d?.todayHidden||[],exKinds:d?.exKinds||[],weighOff:!!d?.weighOff,skills:d?.skills||{},highlights:d?.highlights||{}};
+        S.settings={habits:d?.habits||[],reminders:d?.reminders||[],todos:d?.todos||[],projects:d?.projects||[],ttMap:d?.ttMap||null,favs:d?.favs||[],pnotes:d?.pnotes||{},claudeCredit:d?.claudeCredit??null,nudgeOn:d?.nudgeOn,nudgeTime:d?.nudgeTime||"07:22",timeZone:d?.timeZone||TZ,todayOrder:d?.todayOrder||[],todayHidden:d?.todayHidden||[],exKinds:d?.exKinds||[],weighOff:!!d?.weighOff,skills:d?.skills||{},highlights:d?.highlights||{}};
         if(ttOn())ttLoadListsMissing();}
       S.settingsReady=true;render();
     },()=>{S.settingsReady=true;render()});
