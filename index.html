@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261024053340"></script>
-<script type="module" src="boot.js?v=20261024053340"></script>
+<script src="shim.js?v=20261024054722"></script>
+<script type="module" src="boot.js?v=20261024054722"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -1762,11 +1762,7 @@ V.backlog=()=>{
       :!openS?`<p class="muted small" style="margin:0">${shelfG.map(([n,a])=>n?`${n} ${a.length}`:`${a.length} waiting`).join(" · ")}</p>`
       :`${some.length>20?`<input type="search" id="bl-q" data-act="blq" placeholder="Search your shelf" autocomplete="off" aria-label="Search your shelf">`:""}<div id="bl-shelf">${shelfG.map(([n,a])=>sub(n,a.slice().sort((x,y)=>(y.added||"").localeCompare(x.added||"")))).join("")}</div>`}
   </section>
-  ${done.length?`<section class="block card"><div class="head"><h2>Done in ${yr}</h2><span class="mono muted">${done.length}</span></div>
-    <ul class="list">${(moreD?done.slice(0,5):done).map(blRow).join("")}</ul>${moreD?`<button class="btn ghost" data-act="showall" data-id="bldone">Show all ${done.length}</button>`:""}</section>`:""}
-  ${dropped.length?`<section class="block card"><div class="head"><h2>Dropped</h2><span class="mono muted">${dropped.length}</span></div>
-    ${S.showAll.bldrop?`<ul class="list">${dropped.map(blRow).join("")}</ul>`:`<button class="btn ghost" data-act="showall" data-id="bldrop">Show ${dropped.length}</button>`}
-    <p class="muted small">Stopping something that isn't working for you is a good use of time too.</p></section>`:""}`;
+`;
 };
 
 /* ---------- Prettify: Claude suggests tidier titles (and author/year for media); nothing changes until you accept ---------- */
