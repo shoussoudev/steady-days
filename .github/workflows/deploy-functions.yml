@@ -11,6 +11,7 @@ jobs:
       PROJECT: steady-days-6a2e7
       HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
       HAS_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}
+      HAS_MB: ${{ secrets.MANGABAKA_TOKEN != '' }}
     steps:
       - name: Waiting for setup
         if: env.HAS_SA != 'true'
@@ -47,6 +48,16 @@ jobs:
         if: env.HAS_SA == 'true' && env.HAS_KEY == 'true'
         env: { ANTHROPIC_API_KEY: "${{ secrets.ANTHROPIC_API_KEY }}" }
         run: printf '%s' "$ANTHROPIC_API_KEY" | npx -y firebase-tools@15 functions:secrets:set ANTHROPIC_API_KEY --data-file=- --project "$PROJECT" --non-interactive --force
+      - name: Placeholder MangaBaka token until a real one is added
+        if: env.HAS_SA == 'true' && env.HAS_MB != 'true'
+        run: |
+          if ! gcloud secrets describe MANGABAKA_TOKEN --project "$PROJECT" >/dev/null 2>&1; then
+            printf 'not-set' | npx -y firebase-tools@15 functions:secrets:set MANGABAKA_TOKEN --data-file=- --project "$PROJECT" --non-interactive --force
+          fi
+      - name: Store the MangaBaka token as a secret
+        if: env.HAS_SA == 'true' && env.HAS_MB == 'true'
+        env: { MANGABAKA_TOKEN: "${{ secrets.MANGABAKA_TOKEN }}" }
+        run: printf '%s' "$MANGABAKA_TOKEN" | npx -y firebase-tools@15 functions:secrets:set MANGABAKA_TOKEN --data-file=- --project "$PROJECT" --non-interactive --force
       - name: Deploy
         if: env.HAS_SA == 'true'
         run: |

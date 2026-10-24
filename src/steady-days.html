@@ -1631,20 +1631,26 @@ function wishPanel(){
   </section>`;
 }
 
-/* ---------- Backlog: books, games, series. At most 2 "Now" per kind ---------- */
-const BL=[["book","📚","Books","Book","reading"],["manga","📖","Manga","Manga","reading"],["game","🎮","Games","Game","playing"],["series","📺","Watch","Series / film / anime","watching"]];
+/* ---------- Backlog: Now (physical copies, at most 3 per kind), Following (manga & webtoons read digitally, synced from MangaBaka), Up next, Shelf ---------- */
+const BL=[["book","📚","Books","Book","reading"],["manga","📖","Manga","Manga","reading"],["webtoon","📱","Webtoons","Webtoon / manhwa","reading"],["game","🎮","Games","Game","playing"],["series","📺","Watch","Series / film / anime","watching"]];
 const blT=k=>BL.find(x=>x[0]===k)||BL[0];
-const NOW_MAX=2;
+const NOW_MAX=3;
+const blFollowable=t=>t==="manga"||t==="webtoon";
+const FSTATE={plan:"Plan to read",paused:"Paused"};
+const PUB={releasing:"ongoing",completed:"complete",hiatus:"on hiatus",cancelled:"cancelled"};
 function blRow(it){
   const T=blT(it.type),fin=S.blFinish===it.id,drop=S.blDrop===it.id;
   if(S.blEdit===it.id)return blEditForm(it);
   const acts=it.status==="someday"?`<button type="button" class="btn ghost sm" data-act="blstart" data-id="${it.id}">Start</button>`
+    :it.status==="following"?(it.link?`<a class="btn ghost sm" href="${esc(it.link)}" target="_blank" rel="noopener">Read ↗</a>`:it.mb?"":`<button type="button" class="btn ghost sm" data-act="blch" data-id="${it.id}" title="One more chapter read">+1 ch</button>`)
     :it.status==="now"?`<button type="button" class="btn ghost sm" data-act="blfinish" data-id="${it.id}">${fin?"Cancel":"Finished"}</button>`
     :it.status==="dropped"?`<button type="button" class="linkbtn subtle" data-act="blpause" data-id="${it.id}">Back to someday</button>`:"";
   const meta=it.status==="done"?`<span class="muted small">${it.rating?`<span class="stars" aria-label="${it.rating} out of 5">${"★".repeat(it.rating)}<span class="dim">${"★".repeat(5-it.rating)}</span></span> · `:""}${shortDay(it.finished)}${it.thought?` · ${esc(it.thought)}`:""}</span>`
     :it.status==="now"?`<span class="muted small">${it.started?`since ${shortDay(it.started)} · `:""}<button type="button" class="linkbtn subtle tiny" data-act="blpause" data-id="${it.id}">Pause</button> · <button type="button" class="linkbtn subtle tiny" data-act="bldrop" data-id="${it.id}">${drop?"Keep going":"Drop"}</button></span>`
+    :it.status==="following"?`<span class="muted small">${it.fState?`${FSTATE[it.fState]} · `:""}${it.ch?`ch. ${+it.ch}${it.total?` of ${+it.total}`:""}`:it.total?`${+it.total} ch.`:"Not started"}${it.pub&&PUB[it.pub]?` · ${PUB[it.pub]}`:""}${it.mb?` · via MangaBaka`:` · <button type="button" class="linkbtn subtle tiny" data-act="blfinish" data-id="${it.id}">${fin?"Cancel":"Finished"}</button> · <button type="button" class="linkbtn subtle tiny" data-act="bldrop" data-id="${it.id}">${drop?"Keep going":"Drop"}</button>`}</span>`
+    :it.status==="someday"?`<span class="muted small"><button type="button" class="linkbtn subtle tiny" data-act="blnext" data-id="${it.id}">${it.next?"Back to shelf":"↑ Up next"}</button>${blFollowable(it.type)?` · <button type="button" class="linkbtn subtle tiny" data-act="blfollow" data-id="${it.id}">Follow digitally</button>`:""}</span>`
     :it.status==="dropped"?`<span class="muted small">Dropped ${shortDay(it.dropped)}${it.why?` · ${esc(it.why)}`:""}</span>`:"";
-  return `<li class="wrow"><div class="wmain"><span class="bltype" title="${T[2]}" aria-hidden="true">${T[1]}</span><div class="tmain grow"><button type="button" class="etext" data-act="bledit" data-id="${it.id}" title="Tap to edit"><span>${esc(it.title)}${it.by||it.year?` <span class="muted small">· ${esc([it.by,it.year].filter(Boolean).join(" · "))}</span>`:""}</span></button>${meta}</div>${acts}<button type="button" class="x" aria-label="Remove “${esc(it.title)}”" data-act="bldel" data-id="${it.id}">×</button></div>
+  return `<li class="wrow" data-q="${esc(gNorm(it.title+" "+(it.by||"")))}"><div class="wmain"><span class="bltype" title="${T[2]}" aria-hidden="true">${T[1]}</span><div class="tmain grow"><button type="button" class="etext" data-act="bledit" data-id="${it.id}" title="Tap to edit"><span>${esc(it.title)}${it.by||it.year?` <span class="muted small">· ${esc([it.by,it.year].filter(Boolean).join(" · "))}</span>`:""}</span></button>${meta}</div>${acts}<button type="button" class="x" aria-label="Remove “${esc(it.title)}”" data-act="bldel" data-id="${it.id}">×</button></div>
   ${fin?`<form class="wbuy" data-form="bldone" data-id="${it.id}"><div class="rate" role="radiogroup" aria-label="Rating (optional)">${[1,2,3,4,5].map(n=>`<label><input type="radio" name="bl-rate" value="${n}"><span aria-hidden="true">★</span><span class="sr">${n} star${n>1?"s":""}</span></label>`).join("")}</div>
     <div class="addrow"><input type="text" id="bl-thought" placeholder="One thought on it (optional)" autocomplete="off"><button class="btn">Done</button></div></form>`:""}
   ${drop?`<form class="addrow" data-form="bldrop" data-id="${it.id}"><input type="text" id="bl-why" placeholder="Why drop it? (optional)" autocomplete="off"><button class="btn ghost">Drop it</button></form>`:""}</li>`;
@@ -1673,46 +1679,61 @@ function fromGoodreads(text){const rows=parseCSV(text.replace(/^﻿/,""));const 
       thought:g("My Review").replace(/<br\s*\/?>/gi," ").replace(/<[^>]+>/g,"").slice(0,240),added:gdDate(g("Date Added"))||today(),finished:status==="done"?(gdDate(g("Date Read"))||gdDate(g("Date Added"))||today()):undefined,started:status==="now"?(gdDate(g("Date Added"))||today()):undefined,dropped:status==="dropped"?today():undefined,source:"goodreads"}}).filter(x=>x.title)}
 function fromMangaXML(text){let doc;try{doc=new DOMParser().parseFromString(text,"text/xml")}catch(_){return null}const ms=[...doc.getElementsByTagName("manga")];if(!ms.length)return null;
   const t=(el,n)=>{const x=el.getElementsByTagName(n)[0];return x?x.textContent.trim():""};
-  return ms.map(m=>{const st=t(m,"my_status").toLowerCase();const status=/complete/.test(st)?"done":/reading|current/.test(st)?"now":/drop/.test(st)?"dropped":"someday";const sc=+t(m,"my_score")||0;
+  return ms.map(m=>{const st=t(m,"my_status").toLowerCase();const status=/complete/.test(st)?"done":/reading|current|hold|paus/.test(st)?"following":/drop/.test(st)?"dropped":"following";const fState=/plan/.test(st)?"plan":/hold|paus/.test(st)?"paused":undefined;const sc=+t(m,"my_score")||0;const ch=+t(m,"my_read_chapters")||undefined,total=+t(m,"series_chapters")||undefined;
     return {type:"manga",title:t(m,"series_title")||t(m,"manga_title"),status,rating:status==="done"&&sc?Math.max(1,Math.min(5,Math.round(sc/2))):null,thought:t(m,"my_comments").slice(0,240),
-      finished:status==="done"?(gdDate(t(m,"my_finish_date"))||today()):undefined,started:status==="now"?(gdDate(t(m,"my_start_date"))||today()):undefined,dropped:status==="dropped"?today():undefined,added:today(),source:"manga list"}}).filter(x=>x.title)}
+      finished:status==="done"?(gdDate(t(m,"my_finish_date"))||today()):undefined,fState,ch,total,dropped:status==="dropped"?today():undefined,added:today(),source:"manga list"}}).filter(x=>x.title)}
 function fromMangaJSON(text){let j;try{j=JSON.parse(text)}catch(_){return null}const arr=Array.isArray(j)?j:(j.data||j.entries||j.library||j.items||j.list||null);if(!Array.isArray(arr))return null;
   const pick=(o,...ks)=>{for(const k of ks){const v=k.split(".").reduce((a,p)=>a&&a[p],o);if(v!=null&&v!=="")return v}return ""};
   const out=arr.map(e=>{const title=String(pick(e,"title","series.title","manga.title","name","series.name","romanized_title","series.romanized_title")||"");const st=String(pick(e,"state","status","reading_status","list_status")).toLowerCase();
-    const status=/complete|finish|read$/.test(st)&&!/plan|to.?read/.test(st)?"done":/reading|current|progress/.test(st)?"now":/drop/.test(st)?"dropped":"someday";const sc=+pick(e,"rating","score","my_rating")||0;
-    return {type:"manga",title,status,rating:status==="done"&&sc?Math.max(1,Math.min(5,Math.round(sc>10?sc/20:sc>5?sc/2:sc))):null,added:today(),finished:status==="done"?today():undefined,started:status==="now"?today():undefined,dropped:status==="dropped"?today():undefined,source:"manga list"}}).filter(x=>x.title);
+    const status=/complete|finish|read$/.test(st)&&!/plan|to.?read/.test(st)?"done":/drop/.test(st)?"dropped":"following";const fState=status!=="following"?undefined:/plan|consider/.test(st)?"plan":/paus|hold/.test(st)?"paused":undefined;const sc=+pick(e,"rating","score","my_rating")||0;
+    return {type:"manga",title,status,rating:status==="done"&&sc?Math.max(1,Math.min(5,Math.round(sc>10?sc/20:sc>5?sc/2:sc))):null,added:today(),finished:status==="done"?today():undefined,fState,ch:+pick(e,"progress_chapter","entry.progress_chapter")||undefined,dropped:status==="dropped"?today():undefined,source:"manga list"}}).filter(x=>x.title);
   return out.length?out:null}
 function readText(f){return f.text?f.text():new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=no;r.readAsText(f)})}
 function blImportFile(file){readText(file).then(text=>{const rows=/\.csv$/i.test(file.name)||/^﻿?Book Id,|,Exclusive Shelf,/.test(text.slice(0,600))?fromGoodreads(text):/<\?xml|<myanimelist|<manga>/i.test(text.slice(0,500))?fromMangaXML(text):fromMangaJSON(text);
   if(!rows||!rows.length){toast("That file isn't a format I can read yet. Send it to Claude so the import can learn it.");return}
   const have=new Set(S.backlog.items.map(x=>x.type+"|"+gNorm(x.title)));const fresh=rows.filter(r=>!have.has(r.type+"|"+gNorm(r.title)));
-  S.blImp={file:file.name,rows:fresh,skipped:rows.length-fresh.length,pick:{someday:true,now:true,done:true,dropped:true}};render(true);window.scrollTo({top:0})}).catch(()=>toast("That file couldn't be read."))}
-function blImportPanel(){const I=S.blImp;if(!I)return "";const n=k=>I.rows.filter(r=>r.status===k).length;const L=[["someday","Want to read / plan to read"],["now","Reading now"],["done","Read / finished"],["dropped","Dropped"]].filter(([k])=>n(k));
+  /* only room for NOW_MAX in Now per kind; the rest of "currently reading" waits in Up next */
+  const room={};fresh.filter(r=>r.status==="now").forEach(r=>{if(room[r.type]==null)room[r.type]=NOW_MAX-S.backlog.items.filter(x=>x.type===r.type&&x.status==="now").length;if(room[r.type]-->0)return;r.status="someday";r.next=true;delete r.started});
+  S.blImp={file:file.name,rows:fresh,skipped:rows.length-fresh.length,pick:{someday:true,now:true,following:true,done:true,dropped:true}};render(true);window.scrollTo({top:0})}).catch(()=>toast("That file couldn't be read."))}
+function blImportPanel(){const I=S.blImp;if(!I)return "";const n=k=>I.rows.filter(r=>r.status===k).length;const L=[["someday","Want to read (goes to your Shelf; extra “reading now” go to Up next)"],["now","Reading now"],["following","Following digitally (manga & webtoons)"],["done","Read / finished"],["dropped","Dropped"]].filter(([k])=>n(k));
   const chosen=I.rows.filter(r=>I.pick[r.status]).length;
   return `<section class="block card import"><div class="head"><h2>Import from ${esc(I.file)}</h2></div>
     <p class="small" style="margin:0">${I.rows.length} new item${I.rows.length===1?"":"s"}${I.skipped?` (${I.skipped} already in your backlog, skipped)`:""}. Choose what to bring in:</p>
     ${L.map(([k,lab])=>`<label class="homemade"><input type="checkbox" data-act="blimppick" data-k="${k}" ${I.pick[k]?"checked":""}> ${lab} · ${n(k)}</label>`).join("")}
-    ${n("now")>NOW_MAX?`<p class="muted small" style="margin:0">More than ${NOW_MAX} are marked as reading now; they'll all come in as Now, and you can pause some.</p>`:""}
     <div class="btnrow"><button type="button" class="btn" data-act="blimpgo" ${chosen?"":"disabled"}>Import ${chosen}</button><button type="button" class="btn ghost" data-act="blimpcancel">Cancel</button></div></section>`}
 V.backlog=()=>{
   const f=S.blType||"all";const all=S.backlog.items;const items=f==="all"?all:all.filter(x=>x.type===f);
-  const now=items.filter(x=>x.status==="now"),some=items.filter(x=>x.status==="someday");
+  const now=items.filter(x=>x.status==="now"),some=items.filter(x=>x.status==="someday"&&!x.next),next=items.filter(x=>x.status==="someday"&&x.next);
+  const fol=items.filter(x=>x.status==="following").sort((a,b)=>(b.chAt||b.added||"").localeCompare(a.chAt||a.added||"")||a.title.localeCompare(b.title));
+  const folG=[["","Reading"],["paused","Paused"],["plan","Plan to read"]].map(([k,n])=>[n,fol.filter(x=>(x.fState||"")===k)]).filter(g=>g[1].length);
+  const shelfG=f==="all"?BL.map(([k,e,n])=>[`${e} ${n}`,some.filter(x=>x.type===k)]).filter(g=>g[1].length):[["",some]];
+  const sub=(n,arr)=>`${n?`<h3 class="eyebrow" style="margin:10px 0 2px">${n} · ${arr.length}</h3>`:""}<ul class="list">${arr.map(blRow).join("")}</ul>`;
   const yr=today().slice(0,4);const done=items.filter(x=>x.status==="done"&&(x.finished||"").startsWith(yr)).sort((a,b)=>a.finished<b.finished?1:-1);
   const dropped=items.filter(x=>x.status==="dropped").sort((a,b)=>(a.dropped||"")<(b.dropped||"")?1:-1);
-  const moreS=!S.showAll.blsome&&some.length>10,moreD=!S.showAll.bldone&&done.length>5;
-  const count=k=>all.filter(x=>x.type===k&&(x.status==="now"||x.status==="someday")).length;
+  const moreD=!S.showAll.bldone&&done.length>5,openF=!!S.showAll.blfollow,openS=!!S.showAll.blshelf;
+  const count=k=>all.filter(x=>x.type===k&&(x.status==="now"||x.status==="someday"||x.status==="following")).length;
   return blImportPanel()+prettyPanel("backlog")+recentBox(u=>(u.kind==="doc"||u.kind==="docall")&&u.doc==="backlog")+`<section class="block card">
     <div class="head"><h2>Backlog</h2><span class="topmeta">${prettyBtn("backlog")}<label class="linkbtn filebtn" title="Import from Goodreads (CSV) or a manga list (MyAnimeList XML)">⤓ Import<input type="file" id="bl-import" accept=".csv,.xml,.json,text/csv,text/xml,application/json" hidden></label><span class="mono muted">${all.filter(x=>x.status==="now"||x.status==="someday").length}</span></span></div>
     <div class="chips"><button class="chip" data-act="bltype" data-t="all" aria-pressed="${f==="all"}">All</button>${BL.map(([k,e,n])=>`<button class="chip" data-act="bltype" data-t="${k}" aria-pressed="${f===k}" ${k==="series"?`title="Series, films and anime"`:""}>${e} ${n} · ${count(k)}</button>`).join("")}</div>
     <form class="addrow" data-form="bladd"><select id="bl-type" aria-label="Kind">${BL.map(([k,e,n])=>`<option value="${k}" ${(f===k||f==="all"&&k==="book")?"selected":""}>${e} ${BL.find(x=>x[0]===k)[3]}</option>`).join("")}</select><input type="text" id="bl-new" placeholder="Title" autocomplete="off"><button class="btn">Add</button></form>
   </section>
   <section class="block card">
-    <div class="head"><h2>Now</h2><span class="eyebrow">Up to ${NOW_MAX} of each</span></div>
+    <div class="head"><h2>Now</h2><span class="eyebrow">Physical copies · up to ${NOW_MAX} of each</span></div>
     ${now.length?`<ul class="list">${now.map(blRow).join("")}</ul>`:`<p class="empty">Nothing on the go. Tap Start on something below when you're ready.</p>`}
   </section>
+  ${fol.length||blFollowable(f)?`<section class="block card"><div class="head"><h2>Following</h2><span class="topmeta"><span class="mono muted">${fol.length}</span><button type="button" class="linkbtn" data-act="showall" data-id="blfollow" aria-expanded="${openF}">${openF?"Hide":"Show"}</button></span></div>
+    ${!openF?`<p class="muted small" style="margin:0">${fol.length?`${folG.map(([n,a])=>`${a.length} ${n.toLowerCase()}`).join(" · ")}`:"Manga and webtoons you read digitally."}${S.backlog.mbSync&&S.backlog.mbSync.at?` · synced ${shortDay(S.backlog.mbSync.at.slice(0,10))}`:""}</p>`
+      :fol.length?folG.map(([n,a])=>sub(folG.length>1||n!=="Reading"?n:"",a)).join(""):`<p class="empty">Nothing followed yet. Connect MangaBaka in Settings, or tap “Follow digitally” on a manga.</p>`}
+  </section>`:""}
   <section class="block card">
-    <div class="head"><h2>Someday</h2><span class="mono muted">${some.length}</span></div>
-    ${some.length?`<ul class="list">${(moreS?some.slice(0,10):some).map(blRow).join("")}</ul>${moreS?`<button class="btn ghost" data-act="showall" data-id="blsome">Show all ${some.length}</button>`:""}`:`<p class="empty">Add books, games or series you'd like to get to.</p>`}
+    <div class="head"><h2>Up next</h2><span class="mono muted">${next.length}</span></div>
+    ${next.length?`<ul class="list">${next.map(blRow).join("")}</ul>`:`<p class="empty">Pick what comes next: tap “↑ Up next” on anything in your shelf.</p>`}
+  </section>
+  <section class="block card">
+    <div class="head"><h2>Shelf</h2><span class="topmeta"><span class="mono muted">${some.length}</span>${some.length?`<button type="button" class="linkbtn" data-act="showall" data-id="blshelf" aria-expanded="${openS}">${openS?"Hide":"Show"}</button>`:""}</span></div>
+    ${!some.length?`<p class="empty">Add books, games or series you'd like to get to someday.</p>`
+      :!openS?`<p class="muted small" style="margin:0">${shelfG.map(([n,a])=>n?`${n} ${a.length}`:`${a.length} waiting`).join(" · ")}</p>`
+      :`${some.length>20?`<input type="search" id="bl-q" data-act="blq" placeholder="Search your shelf" autocomplete="off" aria-label="Search your shelf">`:""}<div id="bl-shelf">${shelfG.map(([n,a])=>sub(n,a.slice().sort((x,y)=>(y.added||"").localeCompare(x.added||"")))).join("")}</div>`}
   </section>
   ${done.length?`<section class="block card"><div class="head"><h2>Done in ${yr}</h2><span class="mono muted">${done.length}</span></div>
     <ul class="list">${(moreD?done.slice(0,5):done).map(blRow).join("")}</ul>${moreD?`<button class="btn ghost" data-act="showall" data-id="bldone">Show all ${done.length}</button>`:""}</section>`:""}
@@ -1831,6 +1852,10 @@ async function exportData(){
 let PUSH_OK=null;
 /* Claude usage, tallied by the server on every call; cost is an estimate from published prices */
 async function loadUsage(){if(!S.live||!S.db)return;try{const snap=await S.db.collection("data/users/"+S.uid).doc("usage").get();S.usage=snap.exists?snap.data():{}}catch(_){S.usage={err:true}}render(true)}
+const MB_ERR={"no-token":"Not connected yet. Add your MangaBaka token as a GitHub secret named MANGABAKA_TOKEN, then run the server deploy.","bad-token":"MangaBaka didn't accept the token. Make a new one in MangaBaka settings and update the GitHub secret.","unavailable":"MangaBaka didn't answer. It'll try again at the next sync."};
+function mbRow(){if(!window.__sdMangaBaka)return "";const M=S.backlog.mbSync||{};
+  const body=S.mbBusy?"Syncing…":!M.at?"Copies the manga and webtoons you follow on MangaBaka into Backlog → Following, Monday and Thursday mornings.":M.error?MB_ERR[M.error]||"Last sync didn't work.":`Last synced ${fmtDay(M.at.slice(0,10),{weekday:"short",day:"numeric",month:"short"})} · ${M.count} in your library · ${M.added||0} new, ${M.updated||0} chapter update${M.updated===1?"":"s"}, ${M.moved||0} moved`;
+  return `<div class="setrow"><div><b>MangaBaka</b><div class="muted small">${body}</div></div><button type="button" class="btn ghost sm" data-act="mbsync" ${S.mbBusy?"disabled":""}>Sync now</button></div>`}
 function usageRow(){
   if(!window.__sdClaude)return "";const U=S.usage;const usd=x=>"$"+(Math.round((+x||0)*100)/100).toFixed(2);
   const mk=new Date().toISOString().slice(0,7),m=(U&&U.months&&U.months[mk])||{},t=(U&&U.total)||{};const bought=+S.settings.claudeCredit||0;
@@ -2460,7 +2485,7 @@ function settingsPanel(){
   if(STANDALONE){const A=window.__sdAuth||{};const c=S.dbCheck;const I=S.imp;
     const dbLine=!c?"Checking the connection to your database…":c.ok?"✓ Connected to your database.":`⚠ Can't reach your database: ${esc(DB_HELP[c.code]||c.message||c.code)}`;
     body=`<div class="setrow"><div><b>Account</b><div class="muted small">Signed in${A.email?" as "+esc(A.email):""}.</div><div class="small ${c&&!c.ok?"warn":"muted"}">${dbLine}</div></div><button type="button" class="btn ghost sm" data-act="signout">Sign out</button></div>
-    ${notifRows()}${usageRow()}
+    ${notifRows()}${mbRow()}${usageRow()}
     <div class="setrow"><div><b>Bring in your data</b><div class="muted small">Choose a Steady Days export file (from Settings → Download in the Claude version). Entries with the same day are replaced.</div></div><label class="btn ghost sm filebtn">Choose file<input type="file" id="import-file" accept=".json,application/json,text/plain,*/*" hidden></label></div>
     ${I?`<div class="impbox ${I.state}"><p class="small" style="margin:0">${esc(I.msg)}</p>${I.state==="ready"?`<div class="btnrow"><button type="button" class="btn sm" data-act="impgo">Import now</button><button type="button" class="btn ghost sm" data-act="impcancel">Cancel</button></div>`:I.state==="done"||I.state==="error"?`<div><button type="button" class="linkbtn subtle" data-act="impcancel">OK</button></div>`:""}</div>`:""}`}
   else if(n.state==="error"||n.state==="missing")body=`<p class="muted small" style="margin:0">${n.state==="missing"?"The reminder task wasn't found. Ask Claude to set it up again.":"Couldn't reach your scheduled tasks from here. You can pause it in Claude under Scheduled."}</p>`;
@@ -2687,7 +2712,11 @@ document.addEventListener("click",e=>{
   if(a==="blstart"){const it=S.backlog.items.find(x=>x.id===id);if(!it)return;const n=S.backlog.items.filter(x=>x.type===it.type&&x.status==="now").length;const T=blT(it.type);
     if(n>=NOW_MAX){toast(`You already have ${NOW_MAX} ${T[0]==="series"?"things to watch":T[0]==="manga"?"manga":T[2].toLowerCase()} on the go. Finish, pause or drop one first.`);return}
     editDoc("backlog",d=>{const x=d.items.find(y=>y.id===id);Object.assign(x,{status:"now",started:today()})});toast(`Enjoy! Now ${T[4]}: ${it.title}`)}
-  if(a==="blpause"){S.blDrop=null;editDoc("backlog",d=>{const x=d.items.find(y=>y.id===id);if(x){x.status="someday";delete x.dropped;delete x.why}})}
+  if(a==="mbsync"&&window.__sdMangaBaka){S.mbBusy=true;render(true);window.__sdMangaBaka().then(r=>{S.mbBusy=false;if(r&&r.error)toast(MB_ERR[r.error]||"Sync didn't work");else toast(`MangaBaka synced: ${r.added||0} new, ${r.updated||0} updated, ${r.moved||0} moved`);render(true)}).catch(e=>{S.mbBusy=false;toast(/permission/.test(e&&e.code||"")?"MangaBaka sync is only for the owner account.":"Sync didn't work. Is the server deployed?");render(true)})}
+  if(a==="blnext"){editDoc("backlog",d=>{const x=d.items.find(y=>y.id===id);if(x){if(x.next)delete x.next;else x.next=true}})}
+  if(a==="blfollow"){editDoc("backlog",d=>{const x=d.items.find(y=>y.id===id);if(x){x.status="following";delete x.next;x.chAt=today()}});toast("Now in Following")}
+  if(a==="blch"){editDoc("backlog",d=>{const x=d.items.find(y=>y.id===id);if(x){x.ch=(+x.ch||0)+1;x.chAt=today();delete x.fState}},{silent:true})}
+  if(a==="blpause"){S.blDrop=null;editDoc("backlog",d=>{const x=d.items.find(y=>y.id===id);if(x){x.status=x.mb||x.wasFollowing?"following":"someday";delete x.dropped;delete x.why}})}
   if(a==="bldrop"){S.blDrop=S.blDrop===id?null:id;S.blFinish=null;render(true);const el=document.getElementById("bl-why");if(el&&S.blDrop)el.focus()}
   if(a==="blfinish"){S.blDrop=null;S.blFinish=S.blFinish===id?null:id;render(true);const el=document.getElementById("bl-thought");if(el&&S.blFinish)el.focus()}
   if(a==="bldel"){const i=S.backlog.items.findIndex(x=>x.id===id);if(i<0)return;const it=S.backlog.items[i];editDoc("backlog",d=>{d.items.splice(i,1)});pushUndo({kind:"doc",doc:"backlog",item:it,index:i,label:`Removed “${it.title}”`})}
@@ -2696,7 +2725,7 @@ document.addEventListener("click",e=>{
   if(a==="body"){S.open.checkin=true;const f=b.dataset.f,v=b.dataset.v==="yes";editDay(vday(),d=>{d.body={...bodyOf(d)};d.body[f]=d.body[f]===v?null:v})}
   /* TickTick */
   if(a==="ttreload")ttLoadAll();
-  if(a==="showall"){S.showAll[id]=true;render(true)}
+  if(a==="showall"){S.showAll[id]=b.getAttribute("aria-expanded")==="true"?false:true;render(true)}
   if(a==="tthabit")habitTap(id);
   if(a==="ttmove")moveTask(id,b.dataset.col);
   if(a==="ttdone2")completeTask(id,b.dataset.pid,"Removed from your wishlist");
@@ -2737,6 +2766,7 @@ document.addEventListener("change",e=>{
 });
 document.addEventListener("input",e=>{
   const b=e.target;if(!b.dataset)return;
+  if(b.dataset.act==="blq"){const q=gNorm(b.value);document.querySelectorAll("#bl-shelf li[data-q]").forEach(li=>{li.hidden=!!q&&!li.dataset.q.includes(q)});document.querySelectorAll("#bl-shelf h3").forEach(h=>{const ul=h.nextElementSibling;h.hidden=!!ul&&![...ul.children].some(li=>!li.hidden)});return}
   if(b.dataset.act==="note")editDay(vday(),d=>{d.note=b.value},{silent:true});
   if(b.dataset.act==="ex")editDay(vday(),d=>{d.body={...bodyOf(d),ex:b.value}},{silent:true});
   if(["vtitle","vnote","vmemory"].includes(b.dataset.act)){const vid=b.dataset.id,f2={vtitle:"title",vnote:"note",vmemory:"memory"}[b.dataset.act],val=b.value;if(f2!=="title"||val.trim())editDoc("vision",d=>{const x=d.items.find(y=>y.id===vid);if(x)x[f2]=f2==="title"?val.trim():val},{silent:true})}
@@ -2853,7 +2883,7 @@ document.addEventListener("submit",e=>{
       if(x.status==="done"){x.rating=r||null;x.thought=v("ble-thought")}
       if(x.status==="dropped")x.why=v("ble-why")});toast("Saved");return}
   if(f==="bldrop"){const bid=form.dataset.id;const why=v("bl-why");S.blDrop=null;
-    editDoc("backlog",d=>{const x=d.items.find(y=>y.id===bid);if(x)Object.assign(x,{status:"dropped",dropped:today(),why})});toast("Dropped. Onwards.");return}
+    editDoc("backlog",d=>{const x=d.items.find(y=>y.id===bid);if(x){if(x.status==="following")x.wasFollowing=true;Object.assign(x,{status:"dropped",dropped:today(),why})}});toast("Dropped. Onwards.");return}
   if(f==="bldone"){const bid=form.dataset.id;const r=+(form.querySelector('input[name="bl-rate"]:checked')||{}).value||0;const th=v("bl-thought");
     S.blFinish=null;editDoc("backlog",d=>{const x=d.items.find(y=>y.id===bid);if(x)Object.assign(x,{status:"done",finished:today(),rating:r||null,thought:th})});toast("Finished! Nice one. 🌿");return}
   const first=form.querySelector("input[type=text]");if(first){setTimeout(()=>{const el=document.getElementById(first.id);if(el)el.focus()},0)}
@@ -2932,7 +2962,7 @@ function startDemo(){
     w("Instant camera",{added:addDays(T,-31),until:addDays(T,-1)}),w("Cast-iron pan",{added:addDays(T,-45),until:addDays(T,-15),checked:true}),w("Linen bedding",{prio:1,added:addDays(T,-3),until:addDays(T,27)})]};
   const bl=(type,title,status,extra)=>({id:uid(),type,title,status,added:addDays(T,-30),...(extra||{})});
   S.backlog={items:[bl("book","Project Hail Mary","now",{by:"Andy Weir",year:2021,started:addDays(T,-6)}),bl("book","The Midnight Library","someday",{by:"Matt Haig",year:2020}),
-    bl("manga","Frieren: Beyond Journey's End","now",{by:"Kanehito Yamada",year:2020,started:addDays(T,-12)}),bl("game","Hades","done",{by:"Supergiant Games",year:2020,finished:addDays(T,-9),rating:5,thought:"Couldn't stop playing"}),
+    bl("manga","Frieren: Beyond Journey's End","following",{by:"Kanehito Yamada",year:2020,ch:140,pub:"releasing",chAt:addDays(T,-2)}),bl("webtoon","Solo Leveling","following",{by:"Chugong",year:2018,ch:96,total:200,pub:"completed",chAt:addDays(T,-5)}),bl("manga","Vagabond","now",{by:"Takehiko Inoue",year:1998,started:addDays(T,-12)}),bl("manga","Blue Lock","someday",{by:"Muneyuki Kaneshiro",year:2018}),bl("game","Hades","done",{by:"Supergiant Games",year:2020,finished:addDays(T,-9),rating:5,thought:"Couldn't stop playing"}),
     bl("game","Stardew Valley","someday",{by:"ConcernedApe",year:2016}),bl("series","Severance","now",{year:2022,started:addDays(T,-4)}),bl("series","Spirited Away","someday",{by:"Hayao Miyazaki",year:2001})]};
   const vt=(title,area,emoji,extra)=>({id:uid(),title,area,emoji,note:"",done:false,...(extra||{})});
   S.vision={year:String(new Date().getFullYear()),values:"Calm · Curiosity · Kindness",motto:"Little by little",items:[vt("See the northern lights","Places","🌌"),vt("Run a 10K","Body & mind","🏃",{done:true,doneAt:addDays(T,-40),memory:"Rainy, slow and very happy"}),

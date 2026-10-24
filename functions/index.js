@@ -1,12 +1,16 @@
 /* Steady Days server side (Firebase Functions, London region).
    - tick: every 5 minutes, sends the morning nudge at each person's chosen time and any task reminders that are due.
-   - claude: a signed-in owner asks Claude (prettify, sorting a vision); the API key never leaves the server. */
+   - claude: a signed-in owner asks Claude (prettify, sorting a vision); the API key never leaves the server.
+   - mangabaka / mangabakaSync: twice a week (and on request) copies your MangaBaka library into Backlog → Following. */
 import {onSchedule} from "firebase-functions/v2/scheduler";
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {defineSecret, defineString} from "firebase-functions/params";
 import {initializeApp} from "firebase-admin/app";
 import {getFirestore, FieldValue} from "firebase-admin/firestore";
 import {getMessaging} from "firebase-admin/messaging";
+import {getAuth} from "firebase-admin/auth";
+import {randomUUID} from "node:crypto";
+import {fetchLibrary, mergeLibrary} from "./mangabaka.js";
 
 initializeApp();
 const db = getFirestore();
@@ -16,6 +20,7 @@ const ALLOWED_EMAILS = defineString("ALLOWED_EMAILS", {default: ""});
 const CLAUDE_MODEL = defineString("CLAUDE_MODEL", {default: "claude-sonnet-5-5"});
 /* lighter, cheaper model for simple jobs like tidying titles */
 const CLAUDE_MODEL_QUICK = defineString("CLAUDE_MODEL_QUICK", {default: "claude-haiku-5-5"});
+const MANGABAKA_TOKEN = defineSecret("MANGABAKA_TOKEN");
 const APP_URL = "https://shoussoudev.github.io/steady-days/";
 
 /* local date and time in a time zone, e.g. {date:"2026-10-22", hm:"07:22"} */
@@ -126,4 +131,49 @@ export const claude = onCall({region: REGION, secrets: [ANTHROPIC_API_KEY], time
     await db.doc(`users/${req.auth.uid}/docs/usage`).set({months: {[month]: add}, total: add, last: {at: new Date().toISOString(), model: j.model || CLAUDE_MODEL.value(), input: inT, output: outT, cost}}, {merge: true});
   } catch (e) { console.error("usage tally failed", e); }
   return {text: (j.content || []).filter(c => c.type === "text").map(c => c.text).join("")};
+});
+
+/* ---------- MangaBaka: the token is yours, so it only ever syncs into the first allowed account ---------- */
+const owner = () => ALLOWED_EMAILS.value().split(",").map(x => x.trim().toLowerCase()).filter(Boolean)[0] || "";
+
+async function syncMangaBaka(uid) {
+  const token = MANGABAKA_TOKEN.value();
+  const ref = db.doc(`users/${uid}/docs/backlog`);
+  const at = new Date().toISOString();
+  if (!token || token === "not-set") {
+    await ref.set({mbSync: {at, error: "no-token"}}, {merge: true});
+    return {error: "no-token"};
+  }
+  let lib;
+  try { lib = await fetchLibrary(token); }
+  catch (e) {
+    console.error("MangaBaka fetch failed", e);
+    await ref.set({mbSync: {at, error: e.code || "unavailable"}}, {merge: true});
+    return {error: e.code || "unavailable"};
+  }
+  const today = new Intl.DateTimeFormat("en-CA", {timeZone: "Europe/London"}).format(new Date());
+  const stats = await db.runTransaction(async tx => {
+    const snap = await tx.get(ref);
+    const cur = snap.exists ? snap.data() : {};
+    const {items, stats} = mergeLibrary(Array.isArray(cur.items) ? cur.items : [], lib, today, () => randomUUID().slice(0, 12));
+    tx.set(ref, {items, kind: "backlog", mbSync: {at, count: lib.length, ...stats}}, {merge: true});
+    return stats;
+  });
+  return {count: lib.length, ...stats};
+}
+
+/* Monday and Thursday mornings */
+export const mangabaka = onSchedule({schedule: "10 6 * * 1,4", region: REGION, timeZone: "Europe/London", retryCount: 0, secrets: [MANGABAKA_TOKEN], memory: "256MiB", timeoutSeconds: 120}, async () => {
+  const email = owner();
+  if (!email) return;
+  let user;
+  try { user = await getAuth().getUserByEmail(email); } catch (e) { console.error("owner not found", e); return; }
+  await syncMangaBaka(user.uid);
+});
+
+/* "Sync now" from Settings */
+export const mangabakaSync = onCall({region: REGION, secrets: [MANGABAKA_TOKEN], timeoutSeconds: 120, memory: "256MiB"}, async (req) => {
+  const email = req.auth && req.auth.token && req.auth.token.email;
+  if (!email || String(email).toLowerCase() !== owner()) throw new HttpsError("permission-denied", "MangaBaka sync isn't enabled for this account.");
+  return await syncMangaBaka(req.auth.uid);
 });
