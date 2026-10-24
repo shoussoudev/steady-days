@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261024050226"></script>
-<script type="module" src="boot.js?v=20261024050226"></script>
+<script src="shim.js?v=20261024050536"></script>
+<script type="module" src="boot.js?v=20261024050536"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -1686,6 +1686,41 @@ function blEditForm(it){
     ${it.status==="dropped"?`<input type="text" id="ble-why" value="${esc(it.why||"")}" placeholder="Why you dropped it" autocomplete="off" aria-label="Reason">`:""}
     <div class="btnrow"><button class="btn sm">Save</button><button type="button" class="btn ghost sm" data-act="bleditcancel">Cancel</button></div></form></li>`;
 }
+/* ---------- Backlog import: Goodreads library (CSV) and manga lists (MyAnimeList-style XML / JSON) ---------- */
+function parseCSV(text){const rows=[];let row=[],f="",q=false;for(let i=0;i<text.length;i++){const c=text[i];
+  if(q){if(c==='"'){if(text[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
+  else if(c==='"')q=true;else if(c===","){row.push(f);f=""}else if(c==="\n"||c==="\r"){if(c==="\r"&&text[i+1]==="\n")i++;row.push(f);f="";if(row.some(x=>x!==""))rows.push(row);row=[]}else f+=c}
+  row.push(f);if(row.some(x=>x!==""))rows.push(row);return rows}
+const gdDate=v=>{const m=/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/.exec(v||"");return m?`${m[1]}-${String(m[2]).padStart(2,"0")}-${String(m[3]).padStart(2,"0")}`:""};
+function fromGoodreads(text){const rows=parseCSV(text.replace(/^﻿/,""));const h=rows.shift()||[];const ix=n=>h.indexOf(n);if(ix("Title")<0||ix("Exclusive Shelf")<0)return null;
+  return rows.map(r=>{const g=n=>(r[ix(n)]||"").trim();const shelf=g("Exclusive Shelf").toLowerCase(),shelves=g("Bookshelves").toLowerCase();
+    const status=/did-not-finish|dnf|abandon/.test(shelves+" "+shelf)?"dropped":shelf==="read"?"done":shelf==="currently-reading"?"now":"someday";
+    const yr=+(g("Original Publication Year")||g("Year Published"))||null;const rating=+g("My Rating")||null;
+    return {type:"book",title:g("Title").replace(/\s*\([^)]*#\d+[^)]*\)\s*$/,"").trim()||g("Title"),by:g("Author"),year:yr,status,rating:status==="done"?rating:null,
+      thought:g("My Review").replace(/<br\s*\/?>/gi," ").replace(/<[^>]+>/g,"").slice(0,240),added:gdDate(g("Date Added"))||today(),finished:status==="done"?(gdDate(g("Date Read"))||gdDate(g("Date Added"))||today()):undefined,started:status==="now"?(gdDate(g("Date Added"))||today()):undefined,dropped:status==="dropped"?today():undefined,source:"goodreads"}}).filter(x=>x.title)}
+function fromMangaXML(text){let doc;try{doc=new DOMParser().parseFromString(text,"text/xml")}catch(_){return null}const ms=[...doc.getElementsByTagName("manga")];if(!ms.length)return null;
+  const t=(el,n)=>{const x=el.getElementsByTagName(n)[0];return x?x.textContent.trim():""};
+  return ms.map(m=>{const st=t(m,"my_status").toLowerCase();const status=/complete/.test(st)?"done":/reading|current/.test(st)?"now":/drop/.test(st)?"dropped":"someday";const sc=+t(m,"my_score")||0;
+    return {type:"manga",title:t(m,"series_title")||t(m,"manga_title"),status,rating:status==="done"&&sc?Math.max(1,Math.min(5,Math.round(sc/2))):null,thought:t(m,"my_comments").slice(0,240),
+      finished:status==="done"?(gdDate(t(m,"my_finish_date"))||today()):undefined,started:status==="now"?(gdDate(t(m,"my_start_date"))||today()):undefined,dropped:status==="dropped"?today():undefined,added:today(),source:"manga list"}}).filter(x=>x.title)}
+function fromMangaJSON(text){let j;try{j=JSON.parse(text)}catch(_){return null}const arr=Array.isArray(j)?j:(j.data||j.entries||j.library||j.items||j.list||null);if(!Array.isArray(arr))return null;
+  const pick=(o,...ks)=>{for(const k of ks){const v=k.split(".").reduce((a,p)=>a&&a[p],o);if(v!=null&&v!=="")return v}return ""};
+  const out=arr.map(e=>{const title=String(pick(e,"title","series.title","manga.title","name","series.name","romanized_title","series.romanized_title")||"");const st=String(pick(e,"state","status","reading_status","list_status")).toLowerCase();
+    const status=/complete|finish|read$/.test(st)&&!/plan|to.?read/.test(st)?"done":/reading|current|progress/.test(st)?"now":/drop/.test(st)?"dropped":"someday";const sc=+pick(e,"rating","score","my_rating")||0;
+    return {type:"manga",title,status,rating:status==="done"&&sc?Math.max(1,Math.min(5,Math.round(sc>10?sc/20:sc>5?sc/2:sc))):null,added:today(),finished:status==="done"?today():undefined,started:status==="now"?today():undefined,dropped:status==="dropped"?today():undefined,source:"manga list"}}).filter(x=>x.title);
+  return out.length?out:null}
+function readText(f){return f.text?f.text():new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=no;r.readAsText(f)})}
+function blImportFile(file){readText(file).then(text=>{const rows=/\.csv$/i.test(file.name)||/^﻿?Book Id,|,Exclusive Shelf,/.test(text.slice(0,600))?fromGoodreads(text):/<\?xml|<myanimelist|<manga>/i.test(text.slice(0,500))?fromMangaXML(text):fromMangaJSON(text);
+  if(!rows||!rows.length){toast("That file isn't a format I can read yet. Send it to Claude so the import can learn it.");return}
+  const have=new Set(S.backlog.items.map(x=>x.type+"|"+gNorm(x.title)));const fresh=rows.filter(r=>!have.has(r.type+"|"+gNorm(r.title)));
+  S.blImp={file:file.name,rows:fresh,skipped:rows.length-fresh.length,pick:{someday:true,now:true,done:true,dropped:true}};render(true);window.scrollTo({top:0})}).catch(()=>toast("That file couldn't be read."))}
+function blImportPanel(){const I=S.blImp;if(!I)return "";const n=k=>I.rows.filter(r=>r.status===k).length;const L=[["someday","Want to read / plan to read"],["now","Reading now"],["done","Read / finished"],["dropped","Dropped"]].filter(([k])=>n(k));
+  const chosen=I.rows.filter(r=>I.pick[r.status]).length;
+  return `<section class="block card import"><div class="head"><h2>Import from ${esc(I.file)}</h2></div>
+    <p class="small" style="margin:0">${I.rows.length} new item${I.rows.length===1?"":"s"}${I.skipped?` (${I.skipped} already in your backlog, skipped)`:""}. Choose what to bring in:</p>
+    ${L.map(([k,lab])=>`<label class="homemade"><input type="checkbox" data-act="blimppick" data-k="${k}" ${I.pick[k]?"checked":""}> ${lab} · ${n(k)}</label>`).join("")}
+    ${n("now")>NOW_MAX?`<p class="muted small" style="margin:0">More than ${NOW_MAX} are marked as reading now; they'll all come in as Now, and you can pause some.</p>`:""}
+    <div class="btnrow"><button type="button" class="btn" data-act="blimpgo" ${chosen?"":"disabled"}>Import ${chosen}</button><button type="button" class="btn ghost" data-act="blimpcancel">Cancel</button></div></section>`}
 V.backlog=()=>{
   const f=S.blType||"all";const all=S.backlog.items;const items=f==="all"?all:all.filter(x=>x.type===f);
   const now=items.filter(x=>x.status==="now"),some=items.filter(x=>x.status==="someday");
@@ -1693,8 +1728,8 @@ V.backlog=()=>{
   const dropped=items.filter(x=>x.status==="dropped").sort((a,b)=>(a.dropped||"")<(b.dropped||"")?1:-1);
   const moreS=!S.showAll.blsome&&some.length>10,moreD=!S.showAll.bldone&&done.length>5;
   const count=k=>all.filter(x=>x.type===k&&(x.status==="now"||x.status==="someday")).length;
-  return prettyPanel("backlog")+recentBox(u=>(u.kind==="doc"||u.kind==="docall")&&u.doc==="backlog")+`<section class="block card">
-    <div class="head"><h2>Backlog</h2><span class="topmeta">${prettyBtn("backlog")}<span class="mono muted">${all.filter(x=>x.status==="now"||x.status==="someday").length}</span></span></div>
+  return blImportPanel()+prettyPanel("backlog")+recentBox(u=>(u.kind==="doc"||u.kind==="docall")&&u.doc==="backlog")+`<section class="block card">
+    <div class="head"><h2>Backlog</h2><span class="topmeta">${prettyBtn("backlog")}<label class="linkbtn filebtn" title="Import from Goodreads (CSV) or a manga list (MyAnimeList XML)">⤓ Import<input type="file" id="bl-import" accept=".csv,.xml,.json,text/csv,text/xml,application/json" hidden></label><span class="mono muted">${all.filter(x=>x.status==="now"||x.status==="someday").length}</span></span></div>
     <div class="chips"><button class="chip" data-act="bltype" data-t="all" aria-pressed="${f==="all"}">All</button>${BL.map(([k,e,n])=>`<button class="chip" data-act="bltype" data-t="${k}" aria-pressed="${f===k}" ${k==="series"?`title="Series, films and anime"`:""}>${e} ${n} · ${count(k)}</button>`).join("")}</div>
     <form class="addrow" data-form="bladd"><select id="bl-type" aria-label="Kind">${BL.map(([k,e,n])=>`<option value="${k}" ${(f===k||f==="all"&&k==="book")?"selected":""}>${e} ${BL.find(x=>x[0]===k)[3]}</option>`).join("")}</select><input type="text" id="bl-new" placeholder="Title" autocomplete="off"><button class="btn">Add</button></form>
   </section>
@@ -2525,6 +2560,9 @@ document.addEventListener("click",e=>{
   if(a==="arrhide"){const k=b.dataset.k;editSettings(st=>{const h=new Set(st.todayHidden||[]);h.has(k)?h.delete(k):h.add(k);st.todayHidden=[...h]})}
   if(a==="arrreset"){editSettings(st=>{st.todayOrder=[];st.todayHidden=[]});toast("Today is back to its usual order")}
   if(a==="vopen"){S.vOpen=id;S.vDoneForm=null;S.vDel=null;if(b.dataset.go2){go("vision");S.sub.vision="year"}render(true)}
+  if(a==="blimpgo"&&S.blImp){const I=S.blImp;const add=I.rows.filter(r=>I.pick[r.status]).map(r=>{const o={id:uid(),...r};Object.keys(o).forEach(k=>{if(o[k]===undefined||o[k]===null||o[k]==="")delete o[k]});return o});const before=JSON.parse(JSON.stringify(S.backlog.items));
+    S.blImp=null;editDoc("backlog",d=>{d.items=[...(d.items||[]),...add]});pushUndo({kind:"docall",doc:"backlog",items:before,label:`Imported ${add.length} item${add.length===1?"":"s"} into your backlog`});toast(`Imported ${add.length}. Try ✨ Prettify to tidy titles.`)}
+  if(a==="blimpcancel"){S.blImp=null;render(true)}
   if(a==="nnew"){const id=uid();const folder=S.nFolder&&S.nFolder!=="all"?S.nFolder:"Notes";editDoc("notes",d=>{d.items=[...(d.items||[]),{id,title:"",body:"",folder,created:today(),updated:today()}]});S.nOpen=id;render(true);const el=document.getElementById("nt-title");if(el)el.focus()}
   if(a==="nopen"){S.nOpen=id;S.nDel=null;render(true)}
   if(a==="nclose"){const n=nItems().find(x=>x.id===S.nOpen);S.nOpen=null;if(n&&!String(n.title||"").trim()&&!String(n.body||"").trim())editDoc("notes",d=>{d.items=d.items.filter(x=>x.id!==n.id)});else render(true)}
@@ -2712,6 +2750,8 @@ document.addEventListener("change",e=>{
   if(e.target&&e.target.dataset&&e.target.dataset.act==="varea"){const vid=e.target.dataset.id,val=e.target.value;editDoc("vision",d=>{const x=d.items.find(y=>y.id===vid);if(x)x.area=val});return}
   if(e.target&&e.target.dataset&&(e.target.dataset.act==="vpic"||e.target.dataset.act==="vboardpic")){const f=e.target.files&&e.target.files[0],act=e.target.dataset.act,vid=e.target.dataset.id;e.target.value="";if(!f)return;
     toast("Adding the picture…");shrinkImage(f,act==="vboardpic"?1400:420,act==="vboardpic"?0.72:0.7).then(url=>{if(act==="vboardpic")editDoc("visionimg",d=>{d.img=url});else editDoc("vision",d=>{const x=d.items.find(y=>y.id===vid);if(x)x.img=url});toast("Picture added")}).catch(()=>toast("That picture couldn't be read."));return}
+  if(e.target&&e.target.id==="bl-import"){const f=e.target.files&&e.target.files[0];e.target.value="";if(f)blImportFile(f);return}
+  if(e.target&&e.target.dataset&&e.target.dataset.act==="blimppick"&&S.blImp){S.blImp.pick[e.target.dataset.k]=e.target.checked;render(true);return}
   if(e.target&&e.target.id==="import-file"){const f=e.target.files&&e.target.files[0];e.target.value="";if(f)importData(f);return}
   {const c=e.target.closest('[data-act="vsortrow"]');if(c&&S.vsort&&S.vsort.rows){const r=S.vsort.rows[+c.dataset.i];if(r){r.on=c.checked;render(true)}return}}
   {const c=e.target.closest('[data-act="prow"],[data-act="psplit"]');if(c&&S.pretty&&S.pretty.rows){const r=S.pretty.rows[+c.dataset.i];if(r){if(c.dataset.act==="prow")r.on=c.checked;else r.splitOn=c.checked;render(true)}return}}
