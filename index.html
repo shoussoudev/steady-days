@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261024062417"></script>
-<script type="module" src="boot.js?v=20261024062417"></script>
+<script src="shim.js?v=20261024062640"></script>
+<script type="module" src="boot.js?v=20261024062640"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -1240,20 +1240,27 @@ function todayOrder(){
 function arrangePanel(){
   const order=todayOrder(),hidden=S.settings.todayHidden||[];const name=k=>(TODAY_BLOCKS.find(x=>x[0]===k)||[k,k])[1];
   return `<div class="arrange"><div class="head"><h3>Arrange Today</h3><button type="button" class="btn sm" data-act="arrange">Done</button></div>
-    <p class="muted small" style="margin:0">Drag ⠿ to move a block, or use the arrows. The switch shows or hides it. Some cards (weigh-in, wishlist) still only appear at their usual times.</p>
+    <p class="muted small" style="margin:0">Drag ⠿ to move a block, or a heading to move its whole section. Arrows work too. The switch shows or hides it. Some cards (weigh-in, wishlist) still only appear at their usual times.</p>
     <ul class="arrlist" id="arrlist">${order.map((k,i)=>{const off=hidden.includes(k),grp=k.startsWith("g-");return `<li data-k="${k}" class="${off?"off":""} ${grp?"isgrp":""}">
       <span class="arrgrip" aria-hidden="true" title="Drag to move">⠿</span><span class="grow">${esc(grp?name(k).replace(/[“”]| heading/g,""):name(k))}</span>
       <button type="button" class="arrbtn" data-act="arrmove" data-k="${k}" data-d="-1" ${i?"":"disabled"} aria-label="Move ${esc(name(k))} up">↑</button><button type="button" class="arrbtn" data-act="arrmove" data-k="${k}" data-d="1" ${i<order.length-1?"":"disabled"} aria-label="Move ${esc(name(k))} down">↓</button>
       <button type="button" class="switch" role="switch" aria-checked="${!off}" aria-label="Show ${esc(name(k))}" data-act="arrhide" data-k="${k}"><span></span></button></li>`}).join("")}</ul>
     <div><button type="button" class="linkbtn subtle" data-act="arrreset">Back to the default order</button></div></div>`;
 }
+function arrUnits(o){const u=[];o.forEach(k=>{if(k.startsWith("g-")||!u.length||!u[u.length-1][0].startsWith("g-"))u.push([k]);else u[u.length-1].push(k)});return u}
 /* drag to reorder (mouse and touch): the row follows your finger, the order saves when you let go */
 document.addEventListener("pointerdown",e=>{const g=e.target.closest&&e.target.closest(".arrgrip");if(!g)return;const li=g.closest("li"),ul=li&&li.parentElement;if(!ul)return;
-  e.preventDefault();li.classList.add("dragging");const scroller=li.closest(".modal");let lastY=e.clientY;
-  const move=ev=>{lastY=ev.clientY;const sibs=[...ul.children].filter(x=>x!==li);let before=null;for(const x of sibs){const r=x.getBoundingClientRect();if(lastY<r.top+r.height/2){before=x;break}}
-    if(before!==li.nextElementSibling||(!before&&ul.lastElementChild!==li))ul.insertBefore(li,before);
+  e.preventDefault();const scroller=li.closest(".modal");let lastY=e.clientY;
+  /* a heading drags its whole section with it */
+  const grp=li.classList.contains("isgrp");const pack=[li];if(grp){let n=li.nextElementSibling;while(n&&!n.classList.contains("isgrp")){pack.push(n);n=n.nextElementSibling}}
+  pack.forEach(x=>x.classList.add("dragging"));
+  const place=before=>{const f=document.createDocumentFragment();pack.forEach(x=>f.appendChild(x));ul.insertBefore(f,before)};
+  const move=ev=>{lastY=ev.clientY;const rest=[...ul.children].filter(x=>!pack.includes(x));
+    const cands=grp?rest.filter(x=>x.classList.contains("isgrp")||!rest.slice(0,rest.indexOf(x)).some(y=>y.classList.contains("isgrp"))):rest;
+    let before=null;for(const x of cands){const r=x.getBoundingClientRect();if(lastY<r.top+r.height/2){before=x;break}}
+    if(before!==pack[pack.length-1].nextElementSibling||!before&&ul.lastElementChild!==pack[pack.length-1])place(before);
     if(scroller){const r=scroller.getBoundingClientRect();if(lastY<r.top+50)scroller.scrollTop-=12;else if(lastY>r.bottom-50)scroller.scrollTop+=12}};
-  const up=()=>{document.removeEventListener("pointermove",move);document.removeEventListener("pointerup",up);document.removeEventListener("pointercancel",up);li.classList.remove("dragging");
+  const up=()=>{document.removeEventListener("pointermove",move);document.removeEventListener("pointerup",up);document.removeEventListener("pointercancel",up);pack.forEach(x=>x.classList.remove("dragging"));
     const o=[...ul.children].map(x=>x.dataset.k);if(o.join()!==todayOrder().join())editSettings(st=>{st.todayOrder=o});};
   document.addEventListener("pointermove",move);document.addEventListener("pointerup",up);document.addEventListener("pointercancel",up)});
 
@@ -2617,7 +2624,10 @@ document.addEventListener("click",e=>{
   if(a==="pushoff"){window.__sdPush.disable().then(()=>{toast("Notifications are off for this device");render(true)})}
   if(a==="nudgeon2"){editSettings(st=>{st.nudgeOn=st.nudgeOn===false;st.timeZone=TZ})}
   if(a==="arrange"){S.arrangeOpen=!S.arrangeOpen;render(true)}
-  if(a==="arrmove"){const k=b.dataset.k,dd=+b.dataset.d;const o=todayOrder();const i=o.indexOf(k),j=i+dd;if(j<0||j>=o.length)return;[o[i],o[j]]=[o[j],o[i]];editSettings(st=>{st.todayOrder=o});
+  if(a==="arrmove"){const k=b.dataset.k,dd=+b.dataset.d;let o=todayOrder();
+    if(k.startsWith("g-")){const u=arrUnits(o);const i=u.findIndex(x=>x[0]===k),j=i+dd;if(j<0||j>=u.length)return;[u[i],u[j]]=[u[j],u[i]];o=u.flat()}
+    else{const i=o.indexOf(k),j=i+dd;if(j<0||j>=o.length)return;[o[i],o[j]]=[o[j],o[i]]}
+    editSettings(st=>{st.todayOrder=o});
     requestAnimationFrame(()=>{const el=document.querySelector(`[data-act="arrmove"][data-k="${k}"][data-d="${dd}"]`);if(el&&!el.disabled)el.focus()})}
   if(a==="arrhide"){const k=b.dataset.k;editSettings(st=>{const h=new Set(st.todayHidden||[]);h.has(k)?h.delete(k):h.add(k);st.todayHidden=[...h]})}
   if(a==="arrreset"){editSettings(st=>{st.todayOrder=[];st.todayHidden=[]});toast("Today is back to its usual order")}
