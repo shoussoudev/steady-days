@@ -1,6 +1,7 @@
 /* Steady Days server side (Firebase Functions, London region).
    - tick: every 5 minutes, sends the morning nudge at each person's chosen time and any task reminders that are due.
    - claude: a signed-in owner asks Claude (prettify, sorting a vision); the API key never leaves the server.
+   - tick also refreshes WaniKani / Bunpro counts every 30 minutes (studyRefresh does it on request).
    - mangabaka / mangabakaSync: twice a week (and on request) copies your MangaBaka library into Backlog → Following. */
 import {onSchedule} from "firebase-functions/v2/scheduler";
 import {onCall, HttpsError} from "firebase-functions/v2/https";
@@ -11,6 +12,7 @@ import {getMessaging} from "firebase-admin/messaging";
 import {getAuth} from "firebase-admin/auth";
 import {randomUUID} from "node:crypto";
 import {fetchLibrary, mergeLibrary} from "./mangabaka.js";
+import {fetchWaniKani, fetchBunpro} from "./study.js";
 
 initializeApp();
 const db = getFirestore();
@@ -21,6 +23,8 @@ const CLAUDE_MODEL = defineString("CLAUDE_MODEL", {default: "claude-sonnet-5-5"}
 /* lighter, cheaper model for simple jobs like tidying titles */
 const CLAUDE_MODEL_QUICK = defineString("CLAUDE_MODEL_QUICK", {default: "claude-haiku-5-5"});
 const MANGABAKA_TOKEN = defineSecret("MANGABAKA_TOKEN");
+const WANIKANI_TOKEN = defineSecret("WANIKANI_TOKEN");
+const BUNPRO_TOKEN = defineSecret("BUNPRO_TOKEN");
 const APP_URL = "https://shoussoudev.github.io/steady-days/";
 
 /* local date and time in a time zone, e.g. {date:"2026-10-22", hm:"07:22"} */
@@ -47,17 +51,28 @@ async function sendTo(uid, tokens, {title, body, url, tag}) {
   return res.successCount;
 }
 
-function nudgeMessage(rem, date) {
+function studyLine(st) {
+  if (!st || !st.at || Date.now() - Date.parse(st.at) > 6 * 3600e3) return "";
+  const bits = [];
+  if (st.wk && !st.wk.vacation && (st.wk.reviews || st.wk.lessons)) bits.push(`WaniKani ${st.wk.reviews || 0} reviews${st.wk.lessons ? `, ${st.wk.lessons} lessons` : ""}`);
+  if (st.bp && st.bp.reviews) bits.push(`Bunpro ${st.bp.reviews}`);
+  return bits.length ? "🈴 " + bits.join(" · ") : "";
+}
+function nudgeMessage(rem, date, study) {
   const d = rem && rem.days && rem.days[date];
+  const sl = studyLine(study);
+  if (!d && sl) return {title: "Good morning 🌿", body: sl};
   if (!d) return {title: "Good morning 🌿", body: "A fresh day in the forest. Take a minute with Steady Days when you can."};
   const lines = [];
   if (d.pointer && d.pointer.text) lines.push(short(d.pointer.text, 140));
   if (Array.isArray(d.top3) && d.top3.length) lines.push("★ " + d.top3.slice(0, 5).map(t => short(t, 40)).join(" · "));
+  if (sl) lines.push(sl);
   if (Array.isArray(d.meals) && d.meals.length) lines.push("🍲 " + d.meals.map(m => short(String(m).replace(/^(Breakfast|Lunch|Dinner|Snack): /, ""), 30)).join(", "));
   return {title: `Good morning 🌿${d.dayCount ? ` Day ${d.dayCount}` : ""}`, body: lines.join("\n") || "Take a minute with Steady Days when you can."};
 }
 
-export const tick = onSchedule({schedule: "every 5 minutes", region: REGION, timeZone: "Europe/London", retryCount: 0, memory: "256MiB"}, async () => {
+export const tick = onSchedule({schedule: "every 5 minutes", region: REGION, timeZone: "Europe/London", retryCount: 0, memory: "256MiB", secrets: [WANIKANI_TOKEN, BUNPRO_TOKEN]}, async () => {
+  try { await refreshStudyForOwner(30); } catch (e) { console.error("study refresh failed", e); }
   const users = await db.collection("users").listDocuments();
   for (const u of users) {
     const uid = u.id;
@@ -76,7 +91,8 @@ export const tick = onSchedule({schedule: "every 5 minutes", region: REGION, tim
       const late = minutes(now.hm) - minutes(at);
       if (st.nudgeOn !== false && late >= 0 && late < 120 && srv.lastNudge !== now.date) {
         const rem = await db.doc(`users/${uid}/docs/reminder__next`).get();
-        await sendTo(uid, tokens, {...nudgeMessage(rem.exists ? rem.data() : null, now.date), tag: "nudge"});
+        const sd = await db.doc(`users/${uid}/docs/study`).get();
+        await sendTo(uid, tokens, {...nudgeMessage(rem.exists ? rem.data() : null, now.date, sd.exists ? sd.data() : null), tag: "nudge"});
         patch.lastNudge = now.date;
       }
 
@@ -176,4 +192,34 @@ export const mangabakaSync = onCall({region: REGION, secrets: [MANGABAKA_TOKEN],
   const email = req.auth && req.auth.token && req.auth.token.email;
   if (!email || String(email).toLowerCase() !== owner()) throw new HttpsError("permission-denied", "MangaBaka sync isn't enabled for this account.");
   return await syncMangaBaka(req.auth.uid);
+});
+
+/* ---------- Japanese study: counts for the owner's Today card, refreshed at most every `minAge` minutes ---------- */
+const has = sec => { const v = sec.value(); return !!v && v !== "not-set"; };
+async function refreshStudy(uid, minAge) {
+  const ref = db.doc(`users/${uid}/docs/study`);
+  const cur = (await ref.get()).data() || {};
+  if (cur.at && Date.now() - Date.parse(cur.at) < minAge * 60e3) return cur;
+  const out = {at: new Date().toISOString(), wk: null, bp: null, errors: {}};
+  if (has(WANIKANI_TOKEN)) { try { out.wk = await fetchWaniKani(WANIKANI_TOKEN.value()); } catch (e) { out.errors.wk = e.code || "unavailable"; out.wk = cur.wk || null; } }
+  else out.errors.wk = "no-token";
+  if (has(BUNPRO_TOKEN)) { try { out.bp = await fetchBunpro(BUNPRO_TOKEN.value()); } catch (e) { out.errors.bp = e.code || "unavailable"; out.bp = cur.bp || null; } }
+  else out.errors.bp = "no-token";
+  await ref.set(JSON.parse(JSON.stringify(out)));
+  return out;
+}
+async function refreshStudyForOwner(minAge) {
+  if (!has(WANIKANI_TOKEN) && !has(BUNPRO_TOKEN)) return;
+  const email = owner();
+  if (!email) return;
+  const user = await getAuth().getUserByEmail(email);
+  await refreshStudy(user.uid, minAge);
+}
+
+/* Today asks for fresh counts when it opens (at most every 5 minutes) */
+export const studyRefresh = onCall({region: REGION, secrets: [WANIKANI_TOKEN, BUNPRO_TOKEN], timeoutSeconds: 30, memory: "256MiB"}, async (req) => {
+  const email = req.auth && req.auth.token && req.auth.token.email;
+  if (!email || String(email).toLowerCase() !== owner()) throw new HttpsError("permission-denied", "Study counts aren't enabled for this account.");
+  const st = await refreshStudy(req.auth.uid, 5);
+  return {at: st.at};
 });

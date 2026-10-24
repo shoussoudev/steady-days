@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261024055023"></script>
-<script type="module" src="boot.js?v=20261024055023"></script>
+<script src="shim.js?v=20261024055900"></script>
+<script type="module" src="boot.js?v=20261024055900"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -223,6 +223,9 @@ body.modal-open{overflow:hidden}
 .vtoday{display:flex;gap:12px;align-items:center;padding:10px 12px}
 .vtile-open{background:none;border:0;padding:0;cursor:pointer;flex:none}
 .vtt{display:grid;gap:2px;min-width:0}
+.study{display:grid;gap:4px;padding:10px 12px}.study .head{display:flex;justify-content:space-between;align-items:center}
+.strow{display:flex;gap:10px;align-items:baseline;padding:8px 0;color:inherit;text-decoration:none;border-top:1px solid var(--line)}
+.strow .fl{font-weight:600;flex:0 0 84px}.strow .fv{flex:1;min-width:0}.strow .fa{color:var(--muted)}.study.clear .strow b{font-weight:500}
 .vtitle{font-weight:600}.vtt .vtitle{text-align:left;padding:0}
 .vimg{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;background:var(--accent-soft)}
 .vemoji{display:grid;place-items:center;width:100%;aspect-ratio:1;border-radius:12px;background:var(--accent-soft);font-size:2.2rem}
@@ -1196,7 +1199,7 @@ function therapyBlock(d){
 function footerExtras(){
   const vd=vday(),past=isPastView();const todays=getDay(vd).progress||[];const tr=trackable();
   return `<div class="extras">
-    ${past?"":`<a href="https://www.wanikani.com/" target="_blank" rel="noopener">WaniKani ↗</a><a href="https://bunpro.jp/" target="_blank" rel="noopener">Bunpro ↗</a>`}
+    ${past||studyOn()?"":`<a href="https://www.wanikani.com/" target="_blank" rel="noopener">WaniKani ↗</a><a href="https://bunpro.jp/" target="_blank" rel="noopener">Bunpro ↗</a>`}
     ${tr.length?`<button type="button" class="linkbtn" data-act="progtoggle">${S.progOpen?"Cancel":"Log project progress"}</button>`:""}
   </div>
   ${S.progOpen&&tr.length?`<section class="block card">${projForm(null,"tp")}</section>`:""}
@@ -1208,13 +1211,13 @@ V.today=()=>{
   if(past)return `<div class="pastnote"><span>Filling in <b>${fmtDay(vd,{weekday:"long",day:"numeric",month:"long"})}</b></span><button type="button" class="btn ghost sm" data-act="viewday" data-d="${today()}">Back to today</button></div>
   <span class="grp">Notice</span>${moodCard(d,true)}${checkinCard()}${ateCard()}
   <span class="grp">Reflect</span>${reflectCard(d,true)}${footerExtras()}`;
-  const R={pointer:()=>pointerCard(pointerOfDay(),true),vision:visionToday,"g-do":()=>`<span class="grp">Do</span>`,tasks:todayTasks,workout:workoutCard,
+  const R={pointer:()=>pointerCard(pointerOfDay(),true),vision:visionToday,"g-do":()=>`<span class="grp">Do</span>`,tasks:todayTasks,workout:workoutCard,study:studyToday,
     "g-notice":()=>`<span class="grp">Notice</span>`,mood:()=>moodCard(d,false),checkin:checkinCard,weigh:weighCard,ate:ateCard,wishcheck:wishCheckCard,
     "g-reflect":()=>`<span class="grp">Reflect</span>`,dream:dreamToday,trip:tripToday,groc:grocToday,reflect:()=>reflectCard(d,false),extras:footerExtras};
   return recapPromptCard()+todayOrder().filter(k=>!(S.settings.todayHidden||[]).includes(k)).map(k=>R[k]()).join("\n");
 };
 /* Today's blocks, in your order (Settings → Arrange Today). New blocks appear in their default place. */
-const TODAY_BLOCKS=[["pointer","Today's pointer"],["vision","Vision tile"],["trip","Trip countdown"],["g-do","“Do” heading"],["tasks","Top 3 and today's tasks"],["workout","Steady 10 workout"],["g-notice","“Notice” heading"],["dream","Morning dream note (until noon)"],["mood","Mood"],["checkin","Check-in (exercise, water, fruit)"],["weigh","Weekly weigh-in"],["ate","What I ate"],["groc","Groceries"],["wishcheck","Wishlist “still want it?”"],["g-reflect","“Reflect” heading"],["reflect","Reflection and gratitude"],["extras","Links, project progress, past days"]];
+const TODAY_BLOCKS=[["pointer","Today's pointer"],["vision","Vision tile"],["trip","Trip countdown"],["g-do","“Do” heading"],["tasks","Top 3 and today's tasks"],["workout","Steady 10 workout"],["study","Japanese: WaniKani & Bunpro"],["g-notice","“Notice” heading"],["dream","Morning dream note (until noon)"],["mood","Mood"],["checkin","Check-in (exercise, water, fruit)"],["weigh","Weekly weigh-in"],["ate","What I ate"],["groc","Groceries"],["wishcheck","Wishlist “still want it?”"],["g-reflect","“Reflect” heading"],["reflect","Reflection and gratitude"],["extras","Links, project progress, past days"]];
 function todayOrder(){
   const def=TODAY_BLOCKS.map(x=>x[0]);const mine=(S.settings.todayOrder||[]).filter(k=>def.includes(k));
   def.forEach((k,i)=>{if(!mine.includes(k)){const prev=def.slice(0,i).reverse().find(x=>mine.includes(x));mine.splice(prev?mine.indexOf(prev)+1:0,0,k)}});
@@ -1545,7 +1548,7 @@ V.cooked=()=>{
 const ageDays=t=>t&&t.created?dayNum(today())-dayNum(key(new Date(t.created))):null;
 const norm=x=>String(x||"").replace(/\[([^\]]*)\]\([^)]*\)/g,"$1").trim().toLowerCase();
 const plainTitle=t=>String(t||"").replace(/\[([^\]]*)\]\([^)]*\)/g,"$1").trim();
-S.wish={items:[],imported:false};S.backlog={items:[]};S.vision={items:[]};S.visionimg={items:[]};S.bucket={items:[]};S.dreams={items:[]};S.longterm={items:[]};S.groceries={items:[]};S.trips={items:[]};S.notes={items:[]};
+S.study={};S.wish={items:[],imported:false};S.backlog={items:[]};S.vision={items:[]};S.visionimg={items:[]};S.bucket={items:[]};S.dreams={items:[]};S.longterm={items:[]};S.groceries={items:[]};S.trips={items:[]};S.notes={items:[]};
 function editDoc(id,fn,{silent=false}={}){const d=JSON.parse(JSON.stringify(S[id]));fn(d);S[id]=d;
   if(silent)saveLater(id,()=>queueWrite(id,{...S[id],kind:id}));else{queueWrite(id,{...d,kind:id});render(true)}}
 const daysTo=k=>dayNum(k)-dayNum(today());
@@ -2262,6 +2265,21 @@ function grocPanel(){
     ${cart.length?`<div class="gaisle"><div class="head"><span class="eyebrow">In the trolley · ${cart.length}</span><button type="button" class="btn sm" data-act="gfinish">Done shopping</button></div><ul class="list glist">${cart.map(row).join("")}</ul></div>`:""}
   </section>`;
 }
+/* ---------- Japanese study: counts come from the server (WaniKani + Bunpro), refreshed every 30 minutes ---------- */
+const studyOn=()=>!!(S.study&&S.study.at&&(S.study.wk||S.study.bp));
+function studyAsk(){if(!window.__sdStudy||S.demo)return;const age=S.study&&S.study.at?Date.now()-Date.parse(S.study.at):1e12;if(age<10*60e3||Date.now()-(S.studyAsked||0)<5*60e3)return;S.studyAsked=Date.now();window.__sdStudy().catch(()=>{})}
+function studyToday(){if(isPastView())return "";studyAsk();if(!studyOn())return "";const {wk,bp}=S.study;
+  const hm=t=>new Date(t).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
+  const wkTxt=!wk?"":wk.vacation?"WaniKani on vacation":wk.reviews||wk.lessons?`<b>${wk.reviews}</b> review${wk.reviews===1?"":"s"}${wk.lessons?` · ${wk.lessons} lesson${wk.lessons===1?"":"s"}`:""}`:`All done${wk.next&&Date.parse(wk.next)>Date.now()?` · next ${hm(wk.next)}`:""}`;
+  const bpTxt=!bp?"":bp.reviews?`<b>${bp.reviews}</b> review${bp.reviews===1?"":"s"}${bp.grammar!=null&&bp.vocab!=null?` <span class="muted">(${bp.grammar} grammar, ${bp.vocab} vocab)</span>`:""}`:"All done";
+  const clear=(!wk||wk.vacation||!(wk.reviews||wk.lessons))&&(!bp||!bp.reviews);
+  return `<section class="card study${clear?" clear":""}"><div class="head"><span class="eyebrow">🈴 Japanese${clear?" · caught up 🌿":""}</span>${wk&&wk.level?`<span class="mono muted small">Level ${wk.level}</span>`:""}</div>
+    ${wk?`<a class="strow" href="https://www.wanikani.com/${wk.reviews?"subjects/review":wk.lessons?"subjects/lesson":"dashboard"}" target="_blank" rel="noopener"><span class="fl">WaniKani</span><span class="fv">${wkTxt}</span><span class="fa">↗</span></a>`:""}
+    ${bp?`<a class="strow" href="https://bunpro.jp/${bp.reviews?"reviews":"dashboard"}" target="_blank" rel="noopener"><span class="fl">Bunpro</span><span class="fv">${bpTxt}</span><span class="fa">↗</span></a>`:""}</section>`}
+const STUDY_ERR={"no-token":"not connected","bad-token":"token not accepted — add a fresh one","unavailable":"didn't answer last time"};
+function studyRow(){if(!window.__sdStudy)return "";const E=(S.study&&S.study.errors)||{};const one=(n,k,ok)=>`${n}: ${E[k]?STUDY_ERR[E[k]]||E[k]:ok?"connected":"not connected"}`;
+  return `<div class="setrow"><div><b>Japanese study</b><div class="muted small">${one("WaniKani","wk",S.study.wk)} · ${one("Bunpro","bp",S.study.bp)}${S.study.at?` · updated ${new Date(S.study.at).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})}`:""}</div>
+    <div class="muted small">Counts refresh every 30 minutes and show on Today. Tokens live in GitHub secrets (WANIKANI_TOKEN, BUNPRO_TOKEN).</div></div></div>`}
 function grocToday(){if(isPastView())return "";const n=gItems().filter(x=>!x.done).length;return `<button type="button" class="card foldrow" data-act="groc"><span class="fl">🛒 Groceries</span><span class="fv">${n?`${n} to buy`:"List is empty"}</span><span class="fa">Open</span></button>`}
 
 /* ---------- Trips: packing and planning, with to-dos that land on Today before you go ---------- */
@@ -2507,7 +2525,7 @@ function settingsPanel(){
   if(STANDALONE){const A=window.__sdAuth||{};const c=S.dbCheck;const I=S.imp;
     const dbLine=!c?"Checking the connection to your database…":c.ok?"✓ Connected to your database.":`⚠ Can't reach your database: ${esc(DB_HELP[c.code]||c.message||c.code)}`;
     body=`<div class="setrow"><div><b>Account</b><div class="muted small">Signed in${A.email?" as "+esc(A.email):""}.</div><div class="small ${c&&!c.ok?"warn":"muted"}">${dbLine}</div></div><button type="button" class="btn ghost sm" data-act="signout">Sign out</button></div>
-    ${notifRows()}${mbRow()}${usageRow()}
+    ${notifRows()}${mbRow()}${studyRow()}${usageRow()}
     <div class="setrow"><div><b>Bring in your data</b><div class="muted small">Choose a Steady Days export file (from Settings → Download in the Claude version). Entries with the same day are replaced.</div></div><label class="btn ghost sm filebtn">Choose file<input type="file" id="import-file" accept=".json,application/json,text/plain,*/*" hidden></label></div>
     ${I?`<div class="impbox ${I.state}"><p class="small" style="margin:0">${esc(I.msg)}</p>${I.state==="ready"?`<div class="btnrow"><button type="button" class="btn sm" data-act="impgo">Import now</button><button type="button" class="btn ghost sm" data-act="impcancel">Cancel</button></div>`:I.state==="done"||I.state==="error"?`<div><button type="button" class="linkbtn subtle" data-act="impcancel">OK</button></div>`:""}</div>`:""}`}
   else if(n.state==="error"||n.state==="missing")body=`<p class="muted small" style="margin:0">${n.state==="missing"?"The reminder task wasn't found. Ask Claude to set it up again.":"Couldn't reach your scheduled tasks from here. You can pause it in Claude under Scheduled."}</p>`;
@@ -2992,6 +3010,7 @@ function startDemo(){
   S.bucket={imported:true,items:[{id:uid(),title:"See the northern lights",area:"places",emoji:"🌌",step:"Check the best months to go to Tromsø",lived:[]},{id:uid(),title:"Learn to surf",area:"skills",emoji:"🏄",lived:[]},
     {id:uid(),title:"Run a marathon",area:"exp",emoji:"🏅",lived:[{date:addDays(T,-200),memory:"Cried at the finish line"}]},{id:uid(),title:"Kyoto in autumn",area:"places",emoji:"🍁",repeat:true,lived:[{date:addDays(T,-900),memory:"The maple leaves"}]},{id:uid(),title:"Build a canoe",area:"make",emoji:"🛶",lived:[]}]};
   S.longterm={title:"10-year vision",horizon:String(new Date().getFullYear()+10),items:[{id:"lp1",title:"A home with a garden",emoji:"🏡",why:"Roots and room to grow",years:{}},{id:"lp2",title:"Fluent in Spanish",emoji:"🗣️",years:{}},{id:"lp3",title:"Strong and healthy at 50",emoji:"💪",why:"To keep up with the people I love",years:{}}]};
+  S.study={at:new Date().toISOString(),wk:{reviews:23,lessons:5,soon:40,level:14,next:new Date().toISOString(),vacation:false},bp:{reviews:12,grammar:7,vocab:5},errors:{}};
   S.notes={imported:true,items:[{id:uid(),title:"Gift ideas",body:"Mum: a good teapot\nSam: climbing chalk bag",folder:"Notes",pinned:true,created:addDays(T,-20),updated:addDays(T,-2)},{id:uid(),title:"Book quotes",body:"“Be where your feet are.”",folder:"Journaling",created:addDays(T,-40),updated:addDays(T,-40)}]};
   S.groceries={imported:true,items:[{id:uid(),name:"Avocados",qty:"2",aisle:"veg",done:false},{id:uid(),name:"Oat milk",qty:"",aisle:"dairy",done:false},{id:uid(),name:"Sourdough",qty:"",aisle:"bakery",done:false},{id:uid(),name:"Pasta",qty:"",aisle:"pantry",done:true}],history:{banana:{name:"Bananas",aisle:"veg",count:6,last:addDays(T,-3)},egg:{name:"Eggs",aisle:"dairy",count:5,last:addDays(T,-5)},coffee:{name:"Coffee",aisle:"pantry",count:3,last:addDays(T,-9)}}};
   S.trips={imported:true,items:[{id:uid(),title:"Lisbon long weekend",place:"Lisbon",emoji:"🇵🇹",start:addDays(T,9),end:addDays(T,12),todos:[{id:uid(),title:"Book airport parking",daysBefore:7},{id:uid(),title:"Check passports",daysBefore:14,done:true}],pack:PACK_TEMPLATES.Basics.slice(0,6).map((x,i)=>({id:uid(),text:x,done:i<2})),plan:[{id:uid(),day:addDays(T,9),time:"09:40",kind:"booking",text:"Flight TP1351 · ref QX7P2L"},{id:uid(),day:addDays(T,10),kind:"place",text:"Belém tower and pastéis"}]},{id:uid(),title:"Kyoto in autumn",emoji:"🍁",todos:[],pack:[],plan:[]}]};
@@ -3020,6 +3039,7 @@ async function connectDb(){
         if(ttOn())ttLoadListsMissing();}
       S.settingsReady=true;render();
     },()=>{S.settingsReady=true;render()});
+    col.doc("study").onSnapshot(snap=>{S.study=snap.exists?snap.data():{};render()},()=>{});
     ["wish","backlog","vision","visionimg","bucket","dreams","longterm","groceries","trips","notes"].forEach(id=>col.doc(id).onSnapshot(snap=>{
       if(!pending[id]&&!inflight[id]&&!debounced[id]){const d=snap.exists?snap.data():null;S[id]={...S[id],...(d||{}),items:(d&&d.items)||[]}}
       render();
