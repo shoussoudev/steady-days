@@ -25,7 +25,7 @@ export async function fetchKnownKanji(token, level, fetchImpl = fetch) {
   return [...new Set(asg.map(a => chars.get(a.data && a.data.subject_id)).filter(Boolean))].join("");
 }
 
-export async function fetchWaniKani(token, now = Date.now(), fetchImpl = fetch) {
+export async function fetchWaniKani(token, now = Date.now(), fetchImpl = fetch, since = now - 24 * 3600e3) {
   const h = {Authorization: `Bearer ${token}`, "Wanikani-Revision": "20170710"};
   const get = async path => {
     const r = await fetchImpl(`https://api.wanikani.com/v2/${path}`, {headers: h});
@@ -35,7 +35,7 @@ export async function fetchWaniKani(token, now = Date.now(), fetchImpl = fetch) 
   };
   const [sum, user] = await Promise.all([get("summary"), get("user")]);
   /* recent mistakes ≈ items whose last answer (in the past 24 h) was wrong: an incorrect answer resets the streak to 1 */
-  let mistakes = 0;
+  let mistakes = 0, doneToday = 0;
   try {
     let url = `review_statistics?updated_after=${new Date(now - 24 * 3600e3).toISOString()}`;
     for (let i = 0; url && i < 4; i++) {
@@ -47,16 +47,18 @@ export async function fetchWaniKani(token, now = Date.now(), fetchImpl = fetch) 
         const wrongM = d.meaning_current_streak === 1 && d.meaning_incorrect > 0;
         const wrongR = d.reading_current_streak === 1 && d.reading_incorrect > 0;
         if (!d.hidden && (wrongM || wrongR)) mistakes++;
+        /* anything answered since local midnight counts as today's work */
+        if (Date.parse(x.data_updated_at) >= since) doneToday++;
       }
       url = j.pages && j.pages.next_url;
     }
-  } catch (_) { mistakes = null; }
+  } catch (_) { mistakes = null; doneToday = null; }
   const count = (buckets, upTo) => (buckets || []).filter(b => Date.parse(b.available_at) <= upTo).reduce((a, b) => a + (b.subject_ids || []).length, 0);
   return {
     reviews: count(sum.reviews, now), lessons: count(sum.lessons, now),
     soon: count(sum.reviews, now + 24 * 3600e3) - count(sum.reviews, now),
     next: sum.next_reviews_at || null, level: user.level || null,
-    vacation: !!user.current_vacation_started_at, mistakes
+    vacation: !!user.current_vacation_started_at, mistakes, doneToday
   };
 }
 

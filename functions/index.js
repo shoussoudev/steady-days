@@ -204,7 +204,14 @@ async function refreshStudy(uid, minAge) {
   const retry = (E.wk && has(WANIKANI_TOKEN)) || (E.bp && has(BUNPRO_TOKEN));
   if (!retry && cur.at && Date.now() - Date.parse(cur.at) < minAge * 60e3) return cur;
   const out = {at: new Date().toISOString(), wk: null, bp: null, errors: {}};
-  if (has(WANIKANI_TOKEN)) { try { out.wk = await fetchWaniKani(WANIKANI_TOKEN.value()); } catch (e) { out.errors.wk = e.code || "unavailable"; out.wk = cur.wk || null; } }
+  /* "today" in London: the date and the instant of local midnight */
+  const tz = "Europe/London", nowD = new Date();
+  const day = new Intl.DateTimeFormat("en-CA", {timeZone: tz}).format(nowD);
+  const offset = Date.parse(nowD.toLocaleString("en-US", {timeZone: tz})) - Date.parse(nowD.toLocaleString("en-US", {timeZone: "UTC"}));
+  const midnight = Date.parse(day + "T00:00:00Z") - offset;
+  out.day = day;
+  if (has(WANIKANI_TOKEN)) { try { out.wk = await fetchWaniKani(WANIKANI_TOKEN.value(), Date.now(), fetch, midnight); } catch (e) { out.errors.wk = e.code || "unavailable"; out.wk = cur.wk || null; } }
+  else out.errors.wk = "no-token";
   /* known kanji change slowly: refresh twice a day */
   out.known = cur.known || "";
   out.knownAt = cur.knownAt || null;
@@ -212,8 +219,13 @@ async function refreshStudy(uid, minAge) {
     try { out.known = await fetchKnownKanji(WANIKANI_TOKEN.value(), out.wk.level); out.knownAt = out.at; }
     catch (e) { out.errors.known = e.code || "unavailable"; }
   }
-  else out.errors.wk = "no-token";
   if (has(BUNPRO_TOKEN)) { try { out.bp = await fetchBunpro(BUNPRO_TOKEN.value()); } catch (e) { out.errors.bp = e.code || "unavailable"; out.bp = cur.bp || null; } }
+  /* Bunpro has no history to ask, so notice the queue going down: each drop since the last check counts as reviews done today */
+  if (out.bp && !out.errors.bp) {
+    const prev = cur.bp && cur.day === day ? cur.bp : null;
+    const drop = prev && typeof prev.reviews === "number" ? Math.max(0, prev.reviews - out.bp.reviews) : 0;
+    out.bp.doneToday = (prev && prev.doneToday || 0) + drop;
+  }
   else out.errors.bp = "no-token";
   await ref.set(JSON.parse(JSON.stringify(out)));
   return out;

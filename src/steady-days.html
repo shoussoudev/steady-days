@@ -210,7 +210,7 @@ body.modal-open{overflow:hidden}
 .vtt{display:grid;gap:2px;min-width:0}
 .study{display:grid;gap:4px;padding:10px 12px}.study .head{display:flex;justify-content:space-between;align-items:center}
 .strow{display:flex;gap:10px;align-items:baseline;padding:8px 0;color:inherit;text-decoration:none;border-top:1px solid var(--line)}
-.strow .fl{font-weight:600;flex:0 0 84px}
+.strow .fl{font-weight:600;flex:0 0 84px}.sttick{display:inline-block;margin-left:8px;font-size:.78rem;color:var(--accent);font-weight:600}
 .jptoday{display:grid;gap:6px;border-top:1px solid var(--line);padding-top:8px}.study>.jptoday:first-child,.study>.head+.jptoday{border-top:0;padding-top:0}.jptoday .head{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .jpp{display:grid;gap:6px}.jphead{display:grid;gap:1px}.jppat{font-size:1.15rem;font-weight:600}.jpex{display:grid;gap:1px;padding-left:10px;border-left:3px solid var(--line)}.jpex [lang=ja]{font-size:1.02rem}
 .jpbtns{display:flex;align-items:center;gap:6px;flex:none}.jplearn{font-size:.78rem;padding:4px 8px}.jpfoot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}.jpdone .jppat{opacity:.6}.mstrip{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.mthumb{width:56px;height:56px;border-radius:8px;overflow:hidden;border:1px solid var(--line);padding:0;background:var(--bg);display:grid;place-items:center;cursor:pointer;flex:none;font-size:1.2rem}.mthumb img{width:100%;height:100%;object-fit:cover;display:block}.modal-in>.card{box-shadow:0 12px 40px rgba(0,0,0,.25);margin:0}.mview img{width:100%;max-height:70vh;object-fit:contain;border-radius:10px;background:#000}.mlist li{align-items:center;gap:10px}
@@ -2377,10 +2377,14 @@ function studyToday(){if(isPastView())return "";studyAsk();if(!studyOn())return 
   const hm=t=>new Date(t).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
   const wkTxt=!wk?"":wk.vacation?"WaniKani on vacation":wk.reviews||wk.lessons?`<b>${wk.reviews}</b> review${wk.reviews===1?"":"s"}${wk.lessons?` · ${wk.lessons} lesson${wk.lessons===1?"":"s"}`:""}`:`All done${wk.next&&Date.parse(wk.next)>Date.now()?` · next ${hm(wk.next)}`:""}`;
   const bpTxt=!bp?"":bp.reviews?`<b>${bp.reviews}</b> review${bp.reviews===1?"":"s"}`:"All done";
-  const clear=(!wk||wk.vacation||!(wk.reviews||wk.lessons))&&(!bp||!bp.reviews);
-  return `<section class="card study${clear?" clear":""}"><div class="head"><span class="eyebrow">🈴 Japanese${clear?" · caught up 🌿":""}</span>${wk&&wk.level?`<span class="mono muted small">Level ${wk.level}</span>`:""}</div>
-    ${wk?`<div class="strow"><span class="fl">WaniKani</span><span class="fv">${wkTxt}</span></div><div class="chips stlinks">${[["dashboard","Home"],["subjects/extra_study?queue_type=recent_lessons","Recent lessons"],wk.mistakes?["subjects/extra_study?queue_type=recent_mistakes",`Recent mistakes · ${wk.mistakes}`]:null,["subjects/review",`Reviews${wk.reviews?` · ${wk.reviews}`:""}`]].filter(Boolean).map(([u,n])=>`<a class="chip" href="https://www.wanikani.com/${u}" target="_blank" rel="noopener">${n}</a>`).join("")}</div>`:""}
-    ${bp?`<div class="strow"><span class="fl">Bunpro</span><span class="fv">${bpTxt}</span></div><div class="chips stlinks">${[["dashboard","Home"],["reviews?only_review=grammar",`Grammar review${bp.grammar?` · ${bp.grammar}`:""}`],["reviews?only_review=vocab",`Vocabulary review${bp.vocab?` · ${bp.vocab}`:""}`]].map(([u,n])=>`<a class="chip" href="https://bunpro.jp/${u}" target="_blank" rel="noopener">${n}</a>`).join("")}</div>`:""}${jpToday()}</section>`}
+  /* work noticed today: WaniKani counts it exactly, Bunpro from the queue going down */
+  const fresh=S.study.day===today();const wkDone=fresh&&wk&&+wk.doneToday||0,bpDone=fresh&&bp&&+bp.doneToday||0;
+  const tick=n=>n?`<span class="sttick" title="Reviews done today">✓ ${n} done today</span>`:"";
+  if(wkDone||bpDone)setTimeout(()=>{const d=getDay(today()),st=d.study||{};if((st.wk||0)!==wkDone||(st.bp||0)!==bpDone)editDay(today(),x=>{x.study={wk:wkDone,bp:bpDone}},{silent:true})},0);
+  const clear=(!wk||wk.vacation||!(wk.reviews||wk.lessons))&&(!bp||!bp.reviews);const worked=wkDone||bpDone;
+  return `<section class="card study${clear?" clear":""}"><div class="head"><span class="eyebrow">🈴 Japanese${clear?" · caught up 🌿":worked?" · studied today ✓":""}</span>${wk&&wk.level?`<span class="mono muted small">Level ${wk.level}</span>`:""}</div>
+    ${wk?`<div class="strow"><span class="fl">WaniKani</span><span class="fv">${wkTxt}${tick(wkDone)}</span></div><div class="chips stlinks">${[["dashboard","Home"],["subjects/extra_study?queue_type=recent_lessons","Recent lessons"],wk.mistakes?["subjects/extra_study?queue_type=recent_mistakes",`Recent mistakes · ${wk.mistakes}`]:null,["subjects/review",`Reviews${wk.reviews?` · ${wk.reviews}`:""}`]].filter(Boolean).map(([u,n])=>`<a class="chip" href="https://www.wanikani.com/${u}" target="_blank" rel="noopener">${n}</a>`).join("")}</div>`:""}
+    ${bp?`<div class="strow"><span class="fl">Bunpro</span><span class="fv">${bpTxt}${tick(bpDone)}</span></div><div class="chips stlinks">${[["dashboard","Home"],["reviews?only_review=grammar",`Grammar review${bp.grammar?` · ${bp.grammar}`:""}`],["reviews?only_review=vocab",`Vocabulary review${bp.vocab?` · ${bp.vocab}`:""}`]].map(([u,n])=>`<a class="chip" href="https://bunpro.jp/${u}" target="_blank" rel="noopener">${n}</a>`).join("")}</div>`:""}${jpToday()}</section>`}
 const STUDY_ERR={"no-token":"not connected","bad-token":"token not accepted — add a fresh one","unavailable":"didn't answer last time"};
 function studyRow(){if(!window.__sdStudy)return "";const E=(S.study&&S.study.errors)||{};const one=(n,k,ok)=>`${n}: ${E[k]?STUDY_ERR[E[k]]||E[k]:ok?"connected":"not connected"}`;
   return `<div class="setrow"><div><b>Japanese study</b><div class="muted small">${one("WaniKani","wk",S.study.wk)} · ${one("Bunpro","bp",S.study.bp)}${S.study.at?` · updated ${new Date(S.study.at).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})}`:""}</div>
@@ -2442,7 +2446,7 @@ function mediaToday(){if(isPastView()||!window.__sdMedia||!mItems().length)retur
     <span class="btnrow"><button type="button" class="btn ghost sm" data-act="mreview">Review</button><button type="button" class="linkbtn subtle" data-act="mchecked">All good</button></span></section>`}
 /* ---------- Your tree: drawn from your own days. It grows, follows the seasons, and never wilts ---------- */
 const showedUp=d=>!!d&&!!(d.mood||String(d.note||"").trim()||(d.gratitude||[]).some(x=>String(x||"").trim())||Object.values(d.habits||{}).some(Boolean)
-  ||(d.body&&(!isRest(d.body.ex)||d.body.water!=null||d.body.fruit!=null))||(d.ate||[]).length||(d.meals||[]).length||(d.progress||[]).length||(d.workout&&d.workout.done)||(d.weight&&+d.weight.kg>0)||(d.top3||[]).some(x=>x&&(x.done||x.text)));
+  ||(d.body&&(!isRest(d.body.ex)||d.body.water!=null||d.body.fruit!=null))||(d.ate||[]).length||(d.meals||[]).length||(d.progress||[]).length||(d.workout&&d.workout.done)||(d.weight&&+d.weight.kg>0)||(d.top3||[]).some(x=>x&&(x.done||x.text))||(d.study&&(d.study.wk||d.study.bp)));
 function treeSeed(){const s=String(S.uid||"")+"|"+(S.settings.startDay||START_DAY);let h=2166136261;for(const c of s){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
 function rng(seed){let a=seed||1;return ()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 const seasonOf=k=>{const m=+String(k).slice(5,7);return m>=3&&m<=5?"spring":m>=6&&m<=8?"summer":m>=9&&m<=11?"autumn":"winter"};
@@ -2450,7 +2454,7 @@ function treeStats(){
   const T=today(),start=S.settings.startDay||START_DAY,age=Math.max(1,dayNum(T)-dayNum(start)+1);
   const last=n=>{let c=0;for(let i=0;i<n;i++){const k=addDays(T,-i);if(dayNum(k)<dayNum(start))break;if(showedUp(S.days[k]))c++}return c};
   const win=Math.min(60,age),shown60=last(win);
-  const hw=Math.min(30,age);let habitDays=0;for(let i=0;i<hw;i++){const d=S.days[addDays(T,-i)];if(d&&(Object.values(d.habits||{}).some(Boolean)||(d.workout&&d.workout.done)||(d.body&&(!isRest(d.body.ex)||d.body.water===true||d.body.fruit===true))))habitDays++}
+  const hw=Math.min(30,age);let habitDays=0;for(let i=0;i<hw;i++){const d=S.days[addDays(T,-i)];if(d&&((d.study&&(d.study.wk||d.study.bp))||Object.values(d.habits||{}).some(Boolean)||(d.workout&&d.workout.done)||(d.body&&(!isRest(d.body.ex)||d.body.water===true||d.body.fruit===true))))habitDays++}
   const Y=T.slice(0,4);
   const blooms=vItems().filter(x=>x.done&&String(x.doneAt||"").startsWith(Y)).length+bItems().reduce((a,x)=>a+(x.lived||[]).filter(l=>String(l.date||"").startsWith(Y)).length,0);
   const branches=Math.max(3,Math.min(7,3+(pItems().length||new Set(vItems().map(x=>x.area).filter(Boolean)).size)));
@@ -2538,10 +2542,11 @@ function recapData(Y){
   const vis=vItems().filter(x=>x.done&&String(x.doneAt||"").startsWith(Y)).concat(((S.recapArchive&&S.recapArchive.year===Y&&S.recapArchive.items)||[]).filter(x=>x.done));
   const lived=bItems().flatMap(x=>(x.lived||[]).filter(l=>String(l.date||"").startsWith(Y)).map(l=>({title:x.title,memory:l.memory})));
   const reads=Object.values(S.settings.jpReadDone||{}).filter(d=>String(d).startsWith(Y)).length;
+  const jpDays=days.filter(d=>d.study&&(d.study.wk||d.study.bp)),jpRev=jpDays.reduce((a,d)=>a+(+d.study.wk||0)+(+d.study.bp||0),0);
   const lines=days.flatMap(d=>[...(d.gratitude||[]).filter(x=>String(x||"").trim().length>12),String(d.note||"").trim().length>20?String(d.note).trim().split("\n")[0]:null].filter(Boolean).map(t=>({t,d:d.date})));
   const r=rng(treeSeed()+(+Y));const picks=[];const seen=new Set();const pool=lines.filter(l=>{const k=l.t.toLowerCase();if(seen.has(k))return false;seen.add(k);return true});while(picks.length<3&&pool.length){picks.push(pool.splice(Math.floor(r()*pool.length),1)[0])}
   picks.sort((a,b)=>a.d<b.d?-1:1);
-  return {Y,span,shown,months,moodCount,workouts,moved,water,fruit,ws,habits,fin,trips,vis,lived,reads,picks,days:days.length}}
+  return {Y,span,shown,jpDays:jpDays.length,jpRev,months,moodCount,workouts,moved,water,fruit,ws,habits,fin,trips,vis,lived,reads,picks,days:days.length}}
 function recapSheet(){if(!S.recapYear)return "";const D=recapData(S.recapYear),Y=D.Y,now=Y===today().slice(0,4);
   const sec=(title,body)=>body?`<section class="rsec"><h3>${title}</h3>${body}</section>`:"";
   const MN=["J","F","M","A","M","J","J","A","S","O","N","D"];
@@ -2557,7 +2562,7 @@ function recapSheet(){if(!S.recapYear)return "";const D=recapData(S.recapYear),Y
     ${sec("Finished",finBy.map(([e,n,L])=>`<p style="margin:4px 0"><b>${e} ${n} · ${L.length}</b><br><span class="small">${L.slice(0,10).map(x=>esc(x.title)+(x.rating?` ${"★".repeat(x.rating)}`:"")).join(" · ")}${L.length>10?` · and ${L.length-10} more`:""}</span></p>`).join(""))}
     ${sec("Trips",D.trips.map(t=>`<p style="margin:2px 0">${esc(t.emoji||"🧳")} ${esc(t.title)}${t.memory?` <span class="muted small">· “${esc(t.memory)}”</span>`:""}</p>`).join(""))}
     ${sec("Lived",[...D.vis.map(x=>`<p style="margin:2px 0">✓ ${esc(x.title)}${x.memory?` <span class="muted small">· “${esc(x.memory)}”</span>`:""}</p>`),...D.lived.map(x=>`<p style="margin:2px 0">🌟 ${esc(x.title)}${x.memory?` <span class="muted small">· “${esc(x.memory)}”</span>`:""}</p>`)].join(""))}
-    ${sec("Japanese",[D.reads?`${D.reads} reading${D.reads===1?"":"s"} done`:"",now&&(S.settings.jpLearned||[]).length?`${(S.settings.jpLearned||[]).length} N5 grammar points learned so far`:"",now&&S.study&&S.study.wk&&S.study.wk.level?`WaniKani level ${S.study.wk.level}`:""].filter(Boolean).map(x=>`<p style="margin:2px 0">${x}</p>`).join(""))}
+    ${sec("Japanese",[D.jpDays?`studied on ${D.jpDays} day${D.jpDays===1?"":"s"} · about ${D.jpRev} reviews`:"",D.reads?`${D.reads} reading${D.reads===1?"":"s"} done`:"",now&&(S.settings.jpLearned||[]).length?`${(S.settings.jpLearned||[]).length} N5 grammar points learned so far`:"",now&&S.study&&S.study.wk&&S.study.wk.level?`WaniKani level ${S.study.wk.level}`:""].filter(Boolean).map(x=>`<p style="margin:2px 0">${x}</p>`).join(""))}
     ${sec("A few lines you wrote",D.picks.map(p=>`<blockquote class="rquote">“${esc(p.t)}”<span class="muted small"> · ${fmtDay(p.d,{day:"numeric",month:"short"})}</span></blockquote>`).join(""))}
     ${!D.days?`<p class="muted small">No days saved for ${Y} yet.</p>`:""}
   </section></div></div>`}
@@ -3319,7 +3324,7 @@ function startDemo(){
   S.bucket={imported:true,items:[{id:uid(),title:"See the northern lights",area:"places",emoji:"🌌",step:"Check the best months to go to Tromsø",lived:[]},{id:uid(),title:"Learn to surf",area:"skills",emoji:"🏄",lived:[]},
     {id:uid(),title:"Run a marathon",area:"exp",emoji:"🏅",lived:[{date:addDays(T,-200),memory:"Cried at the finish line"}]},{id:uid(),title:"Kyoto in autumn",area:"places",emoji:"🍁",repeat:true,lived:[{date:addDays(T,-900),memory:"The maple leaves"}]},{id:uid(),title:"Build a canoe",area:"make",emoji:"🛶",lived:[]}]};
   S.longterm={title:"10-year vision",horizon:String(new Date().getFullYear()+10),items:[{id:"lp1",title:"A home with a garden",emoji:"🏡",why:"Roots and room to grow",years:{}},{id:"lp2",title:"Fluent in Spanish",emoji:"🗣️",years:{}},{id:"lp3",title:"Strong and healthy at 50",emoji:"💪",why:"To keep up with the people I love",years:{}}]};
-  S.study={at:new Date().toISOString(),known:"一二三四五六七八九十人日月火水木金土本山川口大小上下中私今朝毎時半家出食飲",wk:{reviews:23,lessons:5,mistakes:4,soon:40,level:14,next:new Date().toISOString(),vacation:false},bp:{reviews:12,grammar:7,vocab:5},errors:{}};
+  S.study={at:new Date().toISOString(),known:"一二三四五六七八九十人日月火水木金土本山川口大小上下中私今朝毎時半家出食飲",wk:{reviews:23,lessons:5,mistakes:4,doneToday:38,soon:40,level:14,next:new Date().toISOString(),vacation:false},bp:{reviews:12,grammar:7,vocab:5,doneToday:9},errors:{},day:today()};
   S.notes={imported:true,items:[{id:uid(),title:"Gift ideas",body:"Mum: a good teapot\nSam: climbing chalk bag",folder:"Notes",pinned:true,created:addDays(T,-20),updated:addDays(T,-2)},{id:uid(),title:"Book quotes",body:"“Be where your feet are.”",folder:"Journaling",created:addDays(T,-40),updated:addDays(T,-40)}]};
   S.groceries={imported:true,items:[{id:uid(),name:"Avocados",qty:"2",aisle:"veg",done:false},{id:uid(),name:"Oat milk",qty:"",aisle:"dairy",done:false},{id:uid(),name:"Sourdough",qty:"",aisle:"bakery",done:false},{id:uid(),name:"Pasta",qty:"",aisle:"pantry",done:true}],history:{banana:{name:"Bananas",aisle:"veg",count:6,last:addDays(T,-3)},egg:{name:"Eggs",aisle:"dairy",count:5,last:addDays(T,-5)},coffee:{name:"Coffee",aisle:"pantry",count:3,last:addDays(T,-9)}}};
   S.trips={imported:true,items:[{id:uid(),title:"Lisbon long weekend",place:"Lisbon",emoji:"🇵🇹",start:addDays(T,9),end:addDays(T,12),todos:[{id:uid(),title:"Book airport parking",daysBefore:7},{id:uid(),title:"Check passports",daysBefore:14,done:true}],pack:PACK_TEMPLATES.Basics.slice(0,6).map((x,i)=>({id:uid(),text:x,done:i<2})),plan:[{id:uid(),day:addDays(T,9),time:"09:40",kind:"booking",text:"Flight TP1351 · ref QX7P2L"},{id:uid(),day:addDays(T,10),kind:"place",text:"Belém tower and pastéis"}]},{id:uid(),title:"Kyoto in autumn",emoji:"🍁",todos:[],pack:[],plan:[]}]};
