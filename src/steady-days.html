@@ -205,7 +205,7 @@ body.modal-open{overflow:hidden}
 .strow .fl{font-weight:600;flex:0 0 84px}
 .jptoday{display:grid;gap:6px;border-top:1px solid var(--line);padding-top:8px}.study>.jptoday:first-child,.study>.head+.jptoday{border-top:0;padding-top:0}.jptoday .head{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .jpp{display:grid;gap:6px}.jphead{display:grid;gap:1px}.jppat{font-size:1.15rem;font-weight:600}.jpex{display:grid;gap:1px;padding-left:10px;border-left:3px solid var(--line)}.jpex [lang=ja]{font-size:1.02rem}
-.jpbtns{display:flex;align-items:center;gap:6px;flex:none}.jplearn{font-size:.78rem;padding:4px 8px}.jpfoot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}.jpdone .jppat{opacity:.6}.jpread{font-size:1.12rem;line-height:1.9;margin:4px 0}.jpread.kana{font-size:.95rem;line-height:1.7}.jpwords{margin:0;padding-left:18px;display:grid;gap:2px}.jpread ruby rt{font-size:.55em;color:var(--muted)}.jpread{line-height:2.2}.jpdeep{display:grid;gap:10px;background:var(--bg);border-radius:10px;padding:10px 12px;margin-top:6px}.jpdeep p{margin:2px 0 0}.jpdeep ul{margin:4px 0 0;padding-left:18px}.jpdeep .jpex{margin-top:6px}.jpacts{display:inline-flex;gap:14px;align-items:center}.strow .fv{flex:1;min-width:0}.strow .fa{color:var(--muted)}.study.clear .strow b{font-weight:500}.stlinks{padding:0 0 6px}.stlinks .chip{text-decoration:none;color:inherit}
+.jpbtns{display:flex;align-items:center;gap:6px;flex:none}.jplearn{font-size:.78rem;padding:4px 8px}.jpfoot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}.jpdone .jppat{opacity:.6}.tnote{display:block;background:none;border:0;padding:2px 0 0;margin:0;text-align:left;color:var(--muted);font:inherit;font-size:.85rem;white-space:pre-line;cursor:pointer;width:100%}.jpread{font-size:1.12rem;line-height:1.9;margin:4px 0}.jpread.kana{font-size:.95rem;line-height:1.7}.jpwords{margin:0;padding-left:18px;display:grid;gap:2px}.jpread ruby rt{font-size:.55em;color:var(--muted)}.jpread{line-height:2.2}.jpdeep{display:grid;gap:10px;background:var(--bg);border-radius:10px;padding:10px 12px;margin-top:6px}.jpdeep p{margin:2px 0 0}.jpdeep ul{margin:4px 0 0;padding-left:18px}.jpdeep .jpex{margin-top:6px}.jpacts{display:inline-flex;gap:14px;align-items:center}.strow .fv{flex:1;min-width:0}.strow .fa{color:var(--muted)}.study.clear .strow b{font-weight:500}.stlinks{padding:0 0 6px}.stlinks .chip{text-decoration:none;color:inherit}
 .vtitle{font-weight:600}.vtt .vtitle{text-align:left;padding:0}
 .vimg{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;background:var(--accent-soft)}
 .vemoji{display:grid;place-items:center;width:100%;aspect-ratio:1;border-radius:12px;background:var(--accent-soft);font-size:2.2rem}
@@ -1014,12 +1014,18 @@ const ttTaskLi=(t,extra="",hideToday=false)=>{
   const dk=t.due&&key(new Date(t.due));const due=hideToday&&dk&&(dk===today()||dk===key())?"":dueLabel(t);
   const rem=STANDALONE&&t.remindAt&&Date.parse(t.remindAt)>Date.now()-864e5?`<span class="pill soft remp">⏰ ${new Date(t.remindAt).toLocaleString("en-GB",{weekday:Date.parse(t.remindAt)-Date.now()>864e5?"short":undefined,hour:"2-digit",minute:"2-digit"})}</span>`:"";
   const remBtn=STANDALONE?`<button type="button" class="linkbtn subtle tiny" data-act="remopen" data-id="${t.id}" data-pid="${esc(t.pid)}" aria-label="Set a reminder for ${esc(plainTitle(t.title))}">⏰</button>`:"";
-  const meta=due+rem+extra+remBtn;
+  const noteBtn=`<button type="button" class="linkbtn subtle tiny" data-act="tnote" data-id="${t.id}" aria-label="Notes for ${esc(plainTitle(t.title))}" title="Notes">✎</button>`;
+  const meta=due+rem+extra+remBtn+noteBtn;
+  if(S.tNoteOpen===t.id)return `<li class="trow editing"><form class="eform" data-form="tnote" data-id="${t.id}" data-pid="${esc(t.pid)}">
+      <input type="text" id="tn-title" value="${esc(t.title)}" aria-label="Task title" autocomplete="off">
+      <textarea id="tn-body" rows="5" placeholder="Notes, links, details…" aria-label="Notes">${esc(t.content||"")}</textarea>
+      <div class="btnrow"><button class="btn sm">Save</button><button type="button" class="btn ghost sm" data-act="tnote" data-id="">Cancel</button></div></form></li>`;
+  const note=String(t.content||"").replace(/!\[[^\]]*\]\([^)]*\)/g,"").replace(/\[([^\]]*)\]\([^)]*\)/g,"$1").trim();
   if(S.remOpen===t.id){const dflt=t.remindAt?new Date(t.remindAt):(()=>{const d=t.due?new Date(t.due):new Date();d.setHours(new Date().getHours()+1,0,0,0);return d})();const v=new Date(dflt-dflt.getTimezoneOffset()*6e4).toISOString().slice(0,16);
     return `<li class="trow editing"><form class="eform" data-form="remind" data-id="${t.id}" data-pid="${esc(t.pid)}"><span class="small"><b>${esc(plainTitle(t.title))}</b> · remind me at</span><div class="addrow"><input type="datetime-local" id="rem-at" value="${v}" aria-label="Reminder time"><button class="btn sm">Save</button></div>
       <div class="btnrow">${t.remindAt?`<button type="button" class="btn ghost sm" data-act="remclear" data-id="${t.id}" data-pid="${esc(t.pid)}">Remove reminder</button>`:""}<button type="button" class="btn ghost sm" data-act="remopen" data-id="">Cancel</button></div>
       ${window.__sdPush&&!window.__sdPush.isOn()?`<p class="muted small" style="margin:0">Turn on notifications in ⚙️ Settings so this reaches you.</p>`:""}</form></li>`}
-  return `<li class="trow"><input type="checkbox" class="check" id="tt-${t.id}" data-act="ttdone" data-id="${t.id}" data-pid="${esc(t.pid)}" aria-label="Complete ${esc(plainTitle(t.title))}"><div class="tmain"><label for="tt-${t.id}">${prioDot(t)}${esc(plainTitle(t.title))}</label>${meta?`<div class="tmeta">${meta}</div>`:""}</div></li>`};
+  return `<li class="trow"><input type="checkbox" class="check" id="tt-${t.id}" data-act="ttdone" data-id="${t.id}" data-pid="${esc(t.pid)}" aria-label="Complete ${esc(plainTitle(t.title))}"><div class="tmain"><label for="tt-${t.id}">${prioDot(t)}${esc(plainTitle(t.title))}</label>${note?`<button type="button" class="tnote" data-act="tnote" data-id="${t.id}" title="Edit notes">${esc(note.length>140?note.slice(0,139)+"…":note)}</button>`:""}${meta?`<div class="tmeta">${meta}</div>`:""}</div></li>`};
 
 /* ---------- render ---------- */
 function renderTabs(){$("#tabs").innerHTML=TABS.map(([id,l])=>`<button role="tab" id="tab-${id}" aria-selected="${S.tab===id}" data-tab="${id}">${l}</button>`).join("")}
@@ -2687,6 +2693,7 @@ document.addEventListener("click",e=>{
     if(tiles.length)editDoc("vision",d=>{d.items=[...(d.items||[]),...tiles]});if(dreams.length)editDoc("bucket",d=>{d.items=[...(d.items||[]),...dreams]});
     S.vsort=null;S.vsortText="";toast(`Added ${tiles.length} tile${tiles.length===1?"":"s"}${dreams.length?` and ${dreams.length} dream${dreams.length===1?"":"s"}`:""}`)}
   if(a==="remopen"){S.remOpen=id||null;render(true)}
+  if(a==="tnote"){S.tNoteOpen=id||null;render(true);if(id){const el=document.getElementById("tn-body");if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length)}}}
   if(a==="remclear"){S.remOpen=null;call("update_task",{task_id:id,task:{id,projectId:b.dataset.pid,remindAt:null},client_timezone:TZ}).then(()=>{toast("Reminder removed");ttLoadAll()}).catch(e=>toast(ttErrToast(e)))}
   if(a==="pushon"){window.__sdPush.enable().then(()=>{toast("Notifications are on for this device");render(true)}).catch(e=>{toast(e&&e.code==="denied"?"Notifications are blocked. Allow them in your browser's site settings, then try again.":"Couldn't turn on notifications here.");render(true)})}
   if(a==="pushoff"){window.__sdPush.disable().then(()=>{toast("Notifications are off for this device");render(true)})}
@@ -2981,6 +2988,8 @@ document.addEventListener("submit",e=>{
     S.buyOpen=null;buyWish(it.id,parseFloat(v("wb-price"))||0,v("wb-kind")||"want",why);return;
   }
   if(f==="wishadd"){const t=v("wish-new"),k=v("wish-kind")||"want30";if(!t)return;clear("wish-new");addWish(t,k==="need"?"need":"want",k==="want60"?60:30)}
+  if(f==="tnote"){const tid=form.dataset.id,pid=form.dataset.pid;const title=v("tn-title"),content=(document.getElementById("tn-body")||{}).value||"";if(!title){toast("A task needs a title");return}
+    S.tNoteOpen=null;render(true);call("update_task",{task_id:tid,task:{id:tid,projectId:pid,title,content},client_timezone:TZ}).then(()=>{toast("Saved");ttLoadAll()}).catch(e=>toast(ttErrToast(e)));return}
   if(f==="bladd"){const t=v("bl-new"),ty=v("bl-type")||"book";if(!t)return;clear("bl-new");editDoc("backlog",d=>{d.items.unshift({id:uid(),type:ty,title:t,status:"someday",added:today()})});toast("Added to your backlog")}
   if(f==="remind"){const tid=form.dataset.id,pid=form.dataset.pid,val=v("rem-at");if(!val)return;const at=new Date(val);if(isNaN(at)){toast("Pick a date and time");return}S.remOpen=null;
     call("update_task",{task_id:tid,task:{id:tid,projectId:pid,remindAt:at.toISOString()},client_timezone:TZ}).then(()=>{toast(`Reminder set for ${at.toLocaleString("en-GB",{weekday:"short",hour:"2-digit",minute:"2-digit"})}`);ttLoadAll()}).catch(e=>toast(ttErrToast(e)));return}
