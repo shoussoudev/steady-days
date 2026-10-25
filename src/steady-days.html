@@ -655,12 +655,31 @@ async function flush(id){
   inflight[id]=false;
 }
 function saveLater(id,fn,ms=600){clearTimeout(debounced[id]);debounced[id]=setTimeout(()=>{delete debounced[id];fn()},ms)}
+/* Saving replaces a day's whole record, so never save a day we haven't read from the server yet:
+   the change shows at once, waits, and is replayed on top of the real day before saving. */
+S.dayLoaded={};S.dayFrom=null;S.dayQ={};
+const dayReady=k=>!S.live||!!S.dayLoaded[k]||(S.dayFrom!==null&&k>=S.dayFrom);
+async function fetchDayThenSave(date){
+  let base=null;
+  for(let i=0;i<6&&!base;i++){try{const r=S.db.collection("data/users/"+S.uid).doc("d-"+date);const sn=await (r.getServer?r.getServer():r.get());
+      base=sn.exists?{...blankDay(date),...sn.data()}:blankDay(date)}catch(e){await sleep(1200*(i+1))}}
+  const q=S.dayQ[date];if(!q)return;
+  if(!base){q.fetching=false;toast("Waiting for a connection to save today safely…");setTimeout(()=>{if(S.dayQ[date]&&!S.dayQ[date].fetching){S.dayQ[date].fetching=true;fetchDayThenSave(date)}},8000);return}
+  base.gratitude=[0,1,2].map(i=>(base.gratitude||[])[i]||"");q.forEach(f=>{try{f(base)}catch(_){}});
+  delete S.dayQ[date];S.dayLoaded[date]=true;S.days[date]=base;queueWrite("d-"+date,base);render();
+}
 function editDay(date,fn,{silent=false}={}){
+  if(!dayReady(date)||S.dayQ[date]){const d=JSON.parse(JSON.stringify(getDay(date)));fn(d);S.days[date]=d;
+    const q=S.dayQ[date]=S.dayQ[date]||[];q.push(fn);if(!q.fetching){q.fetching=true;fetchDayThenSave(date)}
+    if(!silent)render(true);return}
   const d=JSON.parse(JSON.stringify(getDay(date)));fn(d);S.days[date]=d;
   if(silent)saveLater("d-"+date,()=>queueWrite("d-"+date,S.days[date]));
   else{queueWrite("d-"+date,d);render(true)}
 }
-function editSettings(fn,{silent=false}={}){const s=JSON.parse(JSON.stringify(S.settings));fn(s);S.settings=s;queueWrite("settings",s);if(!silent)render(true)}
+S.setQ=[];
+function editSettings(fn,{silent=false}={}){const s=JSON.parse(JSON.stringify(S.settings));fn(s);S.settings=s;
+  if(S.live&&!S.settingsLoaded){S.setQ.push(fn);if(!silent)render(true);return}
+  queueWrite("settings",s);if(!silent)render(true)}
 
 /* ---------- TickTick layer ---------- */
 const ttOn=()=>MCP&&S.tt.state==="ok";
@@ -1573,7 +1592,10 @@ const ageDays=t=>t&&t.created?dayNum(today())-dayNum(key(new Date(t.created))):n
 const norm=x=>String(x||"").replace(/\[([^\]]*)\]\([^)]*\)/g,"$1").trim().toLowerCase();
 const plainTitle=t=>String(t||"").replace(/\[([^\]]*)\]\([^)]*\)/g,"$1").trim();
 S.study={};S.jpdeep={items:[]};S.media={items:[]};S.wish={items:[],imported:false};S.backlog={items:[]};S.vision={items:[]};S.visionimg={items:[]};S.bucket={items:[]};S.dreams={items:[]};S.longterm={items:[]};S.groceries={items:[]};S.trips={items:[]};S.notes={items:[]};
-function editDoc(id,fn,{silent=false}={}){const d=JSON.parse(JSON.stringify(S[id]));fn(d);S[id]=d;
+S.docReady={};S.docQ={};
+function editDoc(id,fn,{silent=false}={}){
+  if(S.live&&!S.docReady[id]){const d=JSON.parse(JSON.stringify(S[id]));fn(d);S[id]=d;(S.docQ[id]=S.docQ[id]||[]).push(fn);if(!silent)render(true);return}
+  const d=JSON.parse(JSON.stringify(S[id]));fn(d);S[id]=d;
   if(silent)saveLater(id,()=>queueWrite(id,{...S[id],kind:id}));else{queueWrite(id,{...d,kind:id});render(true)}}
 const daysTo=k=>dayNum(k)-dayNum(today());
 const waitedOf=it=>Math.max(0,dayNum(it.closed||today())-dayNum(it.added||today()));
@@ -2380,7 +2402,7 @@ function studyToday(){if(isPastView())return "";studyAsk();if(!studyOn())return 
   /* work noticed today: WaniKani counts it exactly, Bunpro from the queue going down */
   const fresh=S.study.day===today();const wkDone=fresh&&wk&&+wk.doneToday||0,bpDone=fresh&&bp&&+bp.doneToday||0;
   const tick=n=>n?`<span class="sttick" title="Reviews done today">✓ ${n} done today</span>`:"";
-  if(wkDone||bpDone)setTimeout(()=>{const d=getDay(today()),st=d.study||{};if((st.wk||0)!==wkDone||(st.bp||0)!==bpDone)editDay(today(),x=>{x.study={wk:wkDone,bp:bpDone}},{silent:true})},0);
+  if((wkDone||bpDone)&&dayReady(today()))setTimeout(()=>{const d=getDay(today()),st=d.study||{};if((st.wk||0)!==wkDone||(st.bp||0)!==bpDone)editDay(today(),x=>{x.study={wk:wkDone,bp:bpDone}},{silent:true})},0);
   const clear=(!wk||wk.vacation||!(wk.reviews||wk.lessons))&&(!bp||!bp.reviews);const worked=wkDone||bpDone;
   return `<section class="card study${clear?" clear":""}"><div class="head"><span class="eyebrow">🈴 Japanese${clear?" · caught up 🌿":worked?" · studied today ✓":""}</span>${wk&&wk.level?`<span class="mono muted small">Level ${wk.level}</span>`:""}</div>
     ${wk?`<div class="strow"><span class="fl">WaniKani</span><span class="fv">${wkTxt}${tick(wkDone)}</span></div><div class="chips stlinks">${[["dashboard","Home"],["subjects/extra_study?queue_type=recent_lessons","Recent lessons"],wk.mistakes?["subjects/extra_study?queue_type=recent_mistakes",`Recent mistakes · ${wk.mistakes}`]:null,["subjects/review",`Reviews${wk.reviews?` · ${wk.reviews}`:""}`]].filter(Boolean).map(([u,n])=>`<a class="chip" href="https://www.wanikani.com/${u}" target="_blank" rel="noopener">${n}</a>`).join("")}</div>`:""}
@@ -3348,18 +3370,25 @@ async function connectDb(){
     S.db=db;S.uid=id;S.live=true;setStatus();
     const col=db.collection("data/users/"+id);
     col.doc("settings").onSnapshot(snap=>{
+      if(!S.settingsLoaded&&snap.fromCache&&!snap.exists)return;
       if(!pending.settings&&!inflight.settings){const d=snap.exists?snap.data():null;
         S.settings={...(d||{}),habits:d?.habits||[],reminders:d?.reminders||[],todos:d?.todos||[],projects:d?.projects||[],ttMap:d?.ttMap||null,favs:d?.favs||[],pnotes:d?.pnotes||{},lastBackup:d?.lastBackup||null,claudeCredit:d?.claudeCredit??null,nudgeOn:d?.nudgeOn,nudgeTime:d?.nudgeTime||"07:22",timeZone:d?.timeZone||TZ,todayOrder:d?.todayOrder||[],todayHidden:d?.todayHidden||[],exKinds:d?.exKinds||[],weighOff:!!d?.weighOff,skills:d?.skills||{},highlights:d?.highlights||{}};
         if(ttOn())ttLoadListsMissing();}
+      if(!S.settingsLoaded){S.settingsLoaded=true;if(S.setQ.length){const b=JSON.parse(JSON.stringify(S.settings));S.setQ.forEach(f=>{try{f(b)}catch(_){}});S.setQ=[];S.settings=b;queueWrite("settings",b)}}
       S.settingsReady=true;render();
     },()=>{S.settingsReady=true;render()});
     col.doc("study").onSnapshot(snap=>{S.study=snap.exists?snap.data():{};render()},()=>{});
     ["wish","backlog","vision","visionimg","bucket","dreams","longterm","groceries","trips","notes","jpdeep","media"].forEach(id=>col.doc(id).onSnapshot(snap=>{
-      if(!pending[id]&&!inflight[id]&&!debounced[id]){const d=snap.exists?snap.data():null;S[id]={...S[id],...(d||{}),items:(d&&d.items)||[]}}
+      /* an empty answer from the local cache isn't trusted: it may just not have synced yet */
+      if(!S.docReady[id]&&snap.fromCache&&!snap.exists)return;
+      if(!pending[id]&&!inflight[id]&&!debounced[id]){const d=snap.exists?snap.data():null;S[id]={...(S.docReady[id]?S[id]:{}),...(d||{}),items:(d&&d.items)||[]};
+        if(!S.docReady[id]){S.docReady[id]=true;const q=S.docQ[id];delete S.docQ[id];if(q&&q.length){const b=JSON.parse(JSON.stringify(S[id]));q.forEach(f=>{try{f(b)}catch(_){}});S[id]=b;queueWrite(id,{...b,kind:id})}}}
       render();
     },()=>{}));
     col.where("kind","==","day").orderBy("date","desc").limit(180).onSnapshot(snap=>{
-      snap.docs.forEach(doc=>{const d=doc.data();const k="d-"+d.date;if(pending[k]||inflight[k]||debounced[k])return;S.days[d.date]={...blankDay(d.date),...d,gratitude:[0,1,2].map(i=>(d.gratitude||[])[i]||"")}});
+      snap.docs.forEach(doc=>{const d=doc.data();const k="d-"+d.date;if(!snap.fromCache)S.dayLoaded[d.date]=true;if(pending[k]||inflight[k]||debounced[k]||S.dayQ[d.date])return;S.days[d.date]={...blankDay(d.date),...d,gratitude:[0,1,2].map(i=>(d.gratitude||[])[i]||"")}});
+      /* from the server, this list is complete back to its oldest day: anything newer that's missing truly doesn't exist yet */
+      if(!snap.fromCache)S.dayFrom=snap.docs.length<180?"0000-00-00":snap.docs.reduce((a,x)=>{const k=x.data().date;return k<a?k:a},"9999");
       render();
     },()=>toast("Lost connection to your saved entries. Reload to reconnect."));
   }catch(e){offlineDb()}

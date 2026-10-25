@@ -28,17 +28,19 @@ catch(_){fs=initializeFirestore(app,{ignoreUndefinedProperties:true})}
 function makeDb(uid){
   const base="users/"+uid+"/docs";
   const colPath=p=>{const m=/^data\/users\/[^/]+(\/.*)?$/.exec(p);if(!m)throw new Error("Unsupported path "+p);return m[1]?base+m[1]:base};
-  const docSnap=s=>({id:s.id,exists:s.exists(),data:()=>s.data()});
+  const docSnap=s=>({id:s.id,exists:s.exists(),data:()=>s.data(),fromCache:!!(s.metadata&&s.metadata.fromCache)});
   const docRef=ref=>({id:ref.id,
     set:data=>setDoc(ref,JSON.parse(JSON.stringify(data))),
     get:async()=>docSnap(await getDoc(ref)),
+    /* straight from the server (never a possibly-empty local cache), for safe first saves */
+    getServer:async()=>docSnap(await getDocFromServer(ref)),
     onSnapshot:(next,err)=>onSnapshot(ref,s=>next(docSnap(s)),e=>err&&err(e))});
   /* where() runs on the server; orderBy/limit run here, so no composite indexes are needed */
   const makeQuery=(path,wh=[],ord=null,lim=null)=>{
     const ref=()=>wh.length?query(collection(fs,path),...wh.map(w=>where(...w))):collection(fs,path);
     const shape=s=>{let ds=s.docs.map(d=>({id:d.id,exists:true,data:()=>d.data()}));
       if(ord){const [f,dir]=ord;ds.sort((a,b)=>{const x=a.data()[f],y=b.data()[f];return (x<y?-1:x>y?1:0)*(dir==="desc"?-1:1)})}
-      if(lim)ds=ds.slice(0,lim);return {docs:ds,size:ds.length,empty:!ds.length}};
+      if(lim)ds=ds.slice(0,lim);return {docs:ds,size:ds.length,empty:!ds.length,fromCache:!!(s.metadata&&s.metadata.fromCache)}};
     return {path,
       where:(f,op,v)=>makeQuery(path,[...wh,[f,op,v]],ord,lim),
       orderBy:(f,dir="asc")=>makeQuery(path,wh,[f,dir],lim),
