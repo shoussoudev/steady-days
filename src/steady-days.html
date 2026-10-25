@@ -35,7 +35,7 @@ h2{font-size:1.15rem;font-weight:700}
 .muted{color:var(--muted)}
 .mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 
-.mytree{position:absolute;top:2px;right:16%;width:74px;height:86px;padding:0;border:0;background:none;cursor:pointer;z-index:2;border-radius:12px}
+.mytree{position:absolute;top:-2px;right:16%;width:74px;height:86px;padding:0;border:0;background:none;cursor:pointer;z-index:2;border-radius:12px}
 .mytree:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.mytree svg{width:100%;height:100%;display:block;overflow:visible}
 .treebig{display:grid;place-items:center}.tree-big{width:min(300px,80%);height:auto;overflow:visible}
 .treelegend{list-style:none;margin:0;padding:0;display:grid;gap:6px}.treelegend li{display:grid;grid-template-columns:90px 1fr;gap:10px;align-items:baseline}
@@ -2487,7 +2487,9 @@ function treeSVG(st,big){
     pts.forEach(p=>extras.push(`<ellipse cx="${p[0].toFixed(1)}" cy="${(p[1]-1).toFixed(1)}" rx="4" ry="2" fill="#fff" fill-opacity=".9"/>`));
     for(let i=0;i<Math.round(4+st.leaf*16);i++){const p=pts[i%pts.length];extras.push(`<circle cx="${(p[0]+(r()-.5)*10).toFixed(1)}" cy="${(p[1]+(r()-.5)*8).toFixed(1)}" r="1.6" fill="#a7c48f"/>`)}}
   const ground=`<ellipse cx="${cx}" cy="${G+1}" rx="${(46+30*st.grow).toFixed(0)}" ry="5" fill="${st.season==="winter"?"#eef2f3":"var(--accent)"}" fill-opacity="${st.season==="winter"?".9":".14"}"/>`;
-  return `<svg class="${big?"tree-big":"tree-sm"}" viewBox="0 ${big?20:40} ${W} ${big?220:170}" role="img" aria-label="Your tree, ${st.season}">${big?roots.join(""):""}${ground}${seg.join("")}${leaves.join("")}${extras.join("")}</svg>`;
+  /* in the header the tree stands on the forest's own ground line, so no ground of its own */
+  return big?`<svg class="tree-big" viewBox="0 20 ${W} 220" role="img" aria-label="Your tree, ${st.season}">${roots.join("")}${ground}${seg.join("")}${leaves.join("")}${extras.join("")}</svg>`
+    :`<svg class="tree-sm" viewBox="0 40 ${W} ${G-40}" preserveAspectRatio="xMidYMax meet" role="img" aria-label="Your tree, ${st.season}">${seg.join("")}${leaves.join("")}${extras.filter(e=>!/<ellipse cx="[\d.]+" cy="19[5-9]/.test(e)).join("")}</svg>`;
 }
 /* ---------- Rings: one per year in the forest; thick in full years, thin in quiet ones, never missing ---------- */
 async function loadAllDays(){if(S.allDaysLoaded||!S.live||!S.db){return Object.values(S.days)}
