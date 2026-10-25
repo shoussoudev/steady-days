@@ -2,7 +2,7 @@ name: Deploy server functions
 on:
   push:
     branches: [main]
-    paths: ["functions/**", "firebase.json", "firestore.rules", ".github/workflows/deploy-functions.yml"]
+    paths: ["functions/**", "firebase.json", "firestore.rules", "storage.rules", ".github/workflows/deploy-functions.yml"]
   workflow_dispatch:
 jobs:
   deploy:
@@ -84,6 +84,8 @@ jobs:
         if: env.HAS_SA == 'true'
         run: |
           ONLY="functions,firestore:rules"
+          # photo rules only once Storage has been switched on in the Firebase console
+          if gcloud storage buckets describe "gs://$PROJECT.firebasestorage.app" --project "$PROJECT" >/dev/null 2>&1; then ONLY="$ONLY,storage"; echo "Storage found: deploying photo rules"; else echo "Storage not switched on yet: skipping photo rules"; fi
           set -o pipefail
           if ! npx -y firebase-tools@15 deploy --only "$ONLY" --project "$PROJECT" --non-interactive --force 2>&1 | tee deploy.log; then
             msg=$(grep -v '^\s*$' deploy.log | grep -iv 'serving at port' | tail -n 14 | sed -e 's/%/%25/g' -e 's/\r//g' | sed ':a;N;$!ba;s/\n/%0A/g')

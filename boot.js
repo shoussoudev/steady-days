@@ -7,6 +7,7 @@ import {makeTasks} from "./tasks.js";
 import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,doc,collection,setDoc,getDoc,getDocs,getDocFromServer,onSnapshot,query,where,deleteField} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {getMessaging,getToken,deleteToken,isSupported} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 import {getFunctions,httpsCallable} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
+import {getStorage,ref as sref,uploadBytes,getDownloadURL,deleteObject} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 /* Web Push key from Firebase → Project settings → Cloud Messaging → Web Push certificates (public, safe to share) */
 const VAPID_KEY="BM0n1OI8l5kaNpEHMlaYeY1y-mTfWdO-h-52aYCPzL-Il2hx4nVq7Z6xRi8qWGUdEAmPGWcxop2vnKdNOBkLPlI";
 
@@ -78,6 +79,12 @@ onAuthStateChanged(auth,u=>{
   };
   /* Claude, through the server (the key stays there) */
   const fns=getFunctions(app,"europe-west2");
+  /* photos: users/<uid>/media/<id>.jpg, private to you (see storage.rules) */
+  const st=getStorage(app);
+  window.__sdMedia={
+    put:async(id,blob)=>{const path=`users/${u.uid}/media/${id}.jpg`;const r=sref(st,path);await uploadBytes(r,blob,{contentType:"image/jpeg",cacheControl:"private, max-age=31536000"});return {path,url:await getDownloadURL(r)}},
+    del:async path=>{try{await deleteObject(sref(st,path))}catch(e){if(e&&e.code!=="storage/object-not-found")throw e}}
+  };
   window.__sdStudy=async(force)=>(await httpsCallable(fns,"studyRefresh",{timeout:40000})({force:!!force})).data;
   window.__sdMangaBaka=async()=>(await httpsCallable(fns,"mangabakaSync",{timeout:130000})({})).data;
   window.__sdClaude=async(prompt,tier)=>(await httpsCallable(fns,"claude",{timeout:130000})({prompt,tier:tier||"default"})).data.text;

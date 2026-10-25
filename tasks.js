@@ -27,6 +27,8 @@ export function makeTasks(fs,uid){
   const ref=doc(fs,"users/"+uid+"/docs","tt");
   let data={projects:[],tasks:[],columns:{},comments:[]};
   let resolveLoaded;const loaded=new Promise(r=>{resolveLoaded=r});
+  /* lets the photo review tell open, finished and deleted tasks apart */
+  window.__sdTaskState=id=>{const t=data.tasks.find(x=>x.id===id);return !t?"gone":(t.status===0||t.status==null)?"open":"done"};
   onSnapshot(ref,s=>{if(s.exists()){const d=s.data();data={projects:d.projects||[],tasks:d.tasks||[],columns:d.columns||{},comments:d.comments||[]}}resolveLoaded()},()=>resolveLoaded());
   const save=()=>setDoc(ref,JSON.parse(JSON.stringify({...data,kind:"tt",updated:nowIso()})));
   const task=id=>data.tasks.find(t=>t.id===id)||fail("That task wasn't found.");

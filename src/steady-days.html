@@ -205,7 +205,8 @@ body.modal-open{overflow:hidden}
 .strow .fl{font-weight:600;flex:0 0 84px}
 .jptoday{display:grid;gap:6px;border-top:1px solid var(--line);padding-top:8px}.study>.jptoday:first-child,.study>.head+.jptoday{border-top:0;padding-top:0}.jptoday .head{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .jpp{display:grid;gap:6px}.jphead{display:grid;gap:1px}.jppat{font-size:1.15rem;font-weight:600}.jpex{display:grid;gap:1px;padding-left:10px;border-left:3px solid var(--line)}.jpex [lang=ja]{font-size:1.02rem}
-.jpbtns{display:flex;align-items:center;gap:6px;flex:none}.jplearn{font-size:.78rem;padding:4px 8px}.jpfoot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}.jpdone .jppat{opacity:.6}.tnote{display:block;background:none;border:0;padding:2px 0 0;margin:0;text-align:left;color:var(--muted);font:inherit;font-size:.85rem;white-space:pre-line;cursor:pointer;width:100%}.jpread{font-size:1.12rem;line-height:1.9;margin:4px 0}.jpread.kana{font-size:.95rem;line-height:1.7}.jpwords{margin:0;padding-left:18px;display:grid;gap:2px}.jpread ruby rt{font-size:.55em;color:var(--muted)}.jpread{line-height:2.2}.jpdeep{display:grid;gap:10px;background:var(--bg);border-radius:10px;padding:10px 12px;margin-top:6px}.jpdeep p{margin:2px 0 0}.jpdeep ul{margin:4px 0 0;padding-left:18px}.jpdeep .jpex{margin-top:6px}.jpacts{display:inline-flex;gap:14px;align-items:center}.strow .fv{flex:1;min-width:0}.strow .fa{color:var(--muted)}.study.clear .strow b{font-weight:500}.stlinks{padding:0 0 6px}.stlinks .chip{text-decoration:none;color:inherit}
+.jpbtns{display:flex;align-items:center;gap:6px;flex:none}.jplearn{font-size:.78rem;padding:4px 8px}.jpfoot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}.jpdone .jppat{opacity:.6}.mstrip{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.mthumb{width:56px;height:56px;border-radius:8px;overflow:hidden;border:1px solid var(--line);padding:0;background:var(--bg);display:grid;place-items:center;cursor:pointer;flex:none;font-size:1.2rem}.mthumb img{width:100%;height:100%;object-fit:cover;display:block}.modal-in>.card{box-shadow:0 12px 40px rgba(0,0,0,.25);margin:0}.mview img{width:100%;max-height:70vh;object-fit:contain;border-radius:10px;background:#000}.mlist li{align-items:center;gap:10px}
+.tnote{display:block;background:none;border:0;padding:2px 0 0;margin:0;text-align:left;color:var(--muted);font:inherit;font-size:.85rem;white-space:pre-line;cursor:pointer;width:100%}.jpread{font-size:1.12rem;line-height:1.9;margin:4px 0}.jpread.kana{font-size:.95rem;line-height:1.7}.jpwords{margin:0;padding-left:18px;display:grid;gap:2px}.jpread ruby rt{font-size:.55em;color:var(--muted)}.jpread{line-height:2.2}.jpdeep{display:grid;gap:10px;background:var(--bg);border-radius:10px;padding:10px 12px;margin-top:6px}.jpdeep p{margin:2px 0 0}.jpdeep ul{margin:4px 0 0;padding-left:18px}.jpdeep .jpex{margin-top:6px}.jpacts{display:inline-flex;gap:14px;align-items:center}.strow .fv{flex:1;min-width:0}.strow .fa{color:var(--muted)}.study.clear .strow b{font-weight:500}.stlinks{padding:0 0 6px}.stlinks .chip{text-decoration:none;color:inherit}
 .vtitle{font-weight:600}.vtt .vtitle{text-align:left;padding:0}
 .vimg{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;background:var(--accent-soft)}
 .vemoji{display:grid;place-items:center;width:100%;aspect-ratio:1;border-radius:12px;background:var(--accent-soft);font-size:2.2rem}
@@ -1018,14 +1019,14 @@ const ttTaskLi=(t,extra="",hideToday=false)=>{
   const meta=due+rem+extra+remBtn+noteBtn;
   if(S.tNoteOpen===t.id)return `<li class="trow editing"><form class="eform" data-form="tnote" data-id="${t.id}" data-pid="${esc(t.pid)}">
       <input type="text" id="tn-title" value="${esc(t.title)}" aria-label="Task title" autocomplete="off">
-      <textarea id="tn-body" rows="5" placeholder="Notes, links, details…" aria-label="Notes">${esc(t.content||"")}</textarea>
+      <textarea id="tn-body" rows="5" placeholder="Notes, links, details…" aria-label="Notes">${esc(t.content||"")}</textarea>${STANDALONE?mStrip("task",t.id,true,plainTitle(t.title)):""}
       <div class="btnrow"><button class="btn sm">Save</button><button type="button" class="btn ghost sm" data-act="tnote" data-id="">Cancel</button></div></form></li>`;
   const note=String(t.content||"").replace(/!\[[^\]]*\]\([^)]*\)/g,"").replace(/\[([^\]]*)\]\([^)]*\)/g,"$1").trim();
   if(S.remOpen===t.id){const dflt=t.remindAt?new Date(t.remindAt):(()=>{const d=t.due?new Date(t.due):new Date();d.setHours(new Date().getHours()+1,0,0,0);return d})();const v=new Date(dflt-dflt.getTimezoneOffset()*6e4).toISOString().slice(0,16);
     return `<li class="trow editing"><form class="eform" data-form="remind" data-id="${t.id}" data-pid="${esc(t.pid)}"><span class="small"><b>${esc(plainTitle(t.title))}</b> · remind me at</span><div class="addrow"><input type="datetime-local" id="rem-at" value="${v}" aria-label="Reminder time"><button class="btn sm">Save</button></div>
       <div class="btnrow">${t.remindAt?`<button type="button" class="btn ghost sm" data-act="remclear" data-id="${t.id}" data-pid="${esc(t.pid)}">Remove reminder</button>`:""}<button type="button" class="btn ghost sm" data-act="remopen" data-id="">Cancel</button></div>
       ${window.__sdPush&&!window.__sdPush.isOn()?`<p class="muted small" style="margin:0">Turn on notifications in ⚙️ Settings so this reaches you.</p>`:""}</form></li>`}
-  return `<li class="trow"><input type="checkbox" class="check" id="tt-${t.id}" data-act="ttdone" data-id="${t.id}" data-pid="${esc(t.pid)}" aria-label="Complete ${esc(plainTitle(t.title))}"><div class="tmain"><label for="tt-${t.id}">${prioDot(t)}${esc(plainTitle(t.title))}</label>${note?`<button type="button" class="tnote" data-act="tnote" data-id="${t.id}" title="Edit notes">${esc(note.length>140?note.slice(0,139)+"…":note)}</button>`:""}${meta?`<div class="tmeta">${meta}</div>`:""}</div></li>`};
+  return `<li class="trow"><input type="checkbox" class="check" id="tt-${t.id}" data-act="ttdone" data-id="${t.id}" data-pid="${esc(t.pid)}" aria-label="Complete ${esc(plainTitle(t.title))}"><div class="tmain"><label for="tt-${t.id}">${prioDot(t)}${esc(plainTitle(t.title))}</label>${note?`<button type="button" class="tnote" data-act="tnote" data-id="${t.id}" title="Edit notes">${esc(note.length>140?note.slice(0,139)+"…":note)}</button>`:""}${STANDALONE?mStrip("task",t.id,false):""}${meta?`<div class="tmeta">${meta}</div>`:""}</div></li>`};
 
 /* ---------- render ---------- */
 function renderTabs(){$("#tabs").innerHTML=TABS.map(([id,l])=>`<button role="tab" id="tab-${id}" aria-selected="${S.tab===id}" data-tab="${id}">${l}</button>`).join("")}
@@ -1045,8 +1046,9 @@ function render(force){
   const keepScroll=[...document.querySelectorAll("#view .modal, #view .modal-in")].map(m=>m.scrollTop);
   renderTabs();header();setStatus();
   $("#view").innerHTML=pageHtml()+(S.settingsOpen?`<div class="modal" role="dialog" aria-modal="true" aria-label="Settings"><button type="button" class="modal-bg" data-act="settings" aria-label="Close settings" tabindex="-1"></button><div class="modal-in">${settingsPanel()}</div></div>`:"")
+    +mViewer()+mReviewSheet()
     +(S.grocOpen?`<div class="modal" role="dialog" aria-modal="true" aria-label="Groceries"><button type="button" class="modal-bg" data-act="groc" aria-label="Close groceries" tabindex="-1"></button><div class="modal-in">${grocPanel()}</div></div>`:"");
-  document.body.classList.toggle("modal-open",!!(S.settingsOpen||S.grocOpen||S.nOpen&&S.tab==="lists"||S.vOpen&&S.tab==="vision"&&curSub("vision")==="year"||S.bOpen&&S.tab==="vision"||S.pOpen&&S.tab==="vision"||S.ye||S.pastView));
+  document.body.classList.toggle("modal-open",!!(S.settingsOpen||S.grocOpen||S.mView||S.mReview||S.nOpen&&S.tab==="lists"||S.vOpen&&S.tab==="vision"&&curSub("vision")==="year"||S.bOpen&&S.tab==="vision"||S.pOpen&&S.tab==="vision"||S.ye||S.pastView));
   const g=document.getElementById("gear");if(g)g.setAttribute("aria-expanded",String(!!S.settingsOpen));
   {const gc=document.getElementById("gcount"),n=gItems().filter(x=>!x.done).length;if(gc){gc.hidden=!n;gc.textContent=n}}
   document.querySelectorAll("#view .modal, #view .modal-in").forEach((m,i)=>{if(keepScroll[i])m.scrollTop=keepScroll[i]});
@@ -1201,14 +1203,14 @@ V.today=()=>{
   <span class="grp">Reflect</span>${reflectCard(d,true)}${footerExtras()}`;
   const R={pointer:()=>pointerCard(pointerOfDay(),true),vision:visionToday,"g-do":()=>`<span class="grp">Do</span>`,tasks:todayTasks,workout:workoutCard,study:studyToday,jpread:jpReadCard,
     "g-notice":()=>`<span class="grp">Notice</span>`,"g-feel":()=>`<span class="grp">Feel</span>`,mood:()=>moodCard(d,false),checkin:checkinCard,weigh:weighCard,ate:ateCard,wishcheck:wishCheckCard,
-    "g-reflect":()=>`<span class="grp">Reflect</span>`,dream:dreamToday,trip:tripToday,groc:grocToday,reflect:()=>reflectCard(d,false),extras:footerExtras};
+    "g-reflect":()=>`<span class="grp">Reflect</span>`,dream:dreamToday,trip:tripToday,groc:grocToday,media:mediaToday,reflect:()=>reflectCard(d,false),extras:footerExtras};
   const parts=todayOrder().filter(k=>!(S.settings.todayHidden||[]).includes(k)).map(k=>[k,R[k]()]);
   /* a heading only shows when something under it does */
   const shown=parts.filter(([k,h],i)=>{if(!k.startsWith("g-"))return !!h;for(let j=i+1;j<parts.length&&!parts[j][0].startsWith("g-");j++)if(parts[j][1])return true;return false});
   return recapPromptCard()+shown.map(x=>x[1]).join("\n");
 };
 /* Today's blocks, in your order (Settings → Arrange Today). New blocks appear in their default place. */
-const TODAY_BLOCKS=[["pointer","Today's pointer"],["vision","Vision tile"],["trip","Trip countdown"],["g-do","“Do” heading"],["tasks","Top 3 and today's tasks"],["workout","Steady 10 workout"],["g-feel","“Feel” heading"],["dream","Morning dream note (until noon)"],["mood","Mood"],["g-notice","“Notice” heading"],["checkin","Check-in (exercise, water, fruit)"],["weigh","Weekly weigh-in"],["ate","What I ate"],["groc","Groceries"],["wishcheck","Wishlist “still want it?”"],["study","Japanese: WaniKani & Bunpro"],["jpread","Japanese reading"],["g-reflect","“Reflect” heading"],["reflect","Reflection and gratitude"],["extras","Links, project progress, past days"]];
+const TODAY_BLOCKS=[["pointer","Today's pointer"],["vision","Vision tile"],["trip","Trip countdown"],["g-do","“Do” heading"],["tasks","Top 3 and today's tasks"],["workout","Steady 10 workout"],["g-feel","“Feel” heading"],["dream","Morning dream note (until noon)"],["mood","Mood"],["g-notice","“Notice” heading"],["checkin","Check-in (exercise, water, fruit)"],["weigh","Weekly weigh-in"],["ate","What I ate"],["groc","Groceries"],["media","Monthly photo check"],["wishcheck","Wishlist “still want it?”"],["study","Japanese: WaniKani & Bunpro"],["jpread","Japanese reading"],["g-reflect","“Reflect” heading"],["reflect","Reflection and gratitude"],["extras","Links, project progress, past days"]];
 function todayOrder(){
   const def=TODAY_BLOCKS.map(x=>x[0]);const mine=(S.settings.todayOrder||[]).filter(k=>def.includes(k));
   /* older saved orders: the Feel section (dream + mood) takes Notice's old spot, Notice moves below mood */
@@ -1561,7 +1563,7 @@ V.cooked=()=>{
 const ageDays=t=>t&&t.created?dayNum(today())-dayNum(key(new Date(t.created))):null;
 const norm=x=>String(x||"").replace(/\[([^\]]*)\]\([^)]*\)/g,"$1").trim().toLowerCase();
 const plainTitle=t=>String(t||"").replace(/\[([^\]]*)\]\([^)]*\)/g,"$1").trim();
-S.study={};S.jpdeep={items:[]};S.wish={items:[],imported:false};S.backlog={items:[]};S.vision={items:[]};S.visionimg={items:[]};S.bucket={items:[]};S.dreams={items:[]};S.longterm={items:[]};S.groceries={items:[]};S.trips={items:[]};S.notes={items:[]};
+S.study={};S.jpdeep={items:[]};S.media={items:[]};S.wish={items:[],imported:false};S.backlog={items:[]};S.vision={items:[]};S.visionimg={items:[]};S.bucket={items:[]};S.dreams={items:[]};S.longterm={items:[]};S.groceries={items:[]};S.trips={items:[]};S.notes={items:[]};
 function editDoc(id,fn,{silent=false}={}){const d=JSON.parse(JSON.stringify(S[id]));fn(d);S[id]=d;
   if(silent)saveLater(id,()=>queueWrite(id,{...S[id],kind:id}));else{queueWrite(id,{...d,kind:id});render(true)}}
 const daysTo=k=>dayNum(k)-dayNum(today());
@@ -2374,6 +2376,61 @@ const STUDY_ERR={"no-token":"not connected","bad-token":"token not accepted — 
 function studyRow(){if(!window.__sdStudy)return "";const E=(S.study&&S.study.errors)||{};const one=(n,k,ok)=>`${n}: ${E[k]?STUDY_ERR[E[k]]||E[k]:ok?"connected":"not connected"}`;
   return `<div class="setrow"><div><b>Japanese study</b><div class="muted small">${one("WaniKani","wk",S.study.wk)} · ${one("Bunpro","bp",S.study.bp)}${S.study.at?` · updated ${new Date(S.study.at).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})}`:""}</div>
     <div class="muted small">Counts refresh every 30 minutes and show on Today. Tokens live in GitHub secrets (WANIKANI_TOKEN, BUNPRO_TOKEN).</div></div><button type="button" class="btn ghost sm" data-act="studyrefresh" ${S.studyBusy?"disabled":""}>${S.studyBusy?"Checking…":"Refresh"}</button></div>`}
+/* ---------- Photos on tasks and notes: shrunk in the browser, stored privately, tracked so the cost stays visible ---------- */
+const MEDIA_CAP=1024*1024*1024;            /* 1 GB: uploads stop here */
+const USD_PER_GB_MONTH=0.023;              /* London storage, approximate */
+const mItems=()=>S.media.items||[];
+const mOf=(t,id)=>mItems().filter(x=>x.on&&x.on.t===t&&x.on.id===id);
+const mBytes=()=>mItems().reduce((a,x)=>a+(+x.size||0),0);
+const fmtMB=b=>b<1024*1024?`${Math.max(1,Math.round(b/1024))} KB`:`${(b/1048576).toFixed(b<10*1048576?1:0)} MB`;
+const mCost=b=>{const p=b/1073741824*USD_PER_GB_MONTH*0.8*100;return p<1?"under 1p a month":`about ${Math.round(p)}p a month`};
+const mediaOn=()=>!!window.__sdMedia&&!S.demo;
+/* where a photo lives, and whether that thing is still around */
+function mHome(x){const o=x.on||{};
+  if(o.t==="note"){const n=nItems().find(y=>y.id===o.id);return n?{name:n.title||"Untitled note",state:"open"}:{name:"a deleted note",state:"gone"}}
+  if(o.t==="task"){const st=window.__sdTaskState?window.__sdTaskState(o.id):"open";return {name:o.title||"a task",state:st}}
+  return {name:"nothing",state:"gone"}}
+async function shrink(file){
+  const bmp=await (window.createImageBitmap?createImageBitmap(file,{imageOrientation:"from-image"}).catch(()=>null):null)||await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=URL.createObjectURL(file)});
+  const W=bmp.width,H=bmp.height,k=Math.min(1,1600/Math.max(W,H));const c=document.createElement("canvas");c.width=Math.round(W*k);c.height=Math.round(H*k);
+  c.getContext("2d").drawImage(bmp,0,0,c.width,c.height);
+  let q=.8,blob;do{blob=await new Promise(r=>c.toBlob(r,"image/jpeg",q));q-=.15}while(blob&&blob.size>2.5*1048576&&q>.3);
+  return {blob,w:c.width,h:c.height}}
+async function mAdd(files,on){if(!mediaOn())return;const list=[...files].filter(f=>/^image\//.test(f.type));if(!list.length){toast("Photos only, please.");return}
+  S.mBusy=(S.mBusy||0)+list.length;render(true);
+  for(const f of list){
+    try{if(mBytes()>=MEDIA_CAP){toast("Photo storage is full (1 GB). Review your photos in Settings to free space.");break}
+      const {blob,w,h}=await shrink(f);const id=uid();const {path,url}=await window.__sdMedia.put(id,blob);
+      editDoc("media",d=>{d.items=[...(d.items||[]),{id,path,url,size:blob.size,w,h,at:new Date().toISOString(),on}]},{silent:true})}
+    catch(e){toast(/unauthorized|permission/i.test(String(e&&(e.code||e.message)))?"Photos aren't switched on yet in Firebase Storage.":"That photo couldn't be uploaded. Try again.")}
+    finally{S.mBusy--;render(true)}}}
+async function mDel(ids){const set=new Set(ids);const gone=mItems().filter(x=>set.has(x.id));
+  for(const x of gone){try{await window.__sdMedia.del(x.path)}catch(e){toast("Couldn't delete a photo just now.");set.delete(x.id)}}
+  editDoc("media",d=>{d.items=(d.items||[]).filter(x=>!set.has(x.id))});S.mView=null;if(set.size)toast(`Deleted ${set.size} photo${set.size===1?"":"s"}`)}
+function mStrip(t,id,canAdd,title){const L=mOf(t,id);if(!L.length&&!canAdd)return "";
+  return `<div class="mstrip">${L.map(x=>`<button type="button" class="mthumb" data-act="mview" data-id="${x.id}" aria-label="Open photo"><img src="${esc(x.url)}" alt="" loading="lazy"></button>`).join("")}
+    ${canAdd&&mediaOn()?`<label class="mthumb madd" title="Add a photo">${S.mBusy?"…":"📷"}<input type="file" accept="image/*" multiple hidden data-act="madd" data-t="${t}" data-id="${id}" data-title="${esc(title||"")}"></label>`:""}</div>`}
+function mViewer(){const x=S.mView&&mItems().find(y=>y.id===S.mView);if(!x)return "";const h=mHome(x);
+  return `<div class="modal" role="dialog" aria-modal="true" aria-label="Photo"><button type="button" class="modal-bg" data-act="mview" data-id="" aria-label="Close" tabindex="-1"></button>
+    <div class="modal-in"><section class="block card mview"><img src="${esc(x.url)}" alt=""><div class="wfoot"><span class="muted small">${fmtMB(x.size)} · on ${esc(h.name)} · ${fmtDay(x.at.slice(0,10),{day:"numeric",month:"short"})}</span>
+    <span class="btnrow"><button type="button" class="btn ghost sm danger" data-act="mdel" data-id="${x.id}">${S.mDelAsk===x.id?"Tap again to delete":"Delete"}</button><button type="button" class="btn sm" data-act="mview" data-id="">Close</button></span></div></section></div></div>`}
+/* Settings row + review sheet + monthly nudge on Today */
+function mediaRow(){if(!window.__sdMedia)return "";const n=mItems().length,b=mBytes();
+  return `<div class="setrow"><div><b>Photos</b><div class="muted small">${n?`${n} photo${n===1?"":"s"} · ${fmtMB(b)} of 1 GB · ${mCost(b)} to store`:"No photos yet. Add them from a task's ✎ or a note."}</div>
+    ${n?`<div class="bar"><span style="width:${Math.min(100,b/MEDIA_CAP*100).toFixed(1)}%"></span></div>`:""}</div>${n?`<button type="button" class="btn ghost sm" data-act="mreview">Review</button>`:""}</div>`}
+function mReviewSheet(){if(!S.mReview)return "";const L=mItems().map(x=>({...x,h:mHome(x)}));
+  const loose=L.filter(x=>x.h.state!=="open"),big=L.filter(x=>x.h.state==="open").sort((a,b)=>b.size-a.size);
+  const row=x=>`<li><button type="button" class="mthumb" data-act="mview" data-id="${x.id}"><img src="${esc(x.url)}" alt="" loading="lazy"></button><div class="grow"><div class="small">${esc(x.h.name)}</div><div class="muted small">${fmtMB(x.size)} · ${fmtDay(x.at.slice(0,10),{day:"numeric",month:"short",year:"numeric"})}${x.h.state==="done"?" · task finished":x.h.state==="gone"?" · no longer exists":""}</div></div><button type="button" class="linkbtn subtle" data-act="mdel" data-id="${x.id}">${S.mDelAsk===x.id?"Sure?":"Delete"}</button></li>`;
+  return `<div class="modal" role="dialog" aria-modal="true" aria-label="Photo review"><button type="button" class="modal-bg" data-act="mreview" aria-label="Close" tabindex="-1"></button><div class="modal-in"><section class="block card">
+    <div class="head"><h2>Photo review</h2><button type="button" class="btn sm" data-act="mreview">Done</button></div>
+    <p class="muted small">${L.length} photo${L.length===1?"":"s"} · ${fmtMB(mBytes())} · ${mCost(mBytes())} to store. Viewing them also costs a little (about 10p per GB downloaded).</p>
+    ${loose.length?`<section class="block"><div class="head"><h3>On finished or deleted things · ${loose.length}</h3><button type="button" class="btn ghost sm danger" data-act="mdelloose">${S.mDelLoose?"Tap again to delete all":"Delete all "+fmtMB(loose.reduce((a,x)=>a+x.size,0))}</button></div><ul class="list mlist">${loose.map(row).join("")}</ul></section>`:`<p class="small">Nothing left on finished tasks or deleted notes. 🌿</p>`}
+    ${big.length?`<section class="block"><div class="head"><h3>Everything else, biggest first</h3></div><ul class="list mlist">${big.map(row).join("")}</ul></section>`:""}
+  </section></div></div>`}
+function mediaToday(){if(isPastView()||!window.__sdMedia||!mItems().length)return "";const mk=today().slice(0,7);if(S.settings.mediaChecked===mk)return "";
+  const loose=mItems().filter(x=>mHome(x).state!=="open");
+  return `<section class="card foldrow"><span class="fl">📷 Monthly photo check</span><span class="fv">${mItems().length} photos · ${fmtMB(mBytes())} · ${mCost(mBytes())}${loose.length?` · ${loose.length} on finished things`:""}</span>
+    <span class="btnrow"><button type="button" class="btn ghost sm" data-act="mreview">Review</button><button type="button" class="linkbtn subtle" data-act="mchecked">All good</button></span></section>`}
 function grocToday(){if(isPastView())return "";const n=gItems().filter(x=>!x.done).length;return `<button type="button" class="card foldrow" data-act="groc"><span class="fl">🛒 Groceries</span><span class="fv">${n?`${n} to buy`:"List is empty"}</span><span class="fa">Open</span></button>`}
 
 /* ---------- Trips: packing and planning, with to-dos that land on Today before you go ---------- */
@@ -2465,7 +2522,7 @@ async function importNotes(){const ps=nSources();if(!ps.length)return;toast("Gat
 function noteSheet(n){
   return `<div class="vsheet" role="dialog" aria-label="Note"><button type="button" class="modal-bg" data-act="nclose" aria-label="Close" tabindex="-1"></button><div class="vsheet-in nsheet">
     <input type="text" id="nt-title" data-act="nfield" data-f="title" data-id="${n.id}" value="${esc(n.title||"")}" placeholder="Title" aria-label="Title" class="vtitle-in">
-    <textarea id="nt-body" data-act="nfield" data-f="body" data-id="${n.id}" rows="12" placeholder="Write anything…">${esc(n.body||"")}</textarea>
+    <textarea id="nt-body" data-act="nfield" data-f="body" data-id="${n.id}" rows="12" placeholder="Write anything…">${esc(n.body||"")}</textarea>${mStrip("note",n.id,true,n.title)}
     <div class="addrow"><input type="text" id="nt-folder" data-act="nfield" data-f="folder" data-id="${n.id}" value="${esc(n.folder||"Notes")}" list="nt-folders" aria-label="Folder" placeholder="Folder"><datalist id="nt-folders">${nFolders().map(f=>`<option value="${esc(f)}"></option>`).join("")}</datalist>
       <button type="button" class="btn ghost sm" data-act="npin" data-id="${n.id}" aria-pressed="${!!n.pinned}">${n.pinned?"📌 Pinned":"Pin"}</button></div>
     <div class="wfoot"><button type="button" class="linkbtn subtle" data-act="ndel" data-id="${n.id}">${S.nDel===n.id?"Tap again to delete":"Delete"}</button><span class="muted small">Saved as you type · ${fmtDay(n.updated||today(),{day:"numeric",month:"short"})}</span><button type="button" class="btn ghost sm" data-act="nclose">Done</button></div>
@@ -2619,7 +2676,7 @@ function settingsPanel(){
   if(STANDALONE){const A=window.__sdAuth||{};const c=S.dbCheck;const I=S.imp;
     const dbLine=!c?"Checking the connection to your database…":c.ok?"✓ Connected to your database.":`⚠ Can't reach your database: ${esc(DB_HELP[c.code]||c.message||c.code)}`;
     body=`<div class="setrow"><div><b>Account</b><div class="muted small">Signed in${A.email?" as "+esc(A.email):""}.</div><div class="small ${c&&!c.ok?"warn":"muted"}">${dbLine}</div></div><button type="button" class="btn ghost sm" data-act="signout">Sign out</button></div>
-    ${notifRows()}${mbRow()}${studyRow()}${usageRow()}
+    ${notifRows()}${mbRow()}${studyRow()}${mediaRow()}${usageRow()}
     <div class="setrow"><div><b>Bring in your data</b><div class="muted small">Choose a Steady Days export file (from Settings → Download in the Claude version). Entries with the same day are replaced.</div></div><label class="btn ghost sm filebtn">Choose file<input type="file" id="import-file" accept=".json,application/json,text/plain,*/*" hidden></label></div>
     ${I?`<div class="impbox ${I.state}"><p class="small" style="margin:0">${esc(I.msg)}</p>${I.state==="ready"?`<div class="btnrow"><button type="button" class="btn sm" data-act="impgo">Import now</button><button type="button" class="btn ghost sm" data-act="impcancel">Cancel</button></div>`:I.state==="done"||I.state==="error"?`<div><button type="button" class="linkbtn subtle" data-act="impcancel">OK</button></div>`:""}</div>`:""}`}
   else if(n.state==="error"||n.state==="missing")body=`<p class="muted small" style="margin:0">${n.state==="missing"?"The reminder task wasn't found. Ask Claude to set it up again.":"Couldn't reach your scheduled tasks from here. You can pause it in Claude under Scheduled."}</p>`;
@@ -2693,6 +2750,11 @@ document.addEventListener("click",e=>{
     if(tiles.length)editDoc("vision",d=>{d.items=[...(d.items||[]),...tiles]});if(dreams.length)editDoc("bucket",d=>{d.items=[...(d.items||[]),...dreams]});
     S.vsort=null;S.vsortText="";toast(`Added ${tiles.length} tile${tiles.length===1?"":"s"}${dreams.length?` and ${dreams.length} dream${dreams.length===1?"":"s"}`:""}`)}
   if(a==="remopen"){S.remOpen=id||null;render(true)}
+  if(a==="mview"){S.mView=id||null;S.mDelAsk=null;render(true)}
+  if(a==="mdel"){if(S.mDelAsk!==id){S.mDelAsk=id;render(true);return}S.mDelAsk=null;mDel([id])}
+  if(a==="mdelloose"){if(!S.mDelLoose){S.mDelLoose=true;render(true);return}S.mDelLoose=false;mDel(mItems().filter(x=>mHome(x).state!=="open").map(x=>x.id))}
+  if(a==="mreview"){S.mReview=!S.mReview;S.mDelLoose=false;S.mDelAsk=null;if(S.mReview)S.settingsOpen=false;else editSettings(st=>{st.mediaChecked=today().slice(0,7)},{silent:true});render(true)}
+  if(a==="mchecked"){editSettings(st=>{st.mediaChecked=today().slice(0,7)})}
   if(a==="tnote"){S.tNoteOpen=id||null;render(true);if(id){const el=document.getElementById("tn-body");if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length)}}}
   if(a==="remclear"){S.remOpen=null;call("update_task",{task_id:id,task:{id,projectId:b.dataset.pid,remindAt:null},client_timezone:TZ}).then(()=>{toast("Reminder removed");ttLoadAll()}).catch(e=>toast(ttErrToast(e)))}
   if(a==="pushon"){window.__sdPush.enable().then(()=>{toast("Notifications are on for this device");render(true)}).catch(e=>{toast(e&&e.code==="denied"?"Notifications are blocked. Allow them in your browser's site settings, then try again.":"Couldn't turn on notifications here.");render(true)})}
@@ -2886,6 +2948,7 @@ document.addEventListener("click",e=>{
   if(a==="maptodo"){const m=ttMap();const cur=new Set(m.todo||[]);cur.has(id)?cur.delete(id):cur.add(id);editSettings(s=>{s.ttMap={...m,todo:[...cur]}});ttLoadLists()}
 });
 document.addEventListener("change",e=>{
+  if(e.target.dataset&&e.target.dataset.act==="madd"){const d=e.target.dataset;const files=e.target.files;if(files&&files.length)mAdd(files,{t:d.t,id:d.id,title:d.title||""});e.target.value="";return}
   {const d=e.target&&e.target.dataset||{};
   if(d.act==="gtick"){const gid=d.id,on=e.target.checked;editDoc("groceries",x=>{const it=x.items.find(y=>y.id===gid);if(it)it.done=on});return}
   if(d.act==="gaisle"){const gid=d.id,val=e.target.value;editDoc("groceries",x=>{const it=x.items.find(y=>y.id===gid);if(it){it.aisle=val;x.aisleMap={...(x.aisleMap||{}),[gNorm(it.name)]:val}}});return}
@@ -3152,7 +3215,7 @@ async function connectDb(){
       S.settingsReady=true;render();
     },()=>{S.settingsReady=true;render()});
     col.doc("study").onSnapshot(snap=>{S.study=snap.exists?snap.data():{};render()},()=>{});
-    ["wish","backlog","vision","visionimg","bucket","dreams","longterm","groceries","trips","notes","jpdeep"].forEach(id=>col.doc(id).onSnapshot(snap=>{
+    ["wish","backlog","vision","visionimg","bucket","dreams","longterm","groceries","trips","notes","jpdeep","media"].forEach(id=>col.doc(id).onSnapshot(snap=>{
       if(!pending[id]&&!inflight[id]&&!debounced[id]){const d=snap.exists?snap.data():null;S[id]={...S[id],...(d||{}),items:(d&&d.items)||[]}}
       render();
     },()=>{}));

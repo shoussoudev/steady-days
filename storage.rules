@@ -1,0 +1,12 @@
+rules_version = '2';
+// Photos: each person can only read, add or delete their own. Images only, under 3 MB (the app shrinks them first).
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /users/{uid}/media/{file} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null && request.auth.uid == uid
+                    && request.resource.size < 3 * 1024 * 1024
+                    && request.resource.contentType.matches('image/.*');
+    }
+  }
+}
