@@ -1816,8 +1816,11 @@ V.backlog=()=>{
 
 /* ---------- Prettify: Claude suggests tidier titles (and author/year for media); nothing changes until you accept ---------- */
 S.pretty=null;
-const PRETTY_ERR={server_missing:"Claude isn't set up on your server yet. Add the Claude key (see the setup steps), then try again.",not_granted:"Prettify needs permission to ask Claude. You can allow it from this page's permissions.",rate_limited:"Claude is busy right now. Try again in a little while.",session_expired:"Sign in to Claude again, then retry.",invalid_json:"The suggestions came back in a muddle. Try again.",refused:"Claude couldn't help with these items.",empty_completion:"No suggestions came back. Try again."};
-const prettyPool=doc=>doc==="wish"?openWish():S.backlog.items.filter(x=>x.status!=="dropped");
+const PRETTY_ERR={all_failed:"Claude didn't answer for any of the batches. Try again in a moment.",server_missing:"Claude isn't set up on your server yet. Add the Claude key (see the setup steps), then try again.",not_granted:"Prettify needs permission to ask Claude. You can allow it from this page's permissions.",rate_limited:"Claude is busy right now. Try again in a little while.",session_expired:"Sign in to Claude again, then retry.",invalid_json:"The suggestions came back in a muddle. Try again.",refused:"Claude couldn't help with these items.",empty_completion:"No suggestions came back. Try again."};
+/* items imported from Goodreads, MangaBaka or a manga list already have clean titles, authors and years: leave them alone */
+const prettyImported=x=>!!x.mb||["goodreads","mangabaka","manga list"].includes(x.source);
+const prettyPool=doc=>doc==="wish"?openWish():S.backlog.items.filter(x=>x.status!=="dropped"&&!prettyImported(x));
+const PRETTY_MAX=150,PRETTY_BATCH=25;
 const prettyNew=doc=>prettyPool(doc).filter(x=>!x.pretty);
 function prettyPrompt(doc,items){
   if(doc==="backlog")return `You tidy a personal media backlog. For each item, give the work's title as it is commonly known (correct spelling and capitalisation; keep French or romanised Japanese titles if that is how the item is written, unless the English title is clearly what is meant), the creator, and the year of first release.
@@ -1835,21 +1838,28 @@ ${JSON.stringify(items.map(x=>({id:x.id,title:x.title,note:(x.note||"").slice(0,
 }
 async function runPretty(doc,all){
   if(!SAMPLE)return;
-  const items=(all?prettyPool(doc):prettyNew(doc));if(!items.length){toast("Nothing new to tidy");return}
-  S.pretty={doc,state:"loading",rows:[],sent:items.map(x=>x.id),n:items.length};render(true);window.scrollTo({top:0});
+  const pool=(all?prettyPool(doc):prettyNew(doc));if(!pool.length){toast("Nothing new to tidy");return}
+  /* big lists go 150 at a time, in small batches; a batch that fails is tried once more, then skipped */
+  const items=pool.slice(0,PRETTY_MAX);
+  S.pretty={doc,state:"loading",rows:[],sent:[],n:items.length,more:pool.length-items.length,failed:0};render(true);window.scrollTo({top:0});
   try{
     const rows=[];
-    for(let i=0;i<items.length;i+=40){
-      const chunk=items.slice(i,i+40);
-      const out=await SAMPLE.json(prettyPrompt(doc,chunk),{modelTier:"quick"});
+    for(let i=0;i<items.length;i+=PRETTY_BATCH){
+      if(!S.pretty||S.pretty.doc!==doc)return;
+      const chunk=items.slice(i,i+PRETTY_BATCH);
+      let out=null;
+      for(let tries=0;tries<2&&out===null;tries++){try{out=await SAMPLE.json(prettyPrompt(doc,chunk),{modelTier:"quick"})}catch(e){if(e&&(e.code==="server_missing"||e.code==="not_granted"))throw e;if(tries)out=undefined}}
+      if(out===undefined){S.pretty.failed+=chunk.length;continue}
+      S.pretty.sent.push(...chunk.map(x=>x.id));
       (Array.isArray(out)?out:[]).forEach(o=>{const it=chunk.find(x=>x.id===o.id);if(!it||!o||typeof o.title!=="string")return;
         const title=o.title.trim()||it.title;const by=doc==="backlog"?String(o.by||"").trim():"";const year=doc==="backlog"&&+o.year>0?Math.round(+o.year):null;
         const split=doc==="wish"&&Array.isArray(o.split)?o.split.map(t=>String(t).trim()).filter(Boolean).slice(0,60):[];
         const changed=!(title===it.title&&(doc!=="backlog"||(by===(it.by||"")&&year===(it.year||null))));
         if(changed||split.length)rows.push({id:it.id,before:it.title,beforeMeta:[it.by,it.year].filter(Boolean).join(" · "),title,by,year,split,changed,on:changed,splitOn:false});});
-      if(S.pretty&&S.pretty.state==="loading")S.pretty.progress=Math.min(items.length,i+40);
+      if(S.pretty&&S.pretty.state==="loading"){S.pretty.progress=Math.min(items.length,i+PRETTY_BATCH);render(true)}
     }
     if(!S.pretty||S.pretty.doc!==doc)return;
+    if(!S.pretty.sent.length)throw {code:"all_failed"};
     S.pretty={...S.pretty,state:"ready",rows};
   }catch(e){if(S.pretty)S.pretty={...S.pretty,state:"error",err:PRETTY_ERR[e&&e.code]||"Something went wrong. Try again in a moment."}}
   render(true);
@@ -1873,10 +1883,11 @@ function prettyBtn(doc){
 }
 function prettyPanel(doc){
   const P=S.pretty;if(!P||P.doc!==doc)return "";
-  if(P.state==="loading")return `<section class="block card pretty"><div class="head"><h2>✨ Prettify</h2><button type="button" class="linkbtn subtle" data-act="prettycancel">Cancel</button></div><p class="muted small" style="margin:0">Asking Claude to tidy ${P.n} item${P.n===1?"":"s"}${P.progress?` (${P.progress} done)`:""}… this can take up to a minute.</p></section>`;
+  if(P.state==="loading")return `<section class="block card pretty"><div class="head"><h2>✨ Prettify</h2><button type="button" class="linkbtn subtle" data-act="prettycancel">Cancel</button></div><p class="muted small" style="margin:0">Asking Claude to tidy ${P.n} item${P.n===1?"":"s"}${P.progress?` (${P.progress} done)`:""}…${P.more?` The other ${P.more} come next time.`:""} Goodreads and MangaBaka imports are skipped: they're already tidy.</p>${P.n?`<div class="bar"><span style="width:${Math.round((P.progress||0)/P.n*100)}%"></span></div>`:""}</section>`;
   if(P.state==="error")return `<section class="block card pretty"><div class="head"><h2>✨ Prettify</h2><button type="button" class="linkbtn subtle" data-act="prettycancel">Close</button></div><p class="small" style="margin:0">${esc(P.err)}</p></section>`;
   const on=P.rows.filter(r=>r.on||r.splitOn).length;
-  return `<section class="block card pretty"><div class="head"><h2>✨ Suggested changes</h2><span class="mono muted">${P.rows.length}</span></div>
+  const note=[P.failed?`${P.failed} item${P.failed===1?"":"s"} couldn't be checked this time; they'll be tried again next run.`:"",P.more?`${P.more} more are waiting: run ✨ Prettify again after this.`:""].filter(Boolean).join(" ");
+  return `<section class="block card pretty"><div class="head"><h2>✨ Suggested changes</h2><span class="mono muted">${P.rows.length}</span></div>${note?`<p class="muted small" style="margin:0">${note}</p>`:""}
     ${P.rows.length?`<p class="muted small" style="margin:0">Untick anything you'd rather keep as it is.${doc==="backlog"?" Authors and years come from Claude's general knowledge, so give them a glance.":""}</p>
     <ul class="list prows">${P.rows.map((r,i)=>`<li>${r.changed?`<label class="prow"><input type="checkbox" class="check" data-act="prow" data-i="${i}" ${r.on?"checked":""}><span class="pdiff"><span class="pbefore">${esc(r.before)}${r.beforeMeta?` · ${esc(r.beforeMeta)}`:""}</span><span class="pafter">${esc(r.title)}${r.by||r.year?` <span class="muted small">· ${esc([r.by,r.year].filter(Boolean).join(" · "))}</span>`:""}</span></span></label>`:`<span class="pafter">${esc(r.before)}</span>`}
       ${r.split.length?`<label class="prow${r.changed?" psplit":""}"><input type="checkbox" class="check" data-act="psplit" data-i="${i}" ${r.splitOn?"checked":""}><span class="small">${r.changed?"Also split":"Split"} into ${r.split.length} separate items: <span class="muted">${esc(r.split.slice(0,6).join(", "))}${r.split.length>6?"…":""}</span></span></label>`:""}</li>`).join("")}</ul>
