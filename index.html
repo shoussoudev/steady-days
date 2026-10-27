@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261027062523"></script>
-<script type="module" src="boot.js?v=20261027062523"></script>
+<script src="shim.js?v=20261027080154"></script>
+<script type="module" src="boot.js?v=20261027080154"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -864,13 +864,18 @@ function delLocal(kind,date,id,label){
 }
 
 /* rollover: unfinished to-dos from earlier days move to today, once a day */
-S.rolled=(()=>{try{const r=JSON.parse(localStorage.getItem("sd-rolled")||"{}");return r.date===today()?r:{date:today(),ids:[],done:false}}catch(_){return {date:today(),ids:[],done:false}}})();
-function saveRolled(){if(S.demo)return;try{localStorage.setItem("sd-rolled",JSON.stringify(S.rolled))}catch(_){}}
+S.rolled=(()=>{try{const r=JSON.parse(localStorage.getItem("sd-rolled2")||"{}");return r.date===today()?r:{date:today(),ids:[],done:false}}catch(_){return {date:today(),ids:[],done:false}}})();
+function saveRolled(){if(S.demo)return;try{localStorage.setItem("sd-rolled2",JSON.stringify(S.rolled))}catch(_){}}
 async function rollover(){
   if(S.rolled.date!==today())S.rolled={date:today(),ids:[],done:false};
-  if(S.rolled.done)return;
+  if(S.rolled.done){carryPicks();return}
   const seen=new Set(),over=[];
-  for(const id of (ttMap().todo||[])){const L=S.tt.lists[id];if(!L||L.err)return;
+  if(STANDALONE){
+    /* Steady Days' own store: every unfinished task due before today, in any list */
+    let all;try{all=arr(await call("list_undone_tasks_by_date",{search:{startDate:"2000-01-01T00:00:00Z",endDate:dueISO(addDays(today(),-1)).replace("T00:00:00","T23:59:59").replace(/([+-]\d\d)(\d\d)$/,"$1:$2")},client_timezone:TZ},true)).map(nt)}catch(e){return}
+    const parents=new Set(all.map(t=>t.parentId).filter(Boolean));
+    all.forEach(t=>{if(t.due&&key(new Date(t.due))<today()&&!t.repeat&&t.kind!=="NOTE"&&!parents.has(t.id))over.push(t)})}
+  else for(const id of (ttMap().todo||[])){const L=S.tt.lists[id];if(!L)return;if(L.err)continue;
     L.tasks.forEach(t=>{if(seen.has(t.id))return;seen.add(t.id);
       if(t.due&&key(new Date(t.due))<today()&&!t.repeat&&t.kind!=="NOTE"&&!L.tasks.some(x=>x.parentId===t.id))over.push(t)})}
   if(over.length){
@@ -881,7 +886,23 @@ async function rollover(){
     toast(over.length===1?"1 unfinished task moved to today":over.length+" unfinished tasks moved to today");
   }
   S.rolled.done=true;saveRolled();
-  if(over.length){ttLoadToday();ttLoadLists()}
+  if(over.length){await ttLoadToday();ttLoadLists()}
+  carryPicks();
+}
+/* yesterday's unfinished Top 3–5 and Maybe picks come along to today, once (saved on the day so other devices don't repeat it) */
+function carryPicks(){
+  const T=today();if(!MCP||S.tt.state!=="ok"||S.tt.todayErr||!S.rolled.done||S.rolled.date!==T||!dayReady(T)||S.dayQ[T])return;
+  const D=getDay(T);if(D.carried)return;
+  let prev=null;for(let i=1;i<=7;i++){const k=addDays(T,-i);const d=S.days[k];if(d&&((d.top3||[]).length||(d.maybe||[]).length)){prev=d;break}}
+  const open=new Set((S.tt.today||[]).map(t=>t.id));
+  const have=new Set([...(D.top3||[]),...(D.maybe||[])].map(x=>x.id));
+  const take=L=>(L||[]).filter(x=>!x.done&&open.has(x.id)&&!have.has(x.id)).map(x=>({id:x.id,title:x.title,pid:x.pid,carried:true}));
+  const tops=prev?take(prev.top3):[],maybes=prev?take(prev.maybe):[];
+  editDay(T,d=>{d.carried=true;if(!tops.length&&!maybes.length)return;
+    const room=Math.max(0,(d.topMax===5?5:3)-(d.top3||[]).length);
+    d.top3=[...(d.top3||[]),...tops.slice(0,room)];
+    d.maybe=[...(d.maybe||[]),...tops.slice(room),...maybes]},{silent:!(tops.length||maybes.length)});
+  if(tops.length||maybes.length)toast(`Carried over from yesterday: ${tops.length?`${tops.length} from your Top ${prev.topMax===5?5:3}`:""}${tops.length&&maybes.length?" and ":""}${maybes.length?`${maybes.length} maybe`:""}`)
 }
 async function discardTask(tid,pid){
   const t0=findTask(tid);const title=t0?t0.title:"task";const realPid=(t0&&t0.pid)||pid;
@@ -1314,7 +1335,7 @@ function todayTasks(){
     const maybe=getDay(today()).maybe||[];const maybeIds=maybe.map(x=>x.id).filter(id=>!topIds.includes(id));
     const openMaybe=maybeIds.map(id=>ts.find(t=>t.id===id)).filter(Boolean),doneMaybe=maybe.filter(x=>x.done&&!topIds.includes(x.id));
     const rest=ts.filter(t=>!topIds.includes(t.id)&&!maybeIds.includes(t.id));
-    const row=t=>ttTaskLi(t,`${top.some(x=>x.id===t.id&&x.bonus)?`<span class="pill soft">bonus</span>`:""}${S.rolled.ids.includes(t.id)?`<span class="pill soft">from yesterday</span>`:""}${maybeBtn(t.id,maybeIds.includes(t.id),"maybe")}<button class="starbtn" data-act="top3" data-id="${t.id}" aria-pressed="${topIds.includes(t.id)}" aria-label="${topIds.includes(t.id)?"Remove from Top 3":S.bonusPick?"Add as a bonus":"Add to Top 3"}" title="${topIds.includes(t.id)?"In your Top 3":"Add to Top 3"}">${topIds.includes(t.id)?"★":"☆"}</button><button class="btn ghost sm tdiscard" data-act="discard" data-id="${t.id}" data-pid="${esc(t.pid)}" title="Mark as won't do">Discard</button>`,true);
+    const row=t=>ttTaskLi(t,`${top.some(x=>x.id===t.id&&x.bonus)?`<span class="pill soft">bonus</span>`:""}${S.rolled.ids.includes(t.id)||top.some(x=>x.id===t.id&&x.carried)||maybe.some(x=>x.id===t.id&&x.carried)?`<span class="pill soft">from yesterday</span>`:""}${maybeBtn(t.id,maybeIds.includes(t.id),"maybe")}<button class="starbtn" data-act="top3" data-id="${t.id}" aria-pressed="${topIds.includes(t.id)}" aria-label="${topIds.includes(t.id)?"Remove from Top 3":S.bonusPick?"Add as a bonus":"Add to Top 3"}" title="${topIds.includes(t.id)?"In your Top 3":"Add to Top 3"}">${topIds.includes(t.id)?"★":"☆"}</button><button class="btn ghost sm tdiscard" data-act="discard" data-id="${t.id}" data-pid="${esc(t.pid)}" title="Mark as won't do">Discard</button>`,true);
     const dayD=getDay(today());const picking=!top.length;const mx=topMax(today());const choosing=top.length>0&&top.length<mx&&!dayD.topDone;const showRest=picking||choosing||S.showMoreToday||(allDone&&S.bonusPick);
     return `<section class="block card">
       <div class="head"><h2>${picking?"Today":topLabel(today())}</h2>${picking?`<button class="btn ghost" data-go="todo">All to-dos</button>`:`<span class="topmeta"><span class="mono muted">${coreDone.length}/${core.length} done${bonusDone?` · +${bonusDone} bonus`:""}</span>${top.some(x=>x.bonus)?"":sizeBtn(today())}</span>`}</div>
@@ -3426,6 +3447,7 @@ async function connectDb(){
     col.where("kind","==","day").orderBy("date","desc").limit(180).onSnapshot(snap=>{
       snap.docs.forEach(doc=>{const d=doc.data();const k="d-"+d.date;if(!snap.fromCache)S.dayLoaded[d.date]=true;if(pending[k]||inflight[k]||debounced[k]||S.dayQ[d.date])return;S.days[d.date]={...blankDay(d.date),...d,gratitude:[0,1,2].map(i=>(d.gratitude||[])[i]||"")}});
       /* from the server, this list is complete back to its oldest day: anything newer that's missing truly doesn't exist yet */
+      if(!snap.fromCache)setTimeout(carryPicks,0);
       if(!snap.fromCache)S.dayFrom=snap.docs.length<180?"0000-00-00":snap.docs.reduce((a,x)=>{const k=x.data().date;return k<a?k:a},"9999");
       render();
     },()=>toast("Lost connection to your saved entries. Reload to reconnect."));
