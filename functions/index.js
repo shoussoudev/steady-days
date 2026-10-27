@@ -36,6 +36,16 @@ function localNow(tz) {
 const minutes = hm => { const [h, m] = String(hm || "0:0").split(":").map(Number); return (h || 0) * 60 + (m || 0); };
 const short = (t, n) => (t = String(t || "").trim()).length > n ? t.slice(0, n - 1).trimEnd() + "…" : t;
 
+/* server activity goes into the same daily usage record the app keeps (counts only), so Settings → Usage shows it */
+async function logServer(uid, counts) {
+  try {
+    const day = new Intl.DateTimeFormat("en-CA", {timeZone: "Europe/London"}).format(new Date());
+    const server = {};
+    for (const [k, v] of Object.entries(counts)) if (v) server[k] = FieldValue.increment(v);
+    if (Object.keys(server).length) await db.doc(`users/${uid}/docs/use-${day}`).set({kind: "use", date: day, server}, {merge: true});
+  } catch (e) { console.error("usage log failed", e); }
+}
+
 async function sendTo(uid, tokens, {title, body, url, tag}) {
   if (!tokens.length) return 0;
   const res = await getMessaging().sendEachForMulticast({
@@ -94,6 +104,7 @@ export const tick = onSchedule({schedule: "every 5 minutes", region: REGION, tim
         const sd = await db.doc(`users/${uid}/docs/study`).get();
         await sendTo(uid, tokens, {...nudgeMessage(rem.exists ? rem.data() : null, now.date, sd.exists ? sd.data() : null), tag: "nudge"});
         patch.lastNudge = now.date;
+        await logServer(uid, {nudge_sent: 1});
       }
 
       /* task reminders: anything open whose reminder time has passed in the last day and wasn't sent yet */
@@ -108,6 +119,7 @@ export const tick = onSchedule({schedule: "every 5 minutes", region: REGION, tim
         if (ms <= nowMs && nowMs - ms < 24 * 3600e3) {
           await sendTo(uid, tokens, {title: "⏰ " + short(t.title, 80), body: t.content ? short(t.content, 120) : "Reminder from Steady Days", tag: "task-" + t.id});
           keep[t.id] = t.remindAt;
+          await logServer(uid, {reminder_sent: 1});
         }
       }
       if (JSON.stringify(keep) !== JSON.stringify(sent)) patch.sentReminders = keep;
@@ -134,6 +146,7 @@ export const claude = onCall({region: REGION, secrets: [ANTHROPIC_API_KEY], time
   const j = await r.json().catch(() => ({}));
   if (!r.ok) {
     console.error("Anthropic error", r.status, j);
+    await logServer(req.auth.uid, {claude_error: 1});
     throw new HttpsError(r.status === 429 ? "resource-exhausted" : "unavailable", (j.error && j.error.message) || `Claude returned ${r.status}`);
   }
   /* keep a running tally of usage so Settings can show it (prices are an estimate per million tokens) */
@@ -146,6 +159,7 @@ export const claude = onCall({region: REGION, secrets: [ANTHROPIC_API_KEY], time
     const add = {calls: inc(1), input: inc(inT), output: inc(outT), cost: inc(cost)};
     await db.doc(`users/${req.auth.uid}/docs/usage`).set({months: {[month]: add}, total: add, last: {at: new Date().toISOString(), model: j.model || CLAUDE_MODEL.value(), input: inT, output: outT, cost}}, {merge: true});
   } catch (e) { console.error("usage tally failed", e); }
+  await logServer(req.auth.uid, {[req.data && req.data.tier === "quick" ? "claude_quick" : "claude_call"]: 1});
   return {text: (j.content || []).filter(c => c.type === "text").map(c => c.text).join("")};
 });
 
@@ -165,6 +179,7 @@ async function syncMangaBaka(uid) {
   catch (e) {
     console.error("MangaBaka fetch failed", e);
     await ref.set({mbSync: {at, error: e.code || "unavailable"}}, {merge: true});
+    await logServer(uid, {mangabaka_error: 1});
     return {error: e.code || "unavailable"};
   }
   const today = new Intl.DateTimeFormat("en-CA", {timeZone: "Europe/London"}).format(new Date());
@@ -175,6 +190,7 @@ async function syncMangaBaka(uid) {
     tx.set(ref, {items, kind: "backlog", mbSync: {at, count: lib.length, ...stats}}, {merge: true});
     return stats;
   });
+  await logServer(uid, {mangabaka_sync: 1, mangabaka_added: stats.added, mangabaka_updated: stats.updated, mangabaka_moved: stats.moved});
   return {count: lib.length, ...stats};
 }
 
@@ -228,6 +244,7 @@ async function refreshStudy(uid, minAge) {
   }
   else out.errors.bp = "no-token";
   await ref.set(JSON.parse(JSON.stringify(out)));
+  await logServer(uid, {study_refresh: 1, study_error: (out.errors.wk && out.errors.wk !== "no-token" ? 1 : 0) + (out.errors.bp && out.errors.bp !== "no-token" ? 1 : 0), known_kanji: out.knownAt === out.at ? 1 : 0});
   return out;
 }
 async function refreshStudyForOwner(minAge) {

@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261027095316"></script>
-<script type="module" src="boot.js?v=20261027095316"></script>
+<script src="shim.js?v=20261027100106"></script>
+<script type="module" src="boot.js?v=20261027100106"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -2666,10 +2666,11 @@ function useStart(){if(!useOn()||U.started)return;U.started=true;U.since=Date.no
 /* the review page */
 async function loadUse(){S.useData={loading:true};render(true);try{S.useData={rows:await window.__sdUse.read()}}catch(_){S.useData={err:true}}render(true)}
 const ACT_NAMES={top3:"Star a task into Top 3",maybe:"Mark Maybe today",ttdone:"Complete a task",mood:"Pick a mood",tnote:"Task notes",remopen:"Set a reminder",groc:"Open groceries",settings:"Open settings",tree:"Open your tree",recap:"Open a year recap",jpdeep:"Grammar: go deeper",jpnext:"Grammar: another",jplearn:"Grammar: mark learned",jpreadtg:"Reading: show reading/words/translation",jpreaddone:"Reading: mark read",jpreadnext:"Reading: another",nextptr:"Pointer: another",fav:"Favourite a pointer",mview:"Open a photo",mreview:"Photo review",pretty:"Prettify",bltype:"Backlog filter",blstart:"Start a backlog item",blnext:"Backlog: up next",tropen:"Open a trip",nnew:"New note",arrange:"Arrange Today",showall:"Show all / fold",tab:"Switch tab"};
+const SERVER_NAMES={nudge_sent:"Morning nudges sent",reminder_sent:"Task reminders sent",mangabaka_sync:"MangaBaka syncs",mangabaka_added:"MangaBaka: new entries",mangabaka_updated:"MangaBaka: chapter updates",mangabaka_moved:"MangaBaka: moved (done, dropped…)",mangabaka_error:"MangaBaka: failed syncs",study_refresh:"Japanese counts refreshed",study_error:"Japanese: failed refreshes",known_kanji:"Known kanji refreshed",claude_call:"Claude calls",claude_quick:"Claude calls (quick model)",claude_error:"Claude: failed calls"};
 function useSheet(){if(!S.useOpen)return "";const D=S.useData||{};const days=30,from=addDays(today(),-(days-1));
   const rows=(D.rows||[]).filter(r=>r.date>=from);
   const sum=cat=>{const o={};rows.forEach(r=>Object.entries(r[cat]||{}).forEach(([k,v])=>{o[k]=(o[k]||0)+(+v||0)}));return Object.entries(o).sort((a,b)=>b[1]-a[1])};
-  const views=sum("view"),acts=sum("act"),forms=sum("form"),opens=sum("open");const secs=rows.reduce((a,r)=>a+(+r.secs||0),0);
+  const views=sum("view"),acts=sum("act"),forms=sum("form"),opens=sum("open"),server=sum("server");const secs=rows.reduce((a,r)=>a+(+r.secs||0),0);
   const allViews=TABS.flatMap(([t])=>SUBS[t]?SUBS[t].map(([s])=>t+":"+s):[t]);const unseen=allViews.filter(v=>!views.some(([k])=>k===v));
   const max=L=>Math.max(1,...L.map(x=>x[1]));
   const bars=(L,name)=>`<ul class="ulist">${L.slice(0,25).map(([k,v])=>`<li><span class="grow">${esc(name?name(k):k)}</span><span class="ubar"><span style="width:${Math.round(v/max(L)*100)}%"></span></span><span class="mono small">${v}</span></li>`).join("")||`<li class="muted small">Nothing yet.</li>`}</ul>`;
@@ -2685,6 +2686,7 @@ function useSheet(){if(!S.useOpen)return "";const D=S.useData||{};const days=30,
     ${unseen.length?`<section class="rsec"><h3>Not opened in ${days} days</h3><p class="small" style="margin:0">${unseen.map(vname).map(esc).join(" · ")}</p></section>`:""}
     <section class="rsec"><h3>Buttons and actions</h3>${bars(acts,k=>ACT_NAMES[k]||k)}</section>
     ${forms.length?`<section class="rsec"><h3>Things you added</h3>${bars(forms)}</section>`:""}
+    ${server.length?`<section class="rsec"><h3>Server activity</h3>${bars(server,k=>SERVER_NAMES[k]||k)}</section>`:""}
     <div class="btnrow"><button type="button" class="btn ghost sm" data-act="useexport">Download for review</button></div>`}
   </section></div></div>`}
 function useRow(){if(!window.__sdUse)return "";return `<div class="setrow"><div><b>Usage</b><div class="muted small">Which screens and buttons you use, as counts only. For reviewing the app.</div></div><button type="button" class="btn ghost sm" data-act="useopen">Open</button></div>`}
