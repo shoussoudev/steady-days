@@ -42,6 +42,7 @@ h2{font-size:1.15rem;font-weight:700}
 .ringwrap{display:grid;place-items:center}.rings{max-width:60%;height:auto}
 .recap{display:grid;gap:14px}.rbig{display:grid;grid-template-columns:1fr 1fr;gap:12px}.rbig>div{display:grid;gap:2px;background:var(--bg);border-radius:12px;padding:12px}.rnum{font-family:var(--f-display);font-size:2rem;font-weight:700;line-height:1}
 .rsec h3{font-size:.95rem;margin-bottom:6px}.rmonths{display:grid;grid-template-columns:repeat(12,1fr);gap:3px}.rm{height:30px;border-radius:6px;display:grid;place-items:center}.rm i{font-style:normal;font-size:.62rem;color:var(--ink,inherit);opacity:.75}
+.ulist{list-style:none;margin:0;padding:0;display:grid;gap:4px}.ulist li{display:flex;align-items:center;gap:8px;font-size:.88rem}.ubar{flex:0 0 30%;height:6px;background:var(--line);border-radius:4px;overflow:hidden}.ubar span{display:block;height:100%;background:var(--accent)}.usage{display:grid;gap:14px}
 .rquote{margin:6px 0;padding:6px 10px;border-left:3px solid var(--accent);font-style:italic}
 .treeline{position:absolute;left:-16px;width:calc(100% + 32px);top:4px;height:80px;pointer-events:none}
 .tl-back{fill:var(--accent);opacity:.07}.tl-front{fill:var(--accent);opacity:.11}.tl-ground{fill:var(--accent);opacity:.10}
@@ -1095,13 +1096,14 @@ function render(force){
   const keepScroll=[...document.querySelectorAll("#view .modal, #view .modal-in")].map(m=>m.scrollTop);
   renderTabs();header();setStatus();
   $("#view").innerHTML=pageHtml()+(S.settingsOpen?`<div class="modal" role="dialog" aria-modal="true" aria-label="Settings"><button type="button" class="modal-bg" data-act="settings" aria-label="Close settings" tabindex="-1"></button><div class="modal-in">${settingsPanel()}</div></div>`:"")
-    +mViewer()+mReviewSheet()+treeSheet()+recapSheet()
+    +mViewer()+mReviewSheet()+treeSheet()+recapSheet()+useSheet()
     +(S.grocOpen?`<div class="modal" role="dialog" aria-modal="true" aria-label="Groceries"><button type="button" class="modal-bg" data-act="groc" aria-label="Close groceries" tabindex="-1"></button><div class="modal-in">${grocPanel()}</div></div>`:"");
-  document.body.classList.toggle("modal-open",!!(S.settingsOpen||S.grocOpen||S.mView||S.mReview||S.treeOpen||S.recapYear||S.nOpen&&S.tab==="lists"||S.vOpen&&S.tab==="vision"&&curSub("vision")==="year"||S.bOpen&&S.tab==="vision"||S.pOpen&&S.tab==="vision"||S.ye||S.pastView));
+  document.body.classList.toggle("modal-open",!!(S.useOpen||S.settingsOpen||S.grocOpen||S.mView||S.mReview||S.treeOpen||S.recapYear||S.nOpen&&S.tab==="lists"||S.vOpen&&S.tab==="vision"&&curSub("vision")==="year"||S.bOpen&&S.tab==="vision"||S.pOpen&&S.tab==="vision"||S.ye||S.pastView));
   const g=document.getElementById("gear");if(g)g.setAttribute("aria-expanded",String(!!S.settingsOpen));
   {const gc=document.getElementById("gcount"),n=gItems().filter(x=>!x.done).length;if(gc){gc.hidden=!n;gc.textContent=n}}
   document.querySelectorAll("#view .modal, #view .modal-in").forEach((m,i)=>{if(keepScroll[i])m.scrollTop=keepScroll[i]});
   if(focusId){const el=document.getElementById(focusId);if(el)el.focus()}
+  try{useView()}catch(_){}
 }
 const V={};
 
@@ -2620,6 +2622,45 @@ function recapSheet(){if(!S.recapYear)return "";const D=recapData(S.recapYear),Y
     ${sec("A few lines you wrote",D.picks.map(p=>`<blockquote class="rquote">“${esc(p.t)}”<span class="muted small"> · ${fmtDay(p.d,{day:"numeric",month:"short"})}</span></blockquote>`).join(""))}
     ${!D.days?`<p class="muted small">No days saved for ${Y} yet.</p>`:""}
   </section></div></div>`}
+/* ---------- Usage log: what you open and use, as counts only (no content), for reviewing the app ---------- */
+const U={buf:{},t:null,last:null,since:null};
+const useOn=()=>!!window.__sdUse&&!S.demo;
+const useKey=x=>String(x||"").toLowerCase().replace(/[^a-z0-9_:-]/g,"").slice(0,40)||"other";
+function track(cat,name,n=1){if(!useOn())return;const c=U.buf[cat]=U.buf[cat]||{};const k=useKey(name);c[k]=(c[k]||0)+n;clearTimeout(U.t);U.t=setTimeout(useFlush,20000)}
+function useDevice(){const ua=navigator.userAgent||"",app=(window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||navigator.standalone;
+  const kind=/iPhone|Android.*Mobile|iPod/i.test(ua)?"phone":/iPad|Android/i.test(ua)?"tablet":/Mac/i.test(ua)?"mac":"computer";return kind+(app?"_app":"_browser")}
+function useSecs(){if(!U.since)return;const sec=Math.round((Date.now()-U.since)/1000);if(sec>0)U.buf.secs=(U.buf.secs||0)+Math.min(sec,3600);U.since=Date.now()}
+function useFlush(){if(!useOn())return;clearTimeout(U.t);useSecs();
+  const b=U.buf;U.buf={};if(!Object.keys(b).length)return;window.__sdUse.bump(today(),b).catch(()=>{for(const [c,m] of Object.entries(b)){if(typeof m==="number"){U.buf[c]=(U.buf[c]||0)+m;continue}const t=U.buf[c]=U.buf[c]||{};for(const [k,v] of Object.entries(m))t[k]=(t[k]||0)+v}})}
+function useView(){const v=S.tab+(curSub(S.tab)?"/"+curSub(S.tab):"");if(v!==U.last){U.last=v;track("view",v.replace("/",":"))}}
+function useStart(){if(!useOn()||U.started)return;U.started=true;U.since=Date.now();track("open",useDevice());
+  let hiddenAt=0;document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden"){useFlush();hiddenAt=Date.now();U.since=null}else{U.since=Date.now();if(Date.now()-hiddenAt>30*60e3)track("open",useDevice())}});
+  addEventListener("pagehide",useFlush)}
+/* the review page */
+async function loadUse(){S.useData={loading:true};render(true);try{S.useData={rows:await window.__sdUse.read()}}catch(_){S.useData={err:true}}render(true)}
+const ACT_NAMES={top3:"Star a task into Top 3",maybe:"Mark Maybe today",ttdone:"Complete a task",mood:"Pick a mood",tnote:"Task notes",remopen:"Set a reminder",groc:"Open groceries",settings:"Open settings",tree:"Open your tree",recap:"Open a year recap",jpdeep:"Grammar: go deeper",jpnext:"Grammar: another",jplearn:"Grammar: mark learned",jpreadtg:"Reading: show reading/words/translation",jpreaddone:"Reading: mark read",jpreadnext:"Reading: another",nextptr:"Pointer: another",fav:"Favourite a pointer",mview:"Open a photo",mreview:"Photo review",pretty:"Prettify",bltype:"Backlog filter",blstart:"Start a backlog item",blnext:"Backlog: up next",tropen:"Open a trip",nnew:"New note",arrange:"Arrange Today",showall:"Show all / fold",tab:"Switch tab"};
+function useSheet(){if(!S.useOpen)return "";const D=S.useData||{};const days=30,from=addDays(today(),-(days-1));
+  const rows=(D.rows||[]).filter(r=>r.date>=from);
+  const sum=cat=>{const o={};rows.forEach(r=>Object.entries(r[cat]||{}).forEach(([k,v])=>{o[k]=(o[k]||0)+(+v||0)}));return Object.entries(o).sort((a,b)=>b[1]-a[1])};
+  const views=sum("view"),acts=sum("act"),forms=sum("form"),opens=sum("open");const secs=rows.reduce((a,r)=>a+(+r.secs||0),0);
+  const allViews=TABS.flatMap(([t])=>SUBS[t]?SUBS[t].map(([s])=>t+":"+s):[t]);const unseen=allViews.filter(v=>!views.some(([k])=>k===v));
+  const max=L=>Math.max(1,...L.map(x=>x[1]));
+  const bars=(L,name)=>`<ul class="ulist">${L.slice(0,25).map(([k,v])=>`<li><span class="grow">${esc(name?name(k):k)}</span><span class="ubar"><span style="width:${Math.round(v/max(L)*100)}%"></span></span><span class="mono small">${v}</span></li>`).join("")||`<li class="muted small">Nothing yet.</li>`}</ul>`;
+  const vname=k=>{const [t,sb]=k.split(":");const tn=(TABS.find(x=>x[0]===t)||[t,t])[1];const sn=sb&&SUBS[t]?(SUBS[t].find(x=>x[0]===sb)||[sb,sb])[1]:"";return sn?`${tn} → ${sn}`:tn};
+  const dev={phone_app:"Phone app",phone_browser:"Phone browser",mac_app:"Mac app",mac_browser:"Mac browser",tablet_app:"Tablet app",tablet_browser:"Tablet browser",computer_app:"Computer app",computer_browser:"Computer browser"};
+  return `<div class="modal" role="dialog" aria-modal="true" aria-label="Usage"><button type="button" class="modal-bg" data-act="useopen" aria-label="Close" tabindex="-1"></button><div class="modal-in"><section class="block card usage">
+    <div class="head"><h2>How you use Steady Days</h2><button type="button" class="btn sm" data-act="useopen">Done</button></div>
+    <p class="muted small" style="margin:0">Last ${days} days. Counts only: which screens and buttons, never what you write.</p>
+    ${D.loading?`<p class="muted small">Loading…</p>`:D.err?`<p class="small">Couldn't load usage just now.</p>`:`
+    <div class="rbig"><div><span class="rnum">${rows.length}</span><span class="muted small">days opened</span></div><div><span class="rnum">${Math.round(secs/60)}</span><span class="muted small">minutes in total${rows.length?` · about ${Math.round(secs/60/rows.length)} a day`:""}</span></div></div>
+    <section class="rsec"><h3>Where you open it</h3>${bars(opens,k=>dev[k]||k)}</section>
+    <section class="rsec"><h3>Screens</h3>${bars(views,vname)}</section>
+    ${unseen.length?`<section class="rsec"><h3>Not opened in ${days} days</h3><p class="small" style="margin:0">${unseen.map(vname).map(esc).join(" · ")}</p></section>`:""}
+    <section class="rsec"><h3>Buttons and actions</h3>${bars(acts,k=>ACT_NAMES[k]||k)}</section>
+    ${forms.length?`<section class="rsec"><h3>Things you added</h3>${bars(forms)}</section>`:""}
+    <div class="btnrow"><button type="button" class="btn ghost sm" data-act="useexport">Download for review</button></div>`}
+  </section></div></div>`}
+function useRow(){if(!window.__sdUse)return "";return `<div class="setrow"><div><b>Usage</b><div class="muted small">Which screens and buttons you use, as counts only. For reviewing the app.</div></div><button type="button" class="btn ghost sm" data-act="useopen">Open</button></div>`}
 function grocToday(){if(isPastView())return "";const n=gItems().filter(x=>!x.done).length;return `<button type="button" class="card foldrow" data-act="groc"><span class="fl">🛒 Groceries</span><span class="fv">${n?`${n} to buy`:"List is empty"}</span><span class="fa">Open</span></button>`}
 
 /* ---------- Trips: packing and planning, with to-dos that land on Today before you go ---------- */
@@ -2865,7 +2906,7 @@ function settingsPanel(){
   if(STANDALONE){const A=window.__sdAuth||{};const c=S.dbCheck;const I=S.imp;
     const dbLine=!c?"Checking the connection to your database…":c.ok?"✓ Connected to your database.":`⚠ Can't reach your database: ${esc(DB_HELP[c.code]||c.message||c.code)}`;
     body=`<div class="setrow"><div><b>Account</b><div class="muted small">Signed in${A.email?" as "+esc(A.email):""}.</div><div class="small ${c&&!c.ok?"warn":"muted"}">${dbLine}</div></div><button type="button" class="btn ghost sm" data-act="signout">Sign out</button></div>
-    ${notifRows()}${mbRow()}${studyRow()}${mediaRow()}${usageRow()}
+    ${notifRows()}${mbRow()}${studyRow()}${mediaRow()}${usageRow()}${useRow()}
     <div class="setrow"><div><b>Bring in your data</b><div class="muted small">Choose a Steady Days export file (from Settings → Download in the Claude version). Entries with the same day are replaced.</div></div><label class="btn ghost sm filebtn">Choose file<input type="file" id="import-file" accept=".json,application/json,text/plain,*/*" hidden></label></div>
     ${I?`<div class="impbox ${I.state}"><p class="small" style="margin:0">${esc(I.msg)}</p>${I.state==="ready"?`<div class="btnrow"><button type="button" class="btn sm" data-act="impgo">Import now</button><button type="button" class="btn ghost sm" data-act="impcancel">Cancel</button></div>`:I.state==="done"||I.state==="error"?`<div><button type="button" class="linkbtn subtle" data-act="impcancel">OK</button></div>`:""}</div>`:""}`}
   else if(n.state==="error"||n.state==="missing")body=`<p class="muted small" style="margin:0">${n.state==="missing"?"The reminder task wasn't found. Ask Claude to set it up again.":"Couldn't reach your scheduled tasks from here. You can pause it in Claude under Scheduled."}</p>`;
@@ -2895,6 +2936,7 @@ V.reminders=()=>{
 };
 
 /* ---------- events ---------- */
+document.addEventListener("click",e=>{try{const t=e.target.closest&&e.target.closest("[data-act]");if(t&&t.dataset.act!=="useopen")track("act",t.dataset.act)}catch(_){}},true);
 document.addEventListener("click",e=>{
   const tab=e.target.closest("[data-tab],[data-go]");
   if(tab){go(tab.dataset.tab||tab.dataset.go);render(true);window.scrollTo({top:0});return}
@@ -2939,6 +2981,9 @@ document.addEventListener("click",e=>{
     if(tiles.length)editDoc("vision",d=>{d.items=[...(d.items||[]),...tiles]});if(dreams.length)editDoc("bucket",d=>{d.items=[...(d.items||[]),...dreams]});
     S.vsort=null;S.vsortText="";toast(`Added ${tiles.length} tile${tiles.length===1?"":"s"}${dreams.length?` and ${dreams.length} dream${dreams.length===1?"":"s"}`:""}`)}
   if(a==="remopen"){S.remOpen=id||null;render(true)}
+  if(a==="useopen"){S.useOpen=!S.useOpen;if(S.useOpen){S.settingsOpen=false;loadUse()}else render(true)}
+  if(a==="useexport"){const rows=(S.useData&&S.useData.rows)||[];const blob=new Blob([JSON.stringify({app:"Steady Days",kind:"usage",exported:new Date().toISOString(),days:rows.sort((a,b)=>a.date<b.date?-1:1)},null,2)],{type:"application/json"});
+    if(DL)DL.save({filename:`steady-days-usage-${today()}.json`,data:blob}).catch(()=>{});else{const a2=document.createElement("a");a2.href=URL.createObjectURL(blob);a2.download=`steady-days-usage-${today()}.json`;a2.click()}}
   if(a==="tree"){S.treeOpen=!S.treeOpen;if(S.treeOpen){S.settingsOpen=false;loadAllDays().then(()=>render(true))}render(true);if(S.treeOpen){const m=document.querySelector("#view .modal");if(m)m.scrollTop=0}}
   if(a==="recap"){const y=b.dataset.y;if(!y){S.recapYear=null;S.treeOpen=!!S.recapFromTree;render(true);return}
     S.recapFromTree=!!S.treeOpen;S.treeOpen=false;S.recapYear=y;S.recapLoading=!S.allDaysLoaded&&S.live;S.recapArchive=null;render(true);{const m=document.querySelector("#view .modal");if(m)m.scrollTop=0}
@@ -3204,6 +3249,7 @@ document.addEventListener("input",e=>{
   if(b.dataset.act==="grat")editDay(vday(),d=>{d.gratitude[+b.dataset.i]=b.value},{silent:true});
 });
 document.addEventListener("focusout",()=>{setTimeout(()=>{if(deferred)render()},0)});
+document.addEventListener("submit",e=>{try{track("form",e.target.dataset.form)}catch(_){}},true);
 document.addEventListener("submit",e=>{
   e.preventDefault();const form=e.target;const f=form.dataset.form;const v=id=>{const el=document.getElementById(id);return el?(el.value||"").trim():""};
   const clear=id=>{const el=document.getElementById(id);if(el)el.value=""};
@@ -3406,7 +3452,7 @@ async function connectDb(){
       if(!pending.settings&&!inflight.settings){const d=snap.exists?snap.data():null;
         S.settings={...(d||{}),habits:d?.habits||[],reminders:d?.reminders||[],todos:d?.todos||[],projects:d?.projects||[],ttMap:d?.ttMap||null,favs:d?.favs||[],pnotes:d?.pnotes||{},lastBackup:d?.lastBackup||null,claudeCredit:d?.claudeCredit??null,nudgeOn:d?.nudgeOn,nudgeTime:d?.nudgeTime||"07:22",timeZone:d?.timeZone||TZ,todayOrder:d?.todayOrder||[],todayHidden:d?.todayHidden||[],exKinds:d?.exKinds||[],weighOff:!!d?.weighOff,skills:d?.skills||{},highlights:d?.highlights||{}};
         if(ttOn())ttLoadListsMissing();}
-      if(!S.settingsLoaded){S.settingsLoaded=true;if(S.setQ.length){const b=JSON.parse(JSON.stringify(S.settings));S.setQ.forEach(f=>{try{f(b)}catch(_){}});S.setQ=[];S.settings=b;queueWrite("settings",b)}}
+      if(!S.settingsLoaded){S.settingsLoaded=true;try{useStart()}catch(_){}if(S.setQ.length){const b=JSON.parse(JSON.stringify(S.settings));S.setQ.forEach(f=>{try{f(b)}catch(_){}});S.setQ=[];S.settings=b;queueWrite("settings",b)}}
       S.settingsReady=true;render();
     },()=>{S.settingsReady=true;render()});
     col.doc("study").onSnapshot(snap=>{S.study=snap.exists?snap.data():{};render()},()=>{});

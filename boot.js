@@ -4,7 +4,7 @@
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {getAuth,GoogleAuthProvider,onAuthStateChanged,signInWithPopup,signInWithRedirect,getRedirectResult,signOut} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {makeTasks} from "./tasks.js";
-import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,doc,collection,setDoc,getDoc,getDocs,getDocFromServer,onSnapshot,query,where,deleteField} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,doc,collection,setDoc,getDoc,getDocs,getDocFromServer,onSnapshot,query,where,deleteField,increment} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {getMessaging,getToken,deleteToken,isSupported} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 import {getFunctions,httpsCallable} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 import {getStorage,ref as sref,uploadBytes,getDownloadURL,deleteObject} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
@@ -86,6 +86,12 @@ onAuthStateChanged(auth,u=>{
   window.__sdMedia={
     put:async(id,blob)=>{const path=`users/${u.uid}/media/${id}.jpg`;const r=sref(st,path);await uploadBytes(r,blob,{contentType:"image/jpeg",cacheControl:"private, max-age=31536000"});return {path,url:await getDownloadURL(r)}},
     del:async path=>{try{await deleteObject(sref(st,path))}catch(e){if(e&&e.code!=="storage/object-not-found")throw e}}
+  };
+  /* usage log: counts only (which screens and buttons), one small doc per day, added up safely from every device */
+  window.__sdUse={
+    bump:async(day,counts)=>{const body={kind:"use",date:day};for(const [cat,m] of Object.entries(counts)){if(typeof m==="number"){body[cat]=increment(m);continue}body[cat]={};for(const [k,v] of Object.entries(m))body[cat][k]=increment(v)}
+      await setDoc(doc(fs,"users/"+u.uid+"/docs","use-"+day),body,{merge:true})},
+    read:async()=>{const s=await getDocs(query(collection(fs,"users/"+u.uid+"/docs"),where("kind","==","use")));return s.docs.map(d=>d.data())}
   };
   window.__sdStudy=async(force)=>(await httpsCallable(fns,"studyRefresh",{timeout:40000})({force:!!force})).data;
   window.__sdMangaBaka=async()=>(await httpsCallable(fns,"mangabakaSync",{timeout:130000})({})).data;
