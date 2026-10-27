@@ -14,7 +14,7 @@
 - "Share my week" — a calm summary to send to someone.
 
 ## Sessions planned
-- **Review v1** — after a week or two of use: what's redundant, too heavy or unused.
+- **Review v1** — after a week or two of use: what's redundant, too heavy or unused. Bring the file from Settings → Usage → Download for review.
 - **Design for sharing with friends** — personal vs core modules, accounts, language setting, choosing modules, who pays for Claude features, how the tree fits in.
 
 ## Parked
