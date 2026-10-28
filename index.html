@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261028065013"></script>
-<script type="module" src="boot.js?v=20261028065013"></script>
+<script src="shim.js?v=20261028065439"></script>
+<script type="module" src="boot.js?v=20261028065439"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -1705,7 +1705,7 @@ function wMedia(it,editing){const L=wLinks(it),imgs=L.filter(isImgUrl),other=L.f
   if(!imgs.length&&!other.length&&!photos.length&&!canAdd)return "";
   const thumbs=[...photos.map(x=>`<button type="button" class="mthumb" data-act="mview" data-id="${x.id}" aria-label="Open photo"><img src="${esc(x.url)}" alt="" loading="lazy"></button>`),
     ...imgs.map(u=>`<a class="mthumb" href="${esc(u)}" target="_blank" rel="noopener" title="${esc(siteOf(u))}"><img src="${esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.classList.add('mbroken')"></a>`),
-    canAdd?`<label class="mthumb madd" title="Add a photo">${S.mBusy?"…":"📷"}<input type="file" accept="image/*" multiple hidden data-act="madd" data-t="wish" data-id="${it.id}" data-title="${esc(it.title||"")}"></label>`:""].join("");
+    canAdd?`<label class="mthumb madd" title="Add a photo">${S.mBusy?"…":"📷"}<input type="file" accept="image/*" multiple hidden data-act="madd" data-t="wish" data-id="${it.id}" data-title="${esc(it.title||"")}"></label>${navigator.clipboard&&navigator.clipboard.read?`<button type="button" class="mthumb madd" data-act="mpaste" data-t="wish" data-id="${it.id}" data-title="${esc(it.title||"")}" title="Paste a photo from the clipboard" aria-label="Paste a photo">📋</button>`:""}`:""].join("");
   return `<div class="wmedia">${thumbs?`<div class="mstrip">${thumbs}</div>`:""}
     ${other.length?`<div class="chips">${other.map(u=>`<a class="chip wlinkchip" href="${esc(u)}" target="_blank" rel="noopener">${SITE_ICON(u)}${esc(siteOf(u))}</a>`).join("")}</div>`:""}</div>`}
 function wishRow(it){
@@ -2523,7 +2523,7 @@ async function mDel(ids){const set=new Set(ids);const gone=mItems().filter(x=>se
   editDoc("media",d=>{d.items=(d.items||[]).filter(x=>!set.has(x.id))});S.mView=null;if(set.size)toast(`Deleted ${set.size} photo${set.size===1?"":"s"}`)}
 function mStrip(t,id,canAdd,title){const L=mOf(t,id);if(!L.length&&!canAdd)return "";
   return `<div class="mstrip">${L.map(x=>`<button type="button" class="mthumb" data-act="mview" data-id="${x.id}" aria-label="Open photo"><img src="${esc(x.url)}" alt="" loading="lazy"></button>`).join("")}
-    ${canAdd&&mediaOn()?`<label class="mthumb madd" title="Add a photo">${S.mBusy?"…":"📷"}<input type="file" accept="image/*" multiple hidden data-act="madd" data-t="${t}" data-id="${id}" data-title="${esc(title||"")}"></label>`:""}</div>`}
+    ${canAdd&&mediaOn()?`<label class="mthumb madd" title="Add a photo">${S.mBusy?"…":"📷"}<input type="file" accept="image/*" multiple hidden data-act="madd" data-t="${t}" data-id="${id}" data-title="${esc(title||"")}"></label>${navigator.clipboard&&navigator.clipboard.read?`<button type="button" class="mthumb madd" data-act="mpaste" data-t="${t}" data-id="${id}" data-title="${esc(title||"")}" title="Paste a photo from the clipboard" aria-label="Paste a photo">📋</button>`:""}`:""}</div>`}
 function mViewer(){const x=S.mView&&mItems().find(y=>y.id===S.mView);if(!x)return "";const h=mHome(x);
   return `<div class="modal" role="dialog" aria-modal="true" aria-label="Photo"><button type="button" class="modal-bg" data-act="mview" data-id="" aria-label="Close" tabindex="-1"></button>
     <div class="modal-in"><section class="block card mview"><img src="${esc(x.url)}" alt=""><div class="wfoot"><span class="muted small">${fmtMB(x.size)} · on ${esc(h.name)} · ${fmtDay(x.at.slice(0,10),{day:"numeric",month:"short"})}</span>
@@ -2674,6 +2674,18 @@ const useKey=x=>String(x||"").toLowerCase().replace(/[^a-z0-9_:-]/g,"").slice(0,
 function track(cat,name,n=1){if(!useOn())return;const c=U.buf[cat]=U.buf[cat]||{};const k=useKey(name);c[k]=(c[k]||0)+n;clearTimeout(U.t);U.t=setTimeout(useFlush,20000)}
 function useDevice(){const ua=navigator.userAgent||"",app=(window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||navigator.standalone;
   const kind=/iPhone|Android.*Mobile|iPod/i.test(ua)?"phone":/iPad|Android/i.test(ua)?"tablet":/Mac/i.test(ua)?"mac":"computer";return kind+(app?"_app":"_browser")}
+/* paste an image (⌘V / Paste) while a task's notes, a note or a wish is open */
+function pasteTarget(){
+  if(S.tNoteOpen){const t=findTask(S.tNoteOpen);return {t:"task",id:S.tNoteOpen,title:t?plainTitle(t.title):""}}
+  if(S.nOpen&&S.tab==="lists"){const n=nItems().find(x=>x.id===S.nOpen);if(n)return {t:"note",id:n.id,title:n.title||""}}
+  if(S.wishOpen&&S.tab==="lists"){const w=(S.wish.items||[]).find(x=>x.id===S.wishOpen);if(w)return {t:"wish",id:w.id,title:w.title||""}}
+  return null}
+document.addEventListener("paste",e=>{const files=[...((e.clipboardData&&e.clipboardData.files)||[])].filter(f=>/^image\//.test(f.type));if(!files.length||!mediaOn())return;
+  const on=pasteTarget();if(!on){toast("Open a task's notes, a note or a wish first, then paste.");return}e.preventDefault();mAdd(files,on);toast("Adding the pasted photo…")});
+async function mPaste(on){try{const items=await navigator.clipboard.read();const files=[];
+    for(const it of items){const ty=it.types.find(x=>/^image\//.test(x));if(ty){const b=await it.getType(ty);files.push(new File([b],"pasted."+(ty.split("/")[1]||"png"),{type:ty}))}}
+    if(!files.length){toast("There's no image on your clipboard.");return}mAdd(files,on)}
+  catch(e){toast("Couldn't read the clipboard. Try pasting (⌘V) instead.")}}
 function useSecs(){if(!U.since)return;const sec=Math.round((Date.now()-U.since)/1000);if(sec>0)U.buf.secs=(U.buf.secs||0)+Math.min(sec,3600);U.since=Date.now()}
 function useFlush(){if(!useOn())return;clearTimeout(U.t);useSecs();
   const b=U.buf;U.buf={};if(!Object.keys(b).length)return;window.__sdUse.bump(today(),b).catch(()=>{for(const [c,m] of Object.entries(b)){if(typeof m==="number"){U.buf[c]=(U.buf[c]||0)+m;continue}const t=U.buf[c]=U.buf[c]||{};for(const [k,v] of Object.entries(m))t[k]=(t[k]||0)+v}})}
@@ -3035,6 +3047,7 @@ document.addEventListener("click",e=>{
   if(a==="recap"){const y=b.dataset.y;if(!y){S.recapYear=null;S.treeOpen=!!S.recapFromTree;render(true);return}
     S.recapFromTree=!!S.treeOpen;S.treeOpen=false;S.recapYear=y;S.recapLoading=!S.allDaysLoaded&&S.live;S.recapArchive=null;render(true);{const m=document.querySelector("#view .modal");if(m)m.scrollTop=0}
     loadAllDays().then(async()=>{S.recapLoading=false;if(y<today().slice(0,4)&&S.live&&S.db){try{const sn=await S.db.collection("data/users/"+S.uid).doc("varchive-"+y).get();if(sn.exists)S.recapArchive={year:y,...sn.data()}}catch(_){}}render(true)})}
+  if(a==="mpaste"){mPaste({t:b.dataset.t,id:b.dataset.id,title:b.dataset.title||""})}
   if(a==="wlinkdel"){const i=+b.dataset.i;editDoc("wish",d=>{const x=d.items.find(y=>y.id===id);if(x&&x.links)x.links.splice(i,1)})}
   if(a==="mview"){S.mView=id||null;S.mDelAsk=null;render(true)}
   if(a==="mdel"){if(S.mDelAsk!==id){S.mDelAsk=id;render(true);return}S.mDelAsk=null;mDel([id])}
