@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261027100106"></script>
-<script type="module" src="boot.js?v=20261027100106"></script>
+<script src="shim.js?v=20261028065013"></script>
+<script type="module" src="boot.js?v=20261028065013"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -242,6 +242,7 @@ body.modal-open{overflow:hidden}
 .jptoday{display:grid;gap:6px;border-top:1px solid var(--line);padding-top:8px}.study>.jptoday:first-child,.study>.head+.jptoday{border-top:0;padding-top:0}.jptoday .head{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .jpp{display:grid;gap:6px}.jphead{display:grid;gap:1px}.jppat{font-size:1.15rem;font-weight:600}.jpex{display:grid;gap:1px;padding-left:10px;border-left:3px solid var(--line)}.jpex [lang=ja]{font-size:1.02rem}
 .jpbtns{display:flex;align-items:center;gap:6px;flex:none}.jplearn{font-size:.78rem;padding:4px 8px}.jpfoot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}.jpdone .jppat{opacity:.6}.mstrip{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.mthumb{width:56px;height:56px;border-radius:8px;overflow:hidden;border:1px solid var(--line);padding:0;background:var(--bg);display:grid;place-items:center;cursor:pointer;flex:none;font-size:1.2rem}.mthumb img{width:100%;height:100%;object-fit:cover;display:block}.modal-in>.card{box-shadow:0 12px 40px rgba(0,0,0,.25);margin:0}.mview img{width:100%;max-height:70vh;object-fit:contain;border-radius:10px;background:#000}.mlist li{align-items:center;gap:10px}
+.mbroken img{display:none}.mbroken::after{content:"🖼";font-size:1.2rem}.wmedia{display:grid;gap:6px;padding:4px 0 2px 34px}.wlinkchip{text-decoration:none;color:inherit;font-size:.78rem}.wxlink{word-break:break-all;color:var(--muted)}
 .tnote{display:block;background:none;border:0;padding:2px 0 0;margin:0;text-align:left;color:var(--muted);font:inherit;font-size:.85rem;white-space:pre-line;cursor:pointer;width:100%}.jpread{font-size:1.12rem;line-height:1.9;margin:4px 0}.jpread.kana{font-size:.95rem;line-height:1.7}.jpwords{margin:0;padding-left:18px;display:grid;gap:2px}.jpread ruby rt{font-size:.55em;color:var(--muted)}.jpread{line-height:2.2}.jpdeep{display:grid;gap:10px;background:var(--bg);border-radius:10px;padding:10px 12px;margin-top:6px}.jpdeep p{margin:2px 0 0}.jpdeep ul{margin:4px 0 0;padding-left:18px}.jpdeep .jpex{margin-top:6px}.jpacts{display:inline-flex;gap:14px;align-items:center}.strow .fv{flex:1;min-width:0}.strow .fa{color:var(--muted)}.study.clear .strow b{font-weight:500}.stlinks{padding:0 0 6px}.stlinks .chip{text-decoration:none;color:inherit}
 .vtitle{font-weight:600}.vtt .vtitle{text-align:left;padding:0}
 .vimg{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;background:var(--accent-soft)}
@@ -1694,6 +1695,19 @@ function importWish(){const L=ttWishSource();if(!L)return;const items=ttWishItem
 const wishBuyForm=(it,early)=>`<form class="wbuy" data-form="buy" data-id="${it.id}">
   ${early?`<label class="field"><span class="small">It's still cooling off (${daysTo(it.until)} days left). What makes now the right time?</span><input type="text" id="wb-why" placeholder="One line is enough" autocomplete="off" required></label>`:""}
   <div class="addrow"><input type="number" id="wb-price" placeholder="£ price" step="0.01" min="0" inputmode="decimal" aria-label="Price"><select id="wb-kind" aria-label="Need or want"><option value="want" ${it.kind!=="need"?"selected":""}>Want</option><option value="need" ${it.kind==="need"?"selected":""}>Need</option></select><button class="btn">Log purchase</button></div></form>`;
+/* links on a wish: the main one plus extras; images show as thumbnails, others as a chip with the site name */
+const wLinks=it=>[it.link,...(it.links||[])].map(safeUrl).filter(Boolean);
+const isImgUrl=u=>/\.(jpe?g|png|gif|webp|avif)(\?|#|$)/i.test(u);
+const siteOf=u=>{try{return new URL(u).hostname.replace(/^www\./,"")}catch(_){return "link"}};
+const SITE_ICON=u=>/youtube|youtu\.be/.test(u)?"▶︎ ":/instagram|tiktok|pinterest/.test(u)?"◎ ":"↗ ";
+function wMedia(it,editing){const L=wLinks(it),imgs=L.filter(isImgUrl),other=L.filter(u=>!isImgUrl(u)),photos=mOf("wish",it.id);
+  const canAdd=editing&&mediaOn();
+  if(!imgs.length&&!other.length&&!photos.length&&!canAdd)return "";
+  const thumbs=[...photos.map(x=>`<button type="button" class="mthumb" data-act="mview" data-id="${x.id}" aria-label="Open photo"><img src="${esc(x.url)}" alt="" loading="lazy"></button>`),
+    ...imgs.map(u=>`<a class="mthumb" href="${esc(u)}" target="_blank" rel="noopener" title="${esc(siteOf(u))}"><img src="${esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.classList.add('mbroken')"></a>`),
+    canAdd?`<label class="mthumb madd" title="Add a photo">${S.mBusy?"…":"📷"}<input type="file" accept="image/*" multiple hidden data-act="madd" data-t="wish" data-id="${it.id}" data-title="${esc(it.title||"")}"></label>`:""].join("");
+  return `<div class="wmedia">${thumbs?`<div class="mstrip">${thumbs}</div>`:""}
+    ${other.length?`<div class="chips">${other.map(u=>`<a class="chip wlinkchip" href="${esc(u)}" target="_blank" rel="noopener">${SITE_ICON(u)}${esc(siteOf(u))}</a>`).join("")}</div>`:""}</div>`}
 function wishRow(it){
   const st=wState(it),open=S.wishOpen===it.id,buy=S.buyOpen===it.id,link=safeUrl(it.link);
   const pill=st==="cooling"?`<span class="pill soft" title="Cooling off until ${shortDay(it.until)}">${daysTo(it.until)}d left</span>`
@@ -1702,7 +1716,7 @@ function wishRow(it){
     :st==="check"?"":`<button type="button" class="btn ghost sm" data-act="buyopen" data-id="${it.id}">${buy?"Cancel":"Bought it"}</button>`;
   const PN=["No priority","Low","Medium","High"],pv=it.prio||0;
   return `<li class="wrow"><div class="wmain"><button type="button" class="pflag p${pv}" data-act="wprio" data-id="${it.id}" data-p="${(pv+1)%4}" aria-label="Priority: ${PN[pv]}. Tap to change" title="Priority: ${PN[pv]} (tap to change)"><i></i></button><button type="button" class="wtitle grow" data-act="wopen" data-id="${it.id}" aria-expanded="${open}"><span>${esc(it.title)}</span>${it.note&&!open?`<span class="muted small wnote1">${esc(it.note.split("\n")[0])}</span>`:""}</button>${pill}${act}<button type="button" class="x" aria-label="Let “${esc(it.title)}” go" title="Don't want it anymore" data-act="wletgo" data-id="${it.id}">×</button></div>
-    ${st==="check"?wishCheckBtns(it):""}${buy?wishBuyForm(it,st==="cooling"):""}${open?wishEdit(it,link):""}</li>`;
+    ${!open?wMedia(it,false):""}${st==="check"?wishCheckBtns(it):""}${buy?wishBuyForm(it,st==="cooling"):""}${open?wishEdit(it,link):""}</li>`;
 }
 const wishCheckBtns=it=>`<div class="btnrow"><button type="button" class="btn sm" data-act="wkeep" data-id="${it.id}">Yes, it's earned its place</button><button type="button" class="btn ghost sm" data-act="wletgo" data-id="${it.id}">Let it go</button><button type="button" class="btn ghost sm" data-act="wmore" data-id="${it.id}">Another month</button></div>`;
 function wishEdit(it,link){
@@ -1711,6 +1725,9 @@ function wishEdit(it,link){
     <input type="text" id="wt-${it.id}" data-act="wtitle" data-id="${it.id}" value="${esc(it.title)}" autocomplete="off" aria-label="Name">
     <textarea id="wn-${it.id}" data-act="wnote" data-id="${it.id}" rows="${Math.min(8,Math.max(2,(it.note||"").split("\n").length))}" placeholder="Notes, sizes, where to buy…">${esc(it.note||"")}</textarea>
     <div class="addrow"><input type="text" inputmode="url" id="wl-${it.id}" data-act="wlink" data-id="${it.id}" placeholder="Link (optional)" value="${esc(it.link||"")}" autocomplete="off">${link?`<a class="btn ghost sm" href="${esc(link)}" target="_blank" rel="noopener">Open ↗</a>`:""}</div>
+    ${(it.links||[]).map((u,i)=>`<div class="addrow"><a class="grow small wxlink" href="${esc(safeUrl(u)||"#")}" target="_blank" rel="noopener">${esc(u)}</a><button type="button" class="x" data-act="wlinkdel" data-id="${it.id}" data-i="${i}" aria-label="Remove link">×</button></div>`).join("")}
+    <form class="addrow" data-form="wlinkadd" data-id="${it.id}"><input type="text" inputmode="url" id="wla-${it.id}" placeholder="Add another link: a video, a photo, another shop…" autocomplete="off"><button class="btn ghost sm">Add</button></form>
+    ${wMedia(it,true)}
     <div class="chips"><span class="muted small">Priority</span>${P.map(([n,v])=>`<button type="button" class="chip" data-act="wprio" data-id="${it.id}" data-p="${v}" aria-pressed="${(it.prio||0)===v}">${n}</button>`).join("")}</div>
     <div class="wfoot"><span class="muted small">Added ${shortDay(it.added)}${it.from==="tt"?" · from TickTick":""}</span>${it.kind==="want"?`<button type="button" class="linkbtn subtle" data-act="wkind" data-id="${it.id}" data-k="need">It's actually a need</button>`:`<button type="button" class="linkbtn subtle" data-act="wkind" data-id="${it.id}" data-k="want">It's a want: cool off 30 days</button>`}</div>
   </div>`;
@@ -2484,6 +2501,7 @@ const mediaOn=()=>!!window.__sdMedia&&!S.demo;
 /* where a photo lives, and whether that thing is still around */
 function mHome(x){const o=x.on||{};
   if(o.t==="note"){const n=nItems().find(y=>y.id===o.id);return n?{name:n.title||"Untitled note",state:"open"}:{name:"a deleted note",state:"gone"}}
+  if(o.t==="wish"){const w=(S.wish.items||[]).find(y=>y.id===o.id);return w?{name:w.title||"a wish",state:w.status==="open"?"open":"done"}:{name:"a deleted wish",state:"gone"}}
   if(o.t==="task"){const st=window.__sdTaskState?window.__sdTaskState(o.id):"open";return {name:o.title||"a task",state:st}}
   return {name:"nothing",state:"gone"}}
 async function shrink(file){
@@ -2516,7 +2534,7 @@ function mediaRow(){if(!window.__sdMedia)return "";const n=mItems().length,b=mBy
     ${n?`<div class="bar"><span style="width:${Math.min(100,b/MEDIA_CAP*100).toFixed(1)}%"></span></div>`:""}</div>${n?`<button type="button" class="btn ghost sm" data-act="mreview">Review</button>`:""}</div>`}
 function mReviewSheet(){if(!S.mReview)return "";const L=mItems().map(x=>({...x,h:mHome(x)}));
   const loose=L.filter(x=>x.h.state!=="open"),big=L.filter(x=>x.h.state==="open").sort((a,b)=>b.size-a.size);
-  const row=x=>`<li><button type="button" class="mthumb" data-act="mview" data-id="${x.id}"><img src="${esc(x.url)}" alt="" loading="lazy"></button><div class="grow"><div class="small">${esc(x.h.name)}</div><div class="muted small">${fmtMB(x.size)} · ${fmtDay(x.at.slice(0,10),{day:"numeric",month:"short",year:"numeric"})}${x.h.state==="done"?" · task finished":x.h.state==="gone"?" · no longer exists":""}</div></div><button type="button" class="linkbtn subtle" data-act="mdel" data-id="${x.id}">${S.mDelAsk===x.id?"Sure?":"Delete"}</button></li>`;
+  const row=x=>`<li><button type="button" class="mthumb" data-act="mview" data-id="${x.id}"><img src="${esc(x.url)}" alt="" loading="lazy"></button><div class="grow"><div class="small">${esc(x.h.name)}</div><div class="muted small">${fmtMB(x.size)} · ${fmtDay(x.at.slice(0,10),{day:"numeric",month:"short",year:"numeric"})}${x.h.state==="done"?(x.on&&x.on.t==="wish"?" · bought or let go":" · task finished"):x.h.state==="gone"?" · no longer exists":""}</div></div><button type="button" class="linkbtn subtle" data-act="mdel" data-id="${x.id}">${S.mDelAsk===x.id?"Sure?":"Delete"}</button></li>`;
   return `<div class="modal" role="dialog" aria-modal="true" aria-label="Photo review"><button type="button" class="modal-bg" data-act="mreview" aria-label="Close" tabindex="-1"></button><div class="modal-in"><section class="block card">
     <div class="head"><h2>Photo review</h2><button type="button" class="btn sm" data-act="mreview">Done</button></div>
     <p class="muted small">${L.length} photo${L.length===1?"":"s"} · ${fmtMB(mBytes())} · ${mCost(mBytes())} to store. Viewing them also costs a little (about 10p per GB downloaded).</p>
@@ -3017,6 +3035,7 @@ document.addEventListener("click",e=>{
   if(a==="recap"){const y=b.dataset.y;if(!y){S.recapYear=null;S.treeOpen=!!S.recapFromTree;render(true);return}
     S.recapFromTree=!!S.treeOpen;S.treeOpen=false;S.recapYear=y;S.recapLoading=!S.allDaysLoaded&&S.live;S.recapArchive=null;render(true);{const m=document.querySelector("#view .modal");if(m)m.scrollTop=0}
     loadAllDays().then(async()=>{S.recapLoading=false;if(y<today().slice(0,4)&&S.live&&S.db){try{const sn=await S.db.collection("data/users/"+S.uid).doc("varchive-"+y).get();if(sn.exists)S.recapArchive={year:y,...sn.data()}}catch(_){}}render(true)})}
+  if(a==="wlinkdel"){const i=+b.dataset.i;editDoc("wish",d=>{const x=d.items.find(y=>y.id===id);if(x&&x.links)x.links.splice(i,1)})}
   if(a==="mview"){S.mView=id||null;S.mDelAsk=null;render(true)}
   if(a==="mdel"){if(S.mDelAsk!==id){S.mDelAsk=id;render(true);return}S.mDelAsk=null;mDel([id])}
   if(a==="mdelloose"){if(!S.mDelLoose){S.mDelLoose=true;render(true);return}S.mDelLoose=false;mDel(mItems().filter(x=>mHome(x).state!=="open").map(x=>x.id))}
@@ -3319,6 +3338,8 @@ document.addEventListener("submit",e=>{
     S.buyOpen=null;buyWish(it.id,parseFloat(v("wb-price"))||0,v("wb-kind")||"want",why);return;
   }
   if(f==="wishadd"){const t=v("wish-new"),k=v("wish-kind")||"want30";if(!t)return;clear("wish-new");addWish(t,k==="need"?"need":"want",k==="want60"?60:30)}
+  if(f==="wlinkadd"){const wid=form.dataset.id;let u=v("wla-"+wid);if(!u)return;if(!/^https?:\/\//i.test(u))u="https://"+u;if(!safeUrl(u)){toast("That doesn't look like a link");return}
+    editDoc("wish",d=>{const x=d.items.find(y=>y.id===wid);if(x)x.links=[...(x.links||[]),u]});return}
   if(f==="tnote"){const tid=form.dataset.id,pid=form.dataset.pid;const title=v("tn-title"),content=(document.getElementById("tn-body")||{}).value||"";if(!title){toast("A task needs a title");return}
     S.tNoteOpen=null;render(true);call("update_task",{task_id:tid,task:{id:tid,projectId:pid,title,content},client_timezone:TZ}).then(()=>{toast("Saved");ttLoadAll()}).catch(e=>toast(ttErrToast(e)));return}
   if(f==="bladd"){const t=v("bl-new"),ty=v("bl-type")||"book";if(!t)return;clear("bl-new");editDoc("backlog",d=>{d.items.unshift({id:uid(),type:ty,title:t,status:"someday",added:today()})});toast("Added to your backlog")}
