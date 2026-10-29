@@ -68,12 +68,32 @@ function studyLine(st) {
   if (st.bp && st.bp.reviews) bits.push(`Bunpro ${st.bp.reviews}`);
   return bits.length ? "🈴 " + bits.join(" · ") : "";
 }
-function nudgeMessage(rem, date, study) {
+/* birthdays and dates: a line on the day and a week ahead */
+function dateLines(items, date) {
+  const dn = k => Date.UTC(+k.slice(0, 4), +k.slice(5, 7) - 1, +k.slice(8, 10)) / 864e5;
+  const p2 = n => String(n).padStart(2, "0");
+  const out = [];
+  for (const x of items || []) {
+    if (!x || !/^\d\d-\d\d$/.test(x.md || "")) continue;
+    const [mm, dd] = x.md.split("-").map(Number), y0 = +date.slice(0, 4);
+    const at = y => { const leap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0; return `${y}-${p2(mm)}-${p2(mm === 2 && dd === 29 && !leap ? 28 : dd)}`; };
+    let k = at(y0); if (k < date) k = at(y0 + 1);
+    const days = dn(k) - dn(date), yrs = x.year ? +k.slice(0, 4) - x.year : null;
+    if (days !== 0 && days !== 7) continue;
+    const name = short(x.name, 40);
+    if (x.kind === "remembrance") out.push(days ? `🕯 ${name}'s day is in a week` : `🕯 Remembering ${name} today`);
+    else if (x.kind === "birthday") out.push(days ? `🎂 ${name}'s birthday is in a week${yrs ? ` (turns ${yrs})` : ""}` : `🎂 ${name}${yrs ? ` turns ${yrs}` : "'s birthday is"} today`);
+    else out.push(`${x.kind === "anniversary" ? "💍" : "⭐"} ${name}${x.kind === "anniversary" ? " anniversary" : ""} ${days ? "in a week" : "today"}${yrs ? ` · ${yrs} year${yrs === 1 ? "" : "s"}` : ""}`);
+  }
+  return out;
+}
+function nudgeMessage(rem, date, study, dl) {
   const d = rem && rem.days && rem.days[date];
   const sl = studyLine(study);
-  if (!d && sl) return {title: "Good morning 🌿", body: sl};
+  dl = dl || [];
+  if (!d && (sl || dl.length)) return {title: "Good morning 🌿", body: [...dl, sl].filter(Boolean).join("\n")};
   if (!d) return {title: "Good morning 🌿", body: "A fresh day in the forest. Take a minute with Steady Days when you can."};
-  const lines = [];
+  const lines = [...dl];
   if (d.pointer && d.pointer.text) lines.push(short(d.pointer.text, 140));
   if (Array.isArray(d.top3) && d.top3.length) lines.push("★ " + d.top3.slice(0, 5).map(t => short(t, 40)).join(" · "));
   if (sl) lines.push(sl);
@@ -99,12 +119,20 @@ export const tick = onSchedule({schedule: "every 5 minutes", region: REGION, tim
       /* morning nudge: once a day, at or after the chosen time (within two hours, so a late tick still counts) */
       const at = st.nudgeTime || "07:22";
       const late = minutes(now.hm) - minutes(at);
-      if (st.nudgeOn !== false && late >= 0 && late < 120 && srv.lastNudge !== now.date) {
+      const inWindow = late >= 0 && late < 120;
+      const datesDoc = inWindow && (srv.lastNudge !== now.date || srv.lastDates !== now.date) ? await db.doc(`users/${uid}/docs/dates`).get() : null;
+      const dl = datesDoc && datesDoc.exists ? dateLines(datesDoc.data().items, now.date) : [];
+      if (st.nudgeOn !== false && inWindow && srv.lastNudge !== now.date) {
         const rem = await db.doc(`users/${uid}/docs/reminder__next`).get();
         const sd = await db.doc(`users/${uid}/docs/study`).get();
-        await sendTo(uid, tokens, {...nudgeMessage(rem.exists ? rem.data() : null, now.date, sd.exists ? sd.data() : null), tag: "nudge"});
-        patch.lastNudge = now.date;
+        await sendTo(uid, tokens, {...nudgeMessage(rem.exists ? rem.data() : null, now.date, sd.exists ? sd.data() : null, dl), tag: "nudge"});
+        patch.lastNudge = now.date; patch.lastDates = now.date;
         await logServer(uid, {nudge_sent: 1});
+      } else if (st.nudgeOn === false && inWindow && dl.length && srv.lastDates !== now.date) {
+        /* morning nudge switched off: dates still get their own gentle notification */
+        await sendTo(uid, tokens, {title: dl.length === 1 ? dl[0] : "Dates to remember", body: dl.length === 1 ? "From Steady Days" : dl.join("\n"), tag: "dates"});
+        patch.lastDates = now.date;
+        await logServer(uid, {dates_sent: 1});
       }
 
       /* task reminders: anything open whose reminder time has passed in the last day and wasn't sent yet */

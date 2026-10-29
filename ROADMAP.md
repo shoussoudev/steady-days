@@ -2,6 +2,8 @@
 
 ## Done recently
 - Your tree, quietly drawn (header) and Rings as the yearly story (tap the tree).
+- Longer Japanese readings with 3 questions in Japanese.
+- Dates: birthdays, anniversaries and days to remember.
 
 ## Ideas to build
 - **N4 Japanese** — grammar library, Go deeper lessons and readings for the next level.
@@ -10,7 +12,6 @@
 - Editing local projects (rename / archive lists created in Steady Days).
 
 ## Extras (maybe)
-- Birthdays, with reminders.
 - "Share my week" — a calm summary to send to someone.
 
 ## Sessions planned
