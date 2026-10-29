@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261029212141"></script>
-<script type="module" src="boot.js?v=20261029212141"></script>
+<script src="shim.js?v=20261029215301"></script>
+<script type="module" src="boot.js?v=20261029215301"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -243,7 +243,7 @@ body.modal-open{overflow:hidden}
 .jpp{display:grid;gap:6px}.jphead{display:grid;gap:1px}.jppat{font-size:1.15rem;font-weight:600}.jpex{display:grid;gap:1px;padding-left:10px;border-left:3px solid var(--line)}.jpex [lang=ja]{font-size:1.02rem}
 .jpbtns{display:flex;align-items:center;gap:6px;flex:none}.jplearn{font-size:.78rem;padding:4px 8px}.jpfoot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}.jpdone .jppat{opacity:.6}.mstrip{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.mthumb{width:56px;height:56px;border-radius:8px;overflow:hidden;border:1px solid var(--line);padding:0;background:var(--bg);display:grid;place-items:center;cursor:pointer;flex:none;font-size:1.2rem}.mthumb img{width:100%;height:100%;object-fit:cover;display:block}.modal-in>.card{box-shadow:0 12px 40px rgba(0,0,0,.25);margin:0}.mview img{width:100%;max-height:70vh;object-fit:contain;border-radius:10px;background:#000}.mlist li{align-items:center;gap:10px}
 .mbroken img{display:none}.mbroken::after{content:"🖼";font-size:1.2rem}.dpick select{flex:1 1 30%;min-width:0}.dpick input{flex:1 1 34%;min-width:0}
-.dtoday{display:grid;gap:2px;padding:6px 8px}.dline{display:grid;gap:1px;text-align:left;background:none;border:0;padding:6px;border-radius:8px;color:inherit;font:inherit;cursor:pointer}.dline.now{background:var(--accent-soft)}.dbtn{display:flex;gap:10px;align-items:flex-start;text-align:left}
+.dtoday{display:grid;gap:2px;padding:6px 8px}.dline{display:grid;gap:1px;text-align:left;background:none;border:0;padding:6px;border-radius:8px;color:inherit;font:inherit;cursor:pointer}.dgroup{display:grid;gap:0;border-radius:10px;padding:2px 0}.dgroup:not(.single){padding:6px 4px;border:1px solid var(--line)}.dgroup .eyebrow{padding:0 6px}.dgroup.now{background:var(--accent-soft);border-color:var(--accent)}.dlgroup{border-radius:12px;padding:6px 8px;margin-top:6px}.dlgroup.now{background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}.dlhead{display:flex;justify-content:space-between;align-items:baseline;font-weight:600;padding:2px 2px 0}.dbtn{display:flex;gap:10px;align-items:flex-start;text-align:left}
 .wmedia{display:grid;gap:6px;padding:4px 0 2px 34px}.wlinkchip{text-decoration:none;color:inherit;font-size:.78rem}.wxlink{word-break:break-all;color:var(--muted)}
 .tnote{display:block;background:none;border:0;padding:2px 0 0;margin:0;text-align:left;color:var(--muted);font:inherit;font-size:.85rem;white-space:pre-line;cursor:pointer;width:100%}.jpread{font-size:1.12rem;line-height:1.9;margin:4px 0}.jpread.kana{font-size:.95rem;line-height:1.7}.jpwords{margin:0;padding-left:18px;display:grid;gap:2px}
 .jpquiz{display:grid;gap:10px;border-top:1px dashed var(--line);padding-top:10px;margin-top:4px}.jpqq{margin:0 0 6px;line-height:2}.jpopts{display:grid;gap:6px}
@@ -2754,8 +2754,13 @@ function dLine(x,n){const [e]=DKIND[x.kind]||DKIND.other;const who=esc(x.name);c
   if(x.kind==="birthday")return n.days===0?`${e} ${who}${yrs?` turns ${yrs}`:"'s birthday is"} today`:`${e} ${who}'s birthday ${n.days===1?"tomorrow":`in ${n.days} days`}${yrs?` · turns ${yrs}`:""}`;
   const what=x.kind==="anniversary"?" anniversary":"";const yl=yrs?` · ${yrs} year${yrs===1?"":"s"}`:"";
   return n.days===0?`${e} ${who}${what} today${yl}`:`${e} ${who}${what} ${n.days===1?"tomorrow":`in ${n.days} days`}${yl}`}
+/* entries falling on the same day sit together; today's group is highlighted */
+function dGroups(L){const G=[];L.forEach(o=>{const g=G.find(x=>x.k===o.n.k);if(g)g.items.push(o);else G.push({k:o.n.k,days:o.n.days,items:[o]})});return G}
+const dWhen=g=>g.days===0?"Today":g.days===1?"Tomorrow":`In ${g.days} days`;
 function datesToday(){if(isPastView())return "";const L=dItems().map(x=>({x,n:dNext(x)})).filter(o=>o.n.days<=7).sort((a,b)=>a.n.days-b.n.days);if(!L.length)return "";
-  return `<section class="card dtoday">${L.map(({x,n})=>`<button type="button" class="dline${n.days===0?" now":""}" data-act="dopen" data-id="${x.id}"><span>${dLine(x,n)}</span>${x.note&&x.kind!=="remembrance"?`<span class="muted small">${esc(x.note.split("\n")[0])}</span>`:""}</button>`).join("")}</section>`}
+  const line=({x,n})=>`<button type="button" class="dline" data-act="dopen" data-id="${x.id}"><span>${dLine(x,n)}</span>${x.note&&x.kind!=="remembrance"?`<span class="muted small">${esc(x.note.split("\n")[0])}</span>`:""}</button>`;
+  return `<section class="card dtoday">${dGroups(L).map(g=>g.items.length>1?`<div class="dgroup${g.days===0?" now":""}"><span class="eyebrow">${dWhen(g)} · ${fmtDay(g.k,{weekday:"short",day:"numeric",month:"short"})} · ${g.items.length} together</span>${g.items.map(line).join("")}</div>`
+    :`<div class="dgroup single${g.days===0?" now":""}">${line(g.items[0])}</div>`).join("")}</section>`}
 /* day + month, with the year as an optional extra */
 const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
 const dPick=(pre,x)=>{const [mm,dd]=x?x.md.split("-").map(Number):[0,0];
@@ -2768,13 +2773,13 @@ V.dates=()=>{const L=dItems().map(x=>({x,n:dNext(x)})).sort((a,b)=>a.n.days-b.n.
       ${dPick("de",x)}
       <textarea id="de-note" rows="3" placeholder="${x.kind==="remembrance"?"A memory":"Gift ideas, notes"}">${esc(x.note||"")}</textarea>
       <div class="btnrow"><button class="btn sm">Save</button><button type="button" class="btn ghost sm" data-act="dedit" data-id="">Cancel</button><button type="button" class="btn ghost sm danger" data-act="ddel" data-id="${x.id}">${S.dDel===x.id?"Tap again to delete":"Delete"}</button></div></form></li>`;
-    return `<li class="wrow"><button type="button" class="etext grow dbtn" data-act="dedit" data-id="${x.id}"><span class="bltype" aria-hidden="true">${e}</span><span class="tmain"><span>${esc(x.name)}</span>
-      <span class="muted small">${fmtDay(n.k,{day:"numeric",month:"long"})} · ${n.days===0?"today":n.days===1?"tomorrow":`in ${n.days} days`}${n.years!=null?` · ${x.kind==="birthday"?`turns ${n.years}`:`${n.years} year${n.years===1?"":"s"}`}`:""}${x.note?` · ${esc(x.note.split("\n")[0])}`:""}</span></span></button></li>`};
+    const meta=[n.years!=null?(x.kind==="birthday"?(n.days===0?`🎉 turns ${n.years} today`:`turns ${n.years}`):`${n.years} year${n.years===1?"":"s"}`):(n.days===0&&x.kind==="birthday"?"🎉 today":""),kn==="Birthday"?"":kn,x.note?esc(x.note.split("\n")[0]):""].filter(Boolean).join(" · ");
+    return `<li class="wrow"><button type="button" class="etext grow dbtn" data-act="dedit" data-id="${x.id}"><span class="bltype" aria-hidden="true">${e}</span><span class="tmain"><span>${esc(x.name)}</span>${meta?`<span class="muted small">${meta}</span>`:""}</span></button></li>`};
   return `${recentBox(u=>u.kind==="doc"&&u.doc==="dates")}<section class="block card"><div class="head"><h2>Dates</h2><span class="mono muted">${L.length}</span></div>
     <form class="dform" data-form="dadd"><div class="addrow"><input type="text" id="da-name" placeholder="e.g. Mum, Sam & Alex, Grandpa" autocomplete="off" aria-label="Name"><select id="da-kind" aria-label="Kind">${Object.entries(DKIND).map(([k,[e,n]])=>`<option value="${k}">${e} ${n}</option>`).join("")}</select></div>
       ${dPick("da")}<div><button class="btn">Add</button></div></form>
     <p class="muted small" style="margin:0">They show on Today a week ahead and on the day, and in your morning notification.</p></section>
-  ${L.length?`<section class="block card"><div class="head"><h2>Coming up</h2></div><ul class="list">${L.map(row).join("")}</ul></section>`:""}`};
+  ${L.length?`<section class="block card"><div class="head"><h2>Coming up</h2></div>${dGroups(L).map(g=>`<div class="dlgroup${g.days===0?" now":""}"><div class="dlhead"><span>${fmtDay(g.k,{day:"numeric",month:"long"})}</span><span class="muted small">${dWhen(g)}${g.items.length>1?` · ${g.items.length} together`:""}</span></div><ul class="list">${g.items.map(row).join("")}</ul></div>`).join("")}</section>`:""}`};
 function grocToday(){if(isPastView())return "";const n=gItems().filter(x=>!x.done).length;return `<button type="button" class="card foldrow" data-act="groc"><span class="fl">🛒 Groceries</span><span class="fv">${n?`${n} to buy`:"List is empty"}</span><span class="fa">Open</span></button>`}
 
 /* ---------- Trips: packing and planning, with to-dos that land on Today before you go ---------- */
