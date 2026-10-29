@@ -215,7 +215,8 @@ body.modal-open{overflow:hidden}
 .jptoday{display:grid;gap:6px;border-top:1px solid var(--line);padding-top:8px}.study>.jptoday:first-child,.study>.head+.jptoday{border-top:0;padding-top:0}.jptoday .head{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .jpp{display:grid;gap:6px}.jphead{display:grid;gap:1px}.jppat{font-size:1.15rem;font-weight:600}.jpex{display:grid;gap:1px;padding-left:10px;border-left:3px solid var(--line)}.jpex [lang=ja]{font-size:1.02rem}
 .jpbtns{display:flex;align-items:center;gap:6px;flex:none}.jplearn{font-size:.78rem;padding:4px 8px}.jpfoot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}.jpdone .jppat{opacity:.6}.mstrip{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.mthumb{width:56px;height:56px;border-radius:8px;overflow:hidden;border:1px solid var(--line);padding:0;background:var(--bg);display:grid;place-items:center;cursor:pointer;flex:none;font-size:1.2rem}.mthumb img{width:100%;height:100%;object-fit:cover;display:block}.modal-in>.card{box-shadow:0 12px 40px rgba(0,0,0,.25);margin:0}.mview img{width:100%;max-height:70vh;object-fit:contain;border-radius:10px;background:#000}.mlist li{align-items:center;gap:10px}
-.mbroken img{display:none}.mbroken::after{content:"🖼";font-size:1.2rem}.dtoday{display:grid;gap:2px;padding:6px 8px}.dline{display:grid;gap:1px;text-align:left;background:none;border:0;padding:6px;border-radius:8px;color:inherit;font:inherit;cursor:pointer}.dline.now{background:var(--accent-soft)}.dbtn{display:flex;gap:10px;align-items:flex-start;text-align:left}
+.mbroken img{display:none}.mbroken::after{content:"🖼";font-size:1.2rem}.dpick select{flex:1 1 30%;min-width:0}.dpick input{flex:1 1 34%;min-width:0}
+.dtoday{display:grid;gap:2px;padding:6px 8px}.dline{display:grid;gap:1px;text-align:left;background:none;border:0;padding:6px;border-radius:8px;color:inherit;font:inherit;cursor:pointer}.dline.now{background:var(--accent-soft)}.dbtn{display:flex;gap:10px;align-items:flex-start;text-align:left}
 .wmedia{display:grid;gap:6px;padding:4px 0 2px 34px}.wlinkchip{text-decoration:none;color:inherit;font-size:.78rem}.wxlink{word-break:break-all;color:var(--muted)}
 .tnote{display:block;background:none;border:0;padding:2px 0 0;margin:0;text-align:left;color:var(--muted);font:inherit;font-size:.85rem;white-space:pre-line;cursor:pointer;width:100%}.jpread{font-size:1.12rem;line-height:1.9;margin:4px 0}.jpread.kana{font-size:.95rem;line-height:1.7}.jpwords{margin:0;padding-left:18px;display:grid;gap:2px}
 .jpquiz{display:grid;gap:10px;border-top:1px dashed var(--line);padding-top:10px;margin-top:4px}.jpqq{margin:0 0 6px;line-height:2}.jpopts{display:grid;gap:6px}
@@ -2728,17 +2729,23 @@ function dLine(x,n){const [e]=DKIND[x.kind]||DKIND.other;const who=esc(x.name);c
   return n.days===0?`${e} ${who}${what} today${yl}`:`${e} ${who}${what} ${n.days===1?"tomorrow":`in ${n.days} days`}${yl}`}
 function datesToday(){if(isPastView())return "";const L=dItems().map(x=>({x,n:dNext(x)})).filter(o=>o.n.days<=7).sort((a,b)=>a.n.days-b.n.days);if(!L.length)return "";
   return `<section class="card dtoday">${L.map(({x,n})=>`<button type="button" class="dline${n.days===0?" now":""}" data-act="dopen" data-id="${x.id}"><span>${dLine(x,n)}</span>${x.note&&x.kind!=="remembrance"?`<span class="muted small">${esc(x.note.split("\n")[0])}</span>`:""}</button>`).join("")}</section>`}
+/* day + month, with the year as an optional extra */
+const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+const dPick=(pre,x)=>{const [mm,dd]=x?x.md.split("-").map(Number):[0,0];
+  return `<div class="addrow dpick"><select id="${pre}-day" aria-label="Day"><option value="">Day</option>${Array.from({length:31},(_,i)=>`<option value="${i+1}" ${dd===i+1?"selected":""}>${i+1}</option>`).join("")}</select>
+    <select id="${pre}-month" aria-label="Month"><option value="">Month</option>${MONTHS.map((m,i)=>`<option value="${i+1}" ${mm===i+1?"selected":""}>${m}</option>`).join("")}</select>
+    <input type="number" id="${pre}-year" placeholder="Year (optional)" min="1900" max="2100" inputmode="numeric" value="${x&&x.year?x.year:""}" aria-label="Year, optional"></div>`};
 V.dates=()=>{const L=dItems().map(x=>({x,n:dNext(x)})).sort((a,b)=>a.n.days-b.n.days);
   const row=({x,n})=>{const [e,kn]=DKIND[x.kind]||DKIND.other;if(S.dEdit===x.id)return `<li class="editing"><form class="eform" data-form="dedit" data-id="${x.id}">
       <div class="addrow"><input type="text" id="de-name" value="${esc(x.name)}" aria-label="Name" autocomplete="off"><select id="de-kind" aria-label="Kind">${Object.entries(DKIND).map(([k,[e2,n2]])=>`<option value="${k}" ${k===x.kind?"selected":""}>${e2} ${n2}</option>`).join("")}</select></div>
-      <div class="addrow"><label class="kfl"><span>Date</span><input type="date" id="de-date" value="${x.year?`${x.year}-${x.md}`:`2000-${x.md}`}"></label><label class="homemade"><input type="checkbox" id="de-noyear" ${x.year?"":"checked"}> Year unknown</label></div>
+      ${dPick("de",x)}
       <textarea id="de-note" rows="3" placeholder="${x.kind==="remembrance"?"A memory":"Gift ideas, notes"}">${esc(x.note||"")}</textarea>
       <div class="btnrow"><button class="btn sm">Save</button><button type="button" class="btn ghost sm" data-act="dedit" data-id="">Cancel</button><button type="button" class="btn ghost sm danger" data-act="ddel" data-id="${x.id}">${S.dDel===x.id?"Tap again to delete":"Delete"}</button></div></form></li>`;
     return `<li class="wrow"><button type="button" class="etext grow dbtn" data-act="dedit" data-id="${x.id}"><span class="bltype" aria-hidden="true">${e}</span><span class="tmain"><span>${esc(x.name)}</span>
       <span class="muted small">${fmtDay(n.k,{day:"numeric",month:"long"})} · ${n.days===0?"today":n.days===1?"tomorrow":`in ${n.days} days`}${n.years!=null?` · ${x.kind==="birthday"?`turns ${n.years}`:`${n.years} year${n.years===1?"":"s"}`}`:""}${x.note?` · ${esc(x.note.split("\n")[0])}`:""}</span></span></button></li>`};
   return `${recentBox(u=>u.kind==="doc"&&u.doc==="dates")}<section class="block card"><div class="head"><h2>Dates</h2><span class="mono muted">${L.length}</span></div>
     <form class="dform" data-form="dadd"><div class="addrow"><input type="text" id="da-name" placeholder="e.g. Mum, Sam & Alex, Grandpa" autocomplete="off" aria-label="Name"><select id="da-kind" aria-label="Kind">${Object.entries(DKIND).map(([k,[e,n]])=>`<option value="${k}">${e} ${n}</option>`).join("")}</select></div>
-      <div class="addrow"><label class="kfl"><span>Date</span><input type="date" id="da-date"></label><label class="homemade"><input type="checkbox" id="da-noyear"> Year unknown</label><button class="btn">Add</button></div></form>
+      ${dPick("da")}<div><button class="btn">Add</button></div></form>
     <p class="muted small" style="margin:0">They show on Today a week ahead and on the day, and in your morning notification.</p></section>
   ${L.length?`<section class="block card"><div class="head"><h2>Coming up</h2></div><ul class="list">${L.map(row).join("")}</ul></section>`:""}`};
 function grocToday(){if(isPastView())return "";const n=gItems().filter(x=>!x.done).length;return `<button type="button" class="card foldrow" data-act="groc"><span class="fl">🛒 Groceries</span><span class="fv">${n?`${n} to buy`:"List is empty"}</span><span class="fa">Open</span></button>`}
@@ -3383,10 +3390,12 @@ document.addEventListener("submit",e=>{
   if(f==="wishadd"){const t=v("wish-new"),k=v("wish-kind")||"want30";if(!t)return;clear("wish-new");addWish(t,k==="need"?"need":"want",k==="want60"?60:30)}
   if(f==="wlinkadd"){const wid=form.dataset.id;let u=v("wla-"+wid);if(!u)return;if(!/^https?:\/\//i.test(u))u="https://"+u;if(!safeUrl(u)){toast("That doesn't look like a link");return}
     editDoc("wish",d=>{const x=d.items.find(y=>y.id===wid);if(x)x.links=[...(x.links||[]),u]});return}
-  if(f==="dadd"||f==="dedit"){const pre=f==="dadd"?"da":"de";const name=v(pre+"-name"),dt=v(pre+"-date"),kind=v(pre+"-kind")||"birthday",noy=(document.getElementById(pre+"-noyear")||{}).checked;
-    if(!name||!/^\d{4}-\d\d-\d\d$/.test(dt)){toast("Add a name and a date");return}
-    const rec={name,kind,md:dt.slice(5),year:noy?null:+dt.slice(0,4)};
-    if(f==="dadd"){editDoc("dates",d=>{d.items=[...(d.items||[]),{id:uid(),...rec,added:today()}]});clear(pre+"-name");toast(`Added ${name}`)}
+  if(f==="dadd"||f==="dedit"){const pre=f==="dadd"?"da":"de";const name=v(pre+"-name"),kind=v(pre+"-kind")||"birthday",dd=+v(pre+"-day"),mm=+v(pre+"-month"),yy=+v(pre+"-year")||null;
+    if(!name||!dd||!mm){toast("Add a name, a day and a month");return}
+    if(dd>[31,29,31,30,31,30,31,31,30,31,30,31][mm-1]){toast(`${MONTHS[mm-1]} doesn't have ${dd} days`);return}
+    if(yy&&(yy<1900||yy>2100)){toast("That year looks off");return}
+    const rec={name,kind,md:`${pad(mm)}-${pad(dd)}`,year:yy};
+    if(f==="dadd"){editDoc("dates",d=>{d.items=[...(d.items||[]),{id:uid(),...rec,added:today()}]});clear(pre+"-name");["-day","-month","-year"].forEach(k=>{const el=document.getElementById(pre+k);if(el)el.value=""});toast(`Added ${name}`)}
     else{const did=form.dataset.id;const note=(document.getElementById("de-note")||{}).value||"";S.dEdit=null;editDoc("dates",d=>{const x=d.items.find(y=>y.id===did);if(x)Object.assign(x,rec,{note})})}
     return}
   if(f==="tnote"){const tid=form.dataset.id,pid=form.dataset.pid;const title=v("tn-title"),content=(document.getElementById("tn-body")||{}).value||"";if(!title){toast("A task needs a title");return}
