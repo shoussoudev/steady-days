@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261029215301"></script>
-<script type="module" src="boot.js?v=20261029215301"></script>
+<script src="shim.js?v=20261030100257"></script>
+<script type="module" src="boot.js?v=20261030100257"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -244,6 +244,7 @@ body.modal-open{overflow:hidden}
 .jpbtns{display:flex;align-items:center;gap:6px;flex:none}.jplearn{font-size:.78rem;padding:4px 8px}.jpfoot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}.jpdone .jppat{opacity:.6}.mstrip{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.mthumb{width:56px;height:56px;border-radius:8px;overflow:hidden;border:1px solid var(--line);padding:0;background:var(--bg);display:grid;place-items:center;cursor:pointer;flex:none;font-size:1.2rem}.mthumb img{width:100%;height:100%;object-fit:cover;display:block}.modal-in>.card{box-shadow:0 12px 40px rgba(0,0,0,.25);margin:0}.mview img{width:100%;max-height:70vh;object-fit:contain;border-radius:10px;background:#000}.mlist li{align-items:center;gap:10px}
 .mbroken img{display:none}.mbroken::after{content:"🖼";font-size:1.2rem}.dpick select{flex:1 1 30%;min-width:0}.dpick input{flex:1 1 34%;min-width:0}
 .dtoday{display:grid;gap:2px;padding:6px 8px}.dline{display:grid;gap:1px;text-align:left;background:none;border:0;padding:6px;border-radius:8px;color:inherit;font:inherit;cursor:pointer}.dgroup{display:grid;gap:0;border-radius:10px;padding:2px 0}.dgroup:not(.single){padding:6px 4px;border:1px solid var(--line)}.dgroup .eyebrow{padding:0 6px}.dgroup.now{background:var(--accent-soft);border-color:var(--accent)}.dlgroup{border-radius:12px;padding:6px 8px;margin-top:6px}.dlgroup.now{background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}.dlhead{display:flex;justify-content:space-between;align-items:baseline;font-weight:600;padding:2px 2px 0}.dbtn{display:flex;gap:10px;align-items:flex-start;text-align:left}
+.wweek{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:2px 0 4px}.whead .linkbtn{margin-left:auto}
 .wmedia{display:grid;gap:6px;padding:4px 0 2px 34px}.wlinkchip{text-decoration:none;color:inherit;font-size:.78rem}.wxlink{word-break:break-all;color:var(--muted)}
 .tnote{display:block;background:none;border:0;padding:2px 0 0;margin:0;text-align:left;color:var(--muted);font:inherit;font-size:.85rem;white-space:pre-line;cursor:pointer;width:100%}.jpread{font-size:1.12rem;line-height:1.9;margin:4px 0}.jpread.kana{font-size:.95rem;line-height:1.7}.jpwords{margin:0;padding-left:18px;display:grid;gap:2px}
 .jpquiz{display:grid;gap:10px;border-top:1px dashed var(--line);padding-top:10px;margin-top:4px}.jpqq{margin:0 0 6px;line-height:2}.jpopts{display:grid;gap:6px}
@@ -592,7 +593,7 @@ const FOCI=[
   pool:[["Kettlebell swing","Hike the bell back between your legs, then snap your hips forward so it floats to chest height. The power comes from your hips; your arms just guide it.","3 × 15"],["Kettlebell push press","Hold the bell at your shoulder, dip your knees slightly and drive it overhead using your legs.","3 × 8 each arm"],["Kettlebell snatch","Swing the bell back, then pull it up close to your body and punch it overhead in one move, letting it roll softly onto your forearm. Learn the clean first if it feels new.","3 × 6 each arm"],["Pike push-ups","Hips high, lower your head toward the floor between your hands. Builds overhead strength without handstands.","3 × 8"],["Archer push-ups","Wide hands, lower toward one hand while the other arm stays straight.","3 × 5 each side"],["Kettlebell thrusters","Hold the bell by the horns at your chest, squat, then drive up and press it overhead with both hands.","3 × 10"],["Burpees","Down to a push-up, jump the feet in, jump up.","3 × 8"]]}
 ];
 function seeded(n){let x=(n*2654435761)>>>0;return ()=>{x^=x<<13;x>>>=0;x^=x>>17;x^=x<<5;x>>>=0;return x/4294967296}}
-function workoutFor(k,shift=0){
+function workoutFor(k,shift=0,raw=false){
   const n=dayNum(k);const f=FOCI[(((n+shift)%4)+4)%4];const rnd=seeded(n*7+shift);
   const pool=f.pool.slice();for(let i=pool.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}
   const ex=[];
@@ -601,8 +602,26 @@ function workoutFor(k,shift=0){
   (f.picks||[]).forEach(g=>{const x=g[Math.floor(rnd()*g.length)];if(!ex.some(e=>e.name===x[0]))ex.push({name:x[0],how:x[1],dose:x[2]})});
   const used=new Set(ex.map(e=>e.name));for(let i=pool.length-1;i>=0;i--)if(used.has(pool[i][0]))pool.splice(i,1);
   while(ex.length<4&&pool.length){const x=pool.shift();ex.push({name:x[0],how:x[1],dose:x[2]})}
+  /* exercises you swapped today */
+  const sw=(getDay(k).workout||{}).swaps||{};const shiftNow=(getDay(k).workout||{}).shift||0;
+  if(!raw&&shift===shiftNow)Object.entries(sw).forEach(([i,name])=>{const x=focusMoves(f).find(m=>m[0]===name);if(x&&ex[+i]&&!ex[+i].skill)ex[+i]={name:x[0],how:x[1],dose:x[2],swapped:true}});
   return {focus:f,ex};
 }
+/* every move a focus knows, and the ones that could stand in for a given move */
+const focusMoves=f=>{const seen=new Set();return [...f.fixed,...(f.picks||[]).flat(),...f.pool].filter(m=>!seen.has(m[0])&&seen.add(m[0]))};
+/* a stable cycle per slot: similar moves first (same group), then the rest of the focus, then back to the original */
+function swapCycle(k,shift,i){const f=workoutFor(k,shift,true).focus,orig=workoutFor(k,shift,true).ex,cur=workoutFor(k,shift).ex;const o=orig[i];if(!o||o.skill)return [];
+  const others=new Set(cur.filter((_,j)=>j!==i).map(e=>e.name).concat(orig.filter((_,j)=>j!==i).map(e=>e.name)));
+  const grp=(f.picks||[]).find(g=>g.some(m=>m[0]===o.name));
+  const near=grp?grp.filter(m=>m[0]!==o.name&&!others.has(m[0])):[];const rest=focusMoves(f).filter(m=>m[0]!==o.name&&!others.has(m[0])&&!near.includes(m));
+  return [...near,...rest].map(m=>m[0]).concat(o.name)}
+const swapCandidates=(f,ex,i)=>swapCycle(today(),(getDay(today()).workout||{}).shift||0,i).slice(0,-1);
+/* this week (Monday on): which focuses are done, and which haven't come up yet */
+function weekFoci(){const T=today(),dow=(new Date(T+"T12:00:00").getDay()+6)%7,mon=addDays(T,-dow);const done=[];
+  for(let i=0;i<=dow;i++){const k=addDays(mon,i);const w=getDay(k).workout;if(w&&w.done)done.push({k,id:w.focus||workoutFor(k,w.shift||0).focus.id})}
+  const left=FOCI.filter(f=>!done.some(d=>d.id===f.id));return {done,left}}
+function weekLine(){const {done,left}=weekFoci();const nm=id=>(FOCI.find(f=>f.id===id)||{name:id}).name;
+  return `<div class="wweek"><span class="eyebrow">This week</span>${done.length?done.map(d=>`<span class="pill soft">✓ ${esc(nm(d.id))} · ${fmtDay(d.k,{weekday:"short"})}</span>`).join(""):`<span class="muted small">Nothing yet</span>`}${left.length&&done.length?`<span class="muted small">Not yet: ${left.map(f=>esc(f.name)).join(", ")}</span>`:""}</div>`}
 const MOODS=[[1,"Low","--m1"],[2,"Heavy","--m2"],[3,"Okay","--m3"],[4,"Good","--m4"],[5,"Bright","--m5"]];
 const STARTER_HABITS=["Drink water first thing","10 minutes outside","Cook at home","No phone in bed","Stretch or move for 15 min"];
 const STARTER_REMINDERS=["Pause before buying: do I need it, or do I want it right now?","Three slow breaths before answering a hard message.","Done is better than perfect. Start with five minutes.","Use what's already in the fridge before shopping again.","Notice one good thing out loud today.","Rest is part of the work, not a reward for it.","Small and steady beats big and rare."];
@@ -1417,12 +1436,14 @@ function timerRow(w){
 function workoutCard(){
   if(isPastView())return "";
   const d=getDay(today());const w=d.workout||{};const {focus,ex}=workoutFor(today(),w.shift||0);
-  if(!isOpen("workout"))return foldRow("workout",w.done?"✓ Steady 10":"Steady 10",esc(focus.name),w.done?(w.secs?"done in "+mmss(w.secs):"done"):w.startedAt?`<span data-wclock>${mmss(wElapsed(w))}</span>${w.pausedAt?" · paused":""}`:"4 moves · ~10 min",w.done?"View":w.startedAt?"Open":"Start");
+  const wk=weekFoci();
+  if(!isOpen("workout"))return foldRow("workout",w.done?"✓ Steady 10":"Steady 10",esc(focus.name)+(wk.done.length?` <span class="muted small">· ${wk.done.length} this week</span>`:""),w.done?(w.secs?"done in "+mmss(w.secs):"done"):w.startedAt?`<span data-wclock>${mmss(wElapsed(w))}</span>${w.pausedAt?" · paused":""}`:"4 moves · ~10 min",w.done?"View":w.startedAt?"Open":"Start");
   return `<section class="block card workout">
     <div class="head"><h2>Steady 10</h2><span class="muted small">${esc(focus.name)} · ~10 min</span></div>
+    ${weekLine()}
     ${timerRow(w)}
     <p class="muted small">Warm up for a minute: arm and hip circles, 10 easy squats. Then do the 4 moves back to back, rest about 45 s, and repeat for 3 rounds.</p>
-    <ol class="wlist">${ex.map(e=>`<li><div class="whead"><b>${esc(e.name)}</b><span class="mono">${esc(e.dose)}</span></div><div class="muted small">${esc(e.how)} <a class="howto" href="https://www.youtube.com/results?search_query=${encodeURIComponent(e.name.replace(/\(.*?\)/g,"").replace(/,.*$/,"").trim()+" exercise form tutorial")}" target="_blank" rel="noopener">Watch how ↗</a></div>${e.skill?`<div class="wlevel"><span class="pill soft">${esc(SKILLS[e.skill].name)} level ${e.level}/4</span><span class="muted small">Move up at ${esc(e.goal)}</span><span class="lvbtns"><button type="button" class="btn ghost sm" data-act="skilllv" data-k="${e.skill}" data-d="-1" ${e.level<=1?"disabled":""} aria-label="Easier level">Easier</button><button type="button" class="btn ghost sm" data-act="skilllv" data-k="${e.skill}" data-d="1" ${e.level>=4?"disabled":""} aria-label="Harder level">Level up</button></span></div>`:""}</li>`).join("")}</ol>
+    <ol class="wlist">${ex.map((e,i)=>`<li><div class="whead"><b>${esc(e.name)}</b><span class="mono">${esc(e.dose)}</span>${!e.skill&&!w.done&&swapCandidates(focus,ex,i).length?`<button type="button" class="linkbtn subtle tiny" data-act="wswap" data-i="${i}" title="Swap for a similar move">⇄ Swap</button>`:""}</div><div class="muted small">${esc(e.how)} <a class="howto" href="https://www.youtube.com/results?search_query=${encodeURIComponent(e.name.replace(/\(.*?\)/g,"").replace(/,.*$/,"").trim()+" exercise form tutorial")}" target="_blank" rel="noopener">Watch how ↗</a></div>${e.skill?`<div class="wlevel"><span class="pill soft">${esc(SKILLS[e.skill].name)} level ${e.level}/4</span><span class="muted small">Move up at ${esc(e.goal)}</span><span class="lvbtns"><button type="button" class="btn ghost sm" data-act="skilllv" data-k="${e.skill}" data-d="-1" ${e.level<=1?"disabled":""} aria-label="Easier level">Easier</button><button type="button" class="btn ghost sm" data-act="skilllv" data-k="${e.skill}" data-d="1" ${e.level>=4?"disabled":""} aria-label="Harder level">Level up</button></span></div>`:""}</li>`).join("")}</ol>
     <div class="addrow">${w.done?`<button type="button" class="btn" data-act="wdone" aria-pressed="true">✓ Done today</button>`:`<button type="button" class="btn" data-act="wdone">Done</button>`}${w.done?"":`<button type="button" class="btn ghost" data-act="wshift">Different focus</button>`}<button type="button" class="linkbtn" data-act="fold" data-k="workout">Close</button></div>
   </section>`;
 }
@@ -3232,7 +3253,9 @@ document.addEventListener("click",e=>{
     const same=cur&&cur.text===pick.text&&cur.k===pick.k;
     editSettings(st=>{st.highlights={...(st.highlights||{})};if(same)delete st.highlights[ws];else st.highlights[ws]=pick});
     toast(same?"Highlight removed":"Saved as this week's highlight ★")}
-  if(a==="wshift")editDay(today(),d=>{d.workout={...(d.workout||{}),shift:((d.workout||{}).shift||0)+1}});
+  if(a==="wshift")editDay(today(),d=>{d.workout={...(d.workout||{}),shift:((d.workout||{}).shift||0)+1,swaps:{}}});
+  if(a==="wswap"){const i=+b.dataset.i;const w0=getDay(today()).workout||{};const c=swapCycle(today(),w0.shift||0,i);if(c.length<2)return;
+    const cur=workoutFor(today(),w0.shift||0).ex[i].name;const next=c[(c.indexOf(cur)+1)%c.length];editDay(today(),d=>{const w={...(d.workout||{})};w.swaps={...(w.swaps||{}),[i]:next};d.workout=w});toast(`Swapped for ${next}`)}
   if(a==="skilllv"){const k=b.dataset.k,dl=+b.dataset.d;const cur=(S.settings.skills||{})[k]||1;const nv=Math.min(4,Math.max(1,cur+dl));editSettings(st=>{st.skills={...(st.skills||{}),[k]:nv}});toast(dl>0?`${SKILLS[k].name}: level ${nv}. Nice progress!`:`${SKILLS[k].name}: level ${nv}`)}
   if(a==="wtimer"){const op=b.dataset.do;editDay(today(),d=>{const w={...(d.workout||{})};const now=Date.now();
       if(op==="start"){w.startedAt=now;w.pausedAt=null;w.pausedMs=0}
@@ -3242,7 +3265,8 @@ document.addEventListener("click",e=>{
   if(a==="wdone"){const w0=getDay(today()).workout||{};const secs=!w0.done&&w0.startedAt?Math.round(wElapsed(w0)):w0.secs;
     const label="Steady 10 · "+workoutFor(today(),w0.shift||0).focus.name+(secs?` · ${Math.max(1,Math.round(secs/60))} min`:"");
     keepAwake(false);
-    editDay(today(),d=>{const w={...(d.workout||{})};const b0=bodyOf(d);w.done=!w.done;if(w.done&&secs)w.secs=secs;d.workout=w;
+    const fid=workoutFor(today(),w0.shift||0).focus.id;
+    editDay(today(),d=>{const w={...(d.workout||{})};const b0=bodyOf(d);w.done=!w.done;if(w.done&&secs)w.secs=secs;if(w.done)w.focus=fid;d.workout=w;
       const acts=actsOf(b0).filter(x=>x.k!=="steady10"&&!(x.k==="other"&&/^Steady 10 · /.test(x.note||"")));
       if(w.done)acts.unshift({k:"steady10",note:label.replace(/^Steady 10 · /,"")});
       d.body={...b0,acts,ex:exText(acts)};});
