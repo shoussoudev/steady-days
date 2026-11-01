@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261031134541"></script>
-<script type="module" src="boot.js?v=20261031134541"></script>
+<script src="shim.js?v=20261101212034"></script>
+<script type="module" src="boot.js?v=20261101212034"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -193,7 +193,7 @@ ul.list li.wrow{display:grid;gap:8px}
 .gedit input[type=text]:first-child{flex:1 1 120px}
 .shopmode .glist li{padding:12px 0;font-size:1.08rem}
 .shopmode .check{width:26px;height:26px}
-li.done label{text-decoration:line-through;color:var(--muted)}
+li.done label,li.done>.grow{text-decoration:line-through;color:var(--muted)}
 .remp{white-space:nowrap}
 #nudge-time{width:auto}
 .pgrid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
@@ -247,6 +247,7 @@ body.modal-open{overflow:hidden}
 .dtoday{display:grid;gap:2px;padding:6px 8px}.dline{display:grid;gap:1px;text-align:left;background:none;border:0;padding:6px;border-radius:8px;color:inherit;font:inherit;cursor:pointer}.dgroup{display:grid;gap:0;border-radius:10px;padding:2px 0}.dgroup:not(.single){padding:6px 4px;border:1px solid var(--line)}.dgroup .eyebrow{padding:0 6px}.dgroup.now{background:var(--accent-soft);border-color:var(--accent)}.dlgroup{border-radius:12px;padding:6px 8px;margin-top:6px}.dlgroup.now{background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}.dlhead{display:flex;justify-content:space-between;align-items:baseline;font-weight:600;padding:2px 2px 0}.dbtn{display:flex;gap:10px;align-items:flex-start;text-align:left}
 .wweek{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:2px 0 4px}.whead .linkbtn{margin-left:auto}
 .wmedia{display:grid;gap:6px;padding:4px 0 2px 34px}.wlinkchip{text-decoration:none;color:inherit;font-size:.78rem}.wxlink{word-break:break-all;color:var(--muted)}
+.ttitle{background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;text-align:left;cursor:pointer;display:inline}
 .tnote{display:block;background:none;border:0;padding:2px 0 0;margin:0;text-align:left;color:var(--muted);font:inherit;font-size:.85rem;white-space:pre-line;cursor:pointer;width:100%}.jpread{font-size:1.12rem;line-height:1.9;margin:4px 0}.jpread.kana{font-size:.95rem;line-height:1.7}.jpwords{margin:0;padding-left:18px;display:grid;gap:2px}
 .jpquiz{display:grid;gap:10px;border-top:1px dashed var(--line);padding-top:10px;margin-top:4px}.jpqq{margin:0 0 6px;line-height:2}.jpopts{display:grid;gap:6px}
 .jpopt{text-align:left;font:inherit;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:inherit;cursor:pointer;line-height:1.9}
@@ -419,8 +420,8 @@ li.mrow{align-items:flex-start}
 ul.list li.trow{align-items:flex-start}
 ul.list li.trow .check{margin-top:1px}
 .tmain{flex:1;min-width:0;display:grid;gap:6px}
-.tmain label{overflow-wrap:anywhere;cursor:pointer;line-height:1.4}
-.tmain label .prio{display:inline-block;margin-right:6px;vertical-align:middle}
+.tmain label,.tmain .ttitle{overflow-wrap:anywhere;cursor:pointer;line-height:1.4}
+.tmain .ttitle .prio,.tmain label .prio{display:inline-block;margin-right:6px;vertical-align:middle}
 .tmeta{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .tmeta .tdiscard{margin-left:auto}
 .favbtn{background:none;border:0;cursor:pointer;font-size:1.25rem;line-height:1;color:var(--muted);padding:2px 6px;border-radius:6px}
@@ -1130,7 +1131,7 @@ const ttTaskLi=(t,extra="",hideToday=false)=>{
     return `<li class="trow editing"><form class="eform" data-form="remind" data-id="${t.id}" data-pid="${esc(t.pid)}"><span class="small"><b>${esc(plainTitle(t.title))}</b> · remind me at</span><div class="addrow"><input type="datetime-local" id="rem-at" value="${v}" aria-label="Reminder time"><button class="btn sm">Save</button></div>
       <div class="btnrow">${t.remindAt?`<button type="button" class="btn ghost sm" data-act="remclear" data-id="${t.id}" data-pid="${esc(t.pid)}">Remove reminder</button>`:""}<button type="button" class="btn ghost sm" data-act="remopen" data-id="">Cancel</button></div>
       ${window.__sdPush&&!window.__sdPush.isOn()?`<p class="muted small" style="margin:0">Turn on notifications in ⚙️ Settings so this reaches you.</p>`:""}</form></li>`}
-  return `<li class="trow"><input type="checkbox" class="check" id="tt-${t.id}" data-act="ttdone" data-id="${t.id}" data-pid="${esc(t.pid)}" aria-label="Complete ${esc(plainTitle(t.title))}"><div class="tmain"><label for="tt-${t.id}">${prioDot(t)}${esc(plainTitle(t.title))}</label>${note?`<button type="button" class="tnote" data-act="tnote" data-id="${t.id}" title="Edit notes">${esc(note.length>140?note.slice(0,139)+"…":note)}</button>`:""}${STANDALONE?mStrip("task",t.id,false):""}${meta?`<div class="tmeta">${meta}</div>`:""}</div></li>`};
+  return `<li class="trow"><input type="checkbox" class="check" id="tt-${t.id}" data-act="ttdone" data-id="${t.id}" data-pid="${esc(t.pid)}" aria-label="Complete ${esc(plainTitle(t.title))}"><div class="tmain"><button type="button" class="ttitle" data-act="tnote" data-id="${t.id}" title="Notes and details">${prioDot(t)}${esc(plainTitle(t.title))}</button>${note?`<button type="button" class="tnote" data-act="tnote" data-id="${t.id}" title="Edit notes">${esc(note.length>140?note.slice(0,139)+"…":note)}</button>`:""}${STANDALONE?mStrip("task",t.id,false):""}${meta?`<div class="tmeta">${meta}</div>`:""}</div></li>`};
 
 /* ---------- render ---------- */
 function renderTabs(){$("#tabs").innerHTML=TABS.map(([id,l])=>`<button role="tab" id="tab-${id}" aria-selected="${S.tab===id}" data-tab="${id}">${l}</button>`).join("")}
@@ -1452,7 +1453,7 @@ function starterBox(){
   if(!S.settingsReady||(MCP&&S.tt.state==="loading"))return `<p class="empty">Loading…</p>`;
   return `<p class="empty">Nothing here yet. Start with a few suggested good-practice reminders, then edit them as you like.</p><div><button class="btn" data-act="starter">Add suggested reminders</button></div>`;
 }
-const todoLi=t=>`<li class="${t.done?"done":""}"><input type="checkbox" class="check" id="t-${t.id}" data-act="todo" data-id="${t.id}" ${t.done?"checked":""}><label class="grow" for="t-${t.id}">${esc(t.text)}</label><button class="x" aria-label="Delete task" data-act="deltodo" data-id="${t.id}">×</button></li>`;
+const todoLi=t=>`<li class="${t.done?"done":""}"><input type="checkbox" class="check" id="t-${t.id}" data-act="todo" data-id="${t.id}" ${t.done?"checked":""}><span class="grow">${esc(t.text)}</span><button class="x" aria-label="Delete task" data-act="deltodo" data-id="${t.id}">×</button></li>`;
 
 function projForm(pid,idp){
   const tr=trackable();
@@ -1604,7 +1605,7 @@ V.lists=()=>{
         ${open?buyForm(t):""}</li>`;
     }
     if(role==="recipes")return `<li><span class="grow">${esc(t.title)}</span><button class="btn ghost sm" data-act="cookedit" data-t="${esc(t.title)}">Cooked it</button></li>`;
-    return `<li><input type="checkbox" class="check" id="tl-${t.id}" data-act="ttdone" data-id="${t.id}" data-pid="${esc(t.pid)}" data-msg="${role==="bucket"?"Ticked off your bucket list!":role==="selling"?"Marked as sold":"Done"}"><label class="grow" for="tl-${t.id}">${esc(t.title)}</label>${age!=null?`<span class="mono muted small">${age}d</span>`:""}</li>`;
+    return `<li><input type="checkbox" class="check" id="tl-${t.id}" data-act="ttdone" data-id="${t.id}" data-pid="${esc(t.pid)}" data-msg="${role==="bucket"?"Ticked off your bucket list!":role==="selling"?"Marked as sold":"Done"}"><span class="grow">${esc(t.title)}</span>${age!=null?`<span class="mono muted small">${age}d</span>`:""}</li>`;
   };
   return recentBox(u=>u.kind==="tt")+`<section class="block card">
     <div class="head"><h2>My lists</h2>${STANDALONE?`<button class="btn ghost" data-act="newlist">${S.newList?"Cancel":"+ New list"}</button>`:`<button class="btn ghost" data-act="ttreload">Refresh</button>`}</div>
@@ -2881,7 +2882,7 @@ function tripPage(t){
     <div class="addrow"><label class="kfl"><span>From</span><input type="date" data-act="trdate" data-f="start" data-id="${t.id}" value="${esc(t.start||"")}"></label><label class="kfl"><span>To</span><input type="date" data-act="trdate" data-f="end" data-id="${t.id}" value="${esc(t.end||"")}"></label></div>
     ${links.length?`<label class="field"><span class="small muted">Part of your vision</span><select data-act="trlink" data-id="${t.id}"><option value="">Not linked</option>${links.map(([v,n])=>`<option value="${esc(v)}" ${t.link===v?"selected":""}>${esc(n)}</option>`).join("")}</select></label>`:""}`)}
   ${sec("todo","Before you go",`<span class="mono muted">${todos.filter(trTodoDone).length}/${todos.length}</span>`,`
-    ${todos.length?`<ul class="list">${todos.map(td=>{const due=trDue(t,td),dn=trTodoDone(td);return `<li class="${dn?"done":""}"><input type="checkbox" class="check" id="trt-${td.id}" data-act="trtodo" data-trip="${t.id}" data-id="${td.id}" ${dn?"checked":""}><label class="grow" for="trt-${td.id}">${esc(td.title)}<span class="muted small"> · ${+td.daysBefore||0} day${(+td.daysBefore||0)===1?"":"s"} before${due?` (${fmtDay(due,{weekday:"short",day:"numeric",month:"short"})})`:""}</span></label><button type="button" class="x" data-act="trtododel" data-trip="${t.id}" data-id="${td.id}" aria-label="Remove">×</button></li>`}).join("")}</ul>`:`<p class="muted small" style="margin:0">Things to do before leaving. Each one lands on your Today list on its day.</p>`}
+    ${todos.length?`<ul class="list">${todos.map(td=>{const due=trDue(t,td),dn=trTodoDone(td);return `<li class="${dn?"done":""}"><input type="checkbox" class="check" id="trt-${td.id}" data-act="trtodo" data-trip="${t.id}" data-id="${td.id}" ${dn?"checked":""}><span class="grow">${esc(td.title)}<span class="muted small"> · ${+td.daysBefore||0} day${(+td.daysBefore||0)===1?"":"s"} before${due?` (${fmtDay(due,{weekday:"short",day:"numeric",month:"short"})})`:""}</span></span><button type="button" class="x" data-act="trtododel" data-trip="${t.id}" data-id="${td.id}" aria-label="Remove">×</button></li>`}).join("")}</ul>`:`<p class="muted small" style="margin:0">Things to do before leaving. Each one lands on your Today list on its day.</p>`}
     <form class="addrow" data-form="trtodo" data-id="${t.id}"><input type="text" id="trt-new" placeholder="e.g. Book airport parking" autocomplete="off"><label class="kfl" style="flex:0 0 96px"><span>Days before</span><input type="number" id="trt-days" min="0" value="7"></label><button class="btn">Add</button></form>
     ${!t.start&&todos.length?`<p class="muted small" style="margin:0">Add the dates above and these will appear on Today on the right days.</p>`:""}`)}
   ${sec("pack","Packing",pack.length?`<span class="mono muted">${packPct(t)}% packed</span>`:"",`
