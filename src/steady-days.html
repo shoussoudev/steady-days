@@ -222,6 +222,7 @@ body.modal-open{overflow:hidden}
 .wmedia{display:grid;gap:6px;padding:4px 0 2px 34px}.wlinkchip{text-decoration:none;color:inherit;font-size:.78rem}.wxlink{word-break:break-all;color:var(--muted)}
 .tnlen.over{color:var(--m1);font-weight:600}
 .plast{display:block;padding-top:2px}
+.pedtop{display:flex;justify-content:flex-end;margin-bottom:-4px}.ghead{display:flex;gap:10px;align-items:center}.pdiscard{color:var(--late,#a4483a)}
 .pkind{color:var(--muted);margin-right:6px;font-weight:600}
 .pbar{display:inline-block;vertical-align:middle;width:46px;height:5px;border-radius:3px;background:var(--line);margin-left:8px;overflow:hidden}.pbar i{display:block;height:100%;background:var(--accent,#3d6b4f)}
 .pbar.big{width:120px;height:7px;margin:0}
@@ -843,6 +844,7 @@ async function runUndo(uidv){
       toast("Restored");
     }else if(u.kind==="tt"){
       await call("update_task",{task_id:u.tid,task:{id:u.tid,projectId:u.pid,status:0},client_timezone:TZ});
+      for(const x of (u.also||[]))await call("update_task",{task_id:x,task:{id:x,projectId:u.pid,status:0},client_timezone:TZ});
       if(u.link||u.stepOf)editSettings(st=>{if(u.link){st.taskProj=st.taskProj||{};st.taskProj[u.tid]=u.link}if(u.stepOf&&st.projMeta&&st.projMeta[u.stepOf])st.projMeta[u.stepOf].doneSteps=(st.projMeta[u.stepOf].doneSteps||[]).filter(x=>x.id!==u.tid)},{silent:true});
       if(S.projAsk&&S.projAsk.text===plainTitle(u.title))S.projAsk=null;
       if((getDay(today()).top3||[]).some(x=>x.id===u.tid))editDay(today(),d=>{d.top3=d.top3.map(x=>x.id===u.tid?{...x,done:false}:x)},{silent:true});
@@ -918,6 +920,15 @@ function carryPicks(){
     d.top3=[...(d.top3||[]),...tops.slice(0,room)];
     d.maybe=[...(d.maybe||[]),...tops.slice(room),...maybes]},{silent:!(tops.length||maybes.length)});
   if(tops.length||maybes.length)toast(`Carried over from yesterday: ${tops.length?`${tops.length} from your Top ${prev.topMax===5?5:3}`:""}${tops.length&&maybes.length?" and ":""}${maybes.length?`${maybes.length} maybe`:""}`)
+}
+function keepSections(bd,extra){const ids=[...bd.groups.filter(g=>g.id!=="_other").map(g=>g.id),...(extra?[extra]:[])];const m=S.settings.projMeta||{};
+  if(ids.some(i=>!(m[i]||{}).section))editSettings(st=>{st.projMeta=st.projMeta||{};ids.forEach(i=>{st.projMeta[i]={...(st.projMeta[i]||{}),section:true}})},{silent:true})}
+async function discardProject(id){
+  const bd=projBoard();const t=bd&&bd.items.find(x=>x.id===id);if(!t)return;keepSections(bd);const steps=(bd.steps[id]||[]).map(x=>x.id);const L=bd.listId;
+  const snap=JSON.stringify(S.tt.lists[L].tasks);S.tt.lists[L].tasks=S.tt.lists[L].tasks.filter(x=>x.id!==id&&!steps.includes(x.id));S.tt.today=S.tt.today.filter(x=>x.id!==id&&!steps.includes(x.id));render(true);
+  try{for(const x of [id,...steps])await call("update_task",{task_id:x,task:{id:x,projectId:L,status:-1},client_timezone:TZ});
+    pushUndo({kind:"tt",tid:id,pid:L,title:t.title,also:steps,label:`Discarded project “${t.title}”`});toast("Project discarded")}
+  catch(e){S.tt.lists[L].tasks=JSON.parse(snap);render(true);toast(ttErrToast(e))}
 }
 async function discardTask(tid,pid){
   const t0=findTask(tid);const title=t0?t0.title:"task";const realPid=(t0&&t0.pid)||pid;
@@ -1072,7 +1083,7 @@ function projBoard(){
   const tasks=L.tasks;const byParent={};tasks.forEach(t=>{if(t.parentId)(byParent[t.parentId]=byParent[t.parentId]||[]).push(t)});
   const meta=S.settings.projMeta||{};
   /* a parent is a group heading unless it's a project (has a kind set here, or itself sits under a group) */
-  const heads=tasks.filter(t=>byParent[t.id]&&byParent[t.id].length&&!meta[t.id]&&!(t.parentId&&tasks.some(x=>x.id===t.parentId)));
+  const heads=tasks.filter(t=>(meta[t.id]||{}).section||byParent[t.id]&&byParent[t.id].length&&!(meta[t.id]||{}).kind&&!(t.parentId&&tasks.some(x=>x.id===t.parentId)));
   const headIds=new Set(heads.map(t=>t.id));
   const isStep=t=>t.parentId&&!headIds.has(t.parentId)&&tasks.some(x=>x.id===t.parentId);
   const steps={};tasks.forEach(t=>{if(isStep(t))(steps[t.parentId]=steps[t.parentId]||[]).push(t)});
@@ -1531,7 +1542,7 @@ V.projects=()=>{
       </section>`;
       b.groups.forEach(g=>{
         const items=g.items.filter(show);if(!items.length)return;
-        html+=`<section class="block card"><div class="head"><h2>${esc(g.name)}</h2><span class="mono muted">${items.length}</span></div><ul class="list">${items.map(t=>projRow(t,b,week)).join("")}</ul></section>`;
+        html+=`<section class="block card"><div class="head">${S.gEdit===g.id?`<form class="addrow" data-form="gedit" data-id="${g.id}" style="flex:1"><input type="text" id="ge-name" value="${esc(g.name)}" aria-label="Section name" autocomplete="off"><button class="btn sm">Save</button><button type="button" class="btn ghost sm" data-act="gedit" data-id="">Cancel</button></form>`:`<h2>${esc(g.name)}</h2><span class="ghead">${g.id!=="_other"?`<button type="button" class="linkbtn subtle tiny" data-act="gedit" data-id="${g.id}" aria-label="Rename section ${esc(g.name)}" title="Rename section">✎</button>`:""}<span class="mono muted">${items.length}</span></span>`}</div><ul class="list">${items.map(t=>projRow(t,b,week)).join("")}</ul></section>`;
       });
       if(!b.groups.some(g=>g.items.some(show)))html+=`<section class="block card"><p class="empty">No projects in this view.</p></section>`;
     }
@@ -1555,7 +1566,13 @@ function projRow(t,b,week){
       <span class="week">${week.map(k=>`<i class="${worked.has(k)?"on":""}"></i>`).join("")}</span>
       ${cn?`<span class="pill ${isOn?"":"soft"}">${esc(cn)}</span>`:""}
     </button>
-    ${open?`<div class="prow-b">
+    ${open&&S.pEdit===t.id?`<div class="prow-b"><form class="eform" data-form="pedit" data-id="${t.id}">
+      <input type="text" id="pe-title" value="${esc(t.title)}" aria-label="Project name" autocomplete="off">
+      <textarea id="pe-body" rows="3" placeholder="What is it, what does done look like…" aria-label="Description">${esc(t.content||"")}</textarea>
+      <label class="small muted">Section <select id="pe-sec" aria-label="Section" data-act="pesec">${b.groups.filter(g=>g.id!=="_other").map(g=>`<option value="${g.id}" ${t.parentId===g.id?"selected":""}>${esc(g.name)}</option>`).join("")}<option value="" ${!t.parentId||!b.groups.some(g=>g.id===t.parentId)?"selected":""}>Other (no section)</option><option value="_new">＋ New section…</option></select></label>
+      <input type="text" id="pe-newsec" placeholder="New section name" autocomplete="off" hidden>
+      <div class="btnrow"><button class="btn sm">Save</button><button type="button" class="btn ghost sm" data-act="pedit" data-id="">Cancel</button><span class="grow"></span><button type="button" class="btn ghost sm pdiscard" data-act="pdiscard" data-id="${t.id}">${S.pDiscAsk===t.id?`Tap again to discard${(b.steps[t.id]||[]).length?` (and its ${(b.steps[t.id]||[]).length} open step${(b.steps[t.id]||[]).length===1?"":"s"})`:""}`:"Discard project"}</button></div></form></div>`:open?`<div class="prow-b">
+      <div class="pedtop"><button type="button" class="linkbtn subtle" data-act="pedit" data-id="${t.id}">✎ Edit or discard</button></div>
       <div class="seg pkindseg" role="group" aria-label="Kind of project"><button type="button" class="chip" data-act="pkind" data-id="${t.id}" data-k="ongoing" aria-pressed="${kind==="ongoing"}">∞ No end</button><button type="button" class="chip" data-act="pkind" data-id="${t.id}" data-k="end" aria-pressed="${kind==="end"}">🏁 Has an end</button></div>
       ${kind==="end"?`<div class="pend">${st.total?`<span class="pbar big"><i style="width:${pct}%"></i></span><span class="mono small">${st.done.length}/${st.total} steps · ${pct}%</span>`:`<span class="muted small">Add steps below to see how close you are.</span>`}
         <label class="small muted">Finish by <input type="date" id="pend-${t.id}" value="${m.end||""}" data-act="pendset" data-id="${t.id}" aria-label="Finish by"></label>${m.end?`<span class="pill ${dayNum(m.end)<dayNum(today())?"late":"soft"}">${endLabel(m.end)}</span>`:""}</div>`
@@ -3218,6 +3235,10 @@ document.addEventListener("click",e=>{
   if(a==="mdelloose"){if(!S.mDelLoose){S.mDelLoose=true;render(true);return}S.mDelLoose=false;mDel(mItems().filter(x=>mHome(x).state!=="open").map(x=>x.id))}
   if(a==="mreview"){S.mReview=!S.mReview;S.mDelLoose=false;S.mDelAsk=null;if(S.mReview)S.settingsOpen=false;else editSettings(st=>{st.mediaChecked=today().slice(0,7)},{silent:true});render(true)}
   if(a==="mchecked"){editSettings(st=>{st.mediaChecked=today().slice(0,7)})}
+  if(a==="pedit"){S.pEdit=id||null;S.pDiscAsk=null;render(true)}
+  if(a==="gedit"){S.gEdit=id||null;render(true);const el=document.getElementById("ge-name");if(el)el.focus()}
+  if(a==="pdiscard"){if(S.pDiscAsk!==id){S.pDiscAsk=id;render(true);setTimeout(()=>{if(S.pDiscAsk===id){S.pDiscAsk=null;render(true)}},4000);return}
+    S.pDiscAsk=null;S.pEdit=null;S.openProject=null;discardProject(id)}
   if(a==="pkind"){const k=b.dataset.k;editSettings(st=>{st.projMeta=st.projMeta||{};st.projMeta[id]={...(st.projMeta[id]||{}),kind:k}})}
   if(a==="pnkind"){S.pnKind=b.dataset.k;render(true)}
   if(a==="pcomplete"){if(S.pDoneAsk!==id){S.pDoneAsk=id;render(true);setTimeout(()=>{if(S.pDoneAsk===id){S.pDoneAsk=null;render(true)}},4000);return}
@@ -3428,6 +3449,7 @@ document.addEventListener("click",e=>{
 document.addEventListener("change",e=>{
   if(e.target.dataset&&e.target.dataset.act==="madd"){const d=e.target.dataset;const files=e.target.files;if(files&&files.length)mAdd(files,{t:d.t,id:d.id,title:d.title||""});e.target.value="";return}
   {const d=e.target&&e.target.dataset||{};
+  if(d.act==="pesec"){const n=document.getElementById("pe-newsec");if(n){n.hidden=e.target.value!=="_new";if(!n.hidden)n.focus()}return}
   if(d.act==="pendset"){const pid=d.id,val=e.target.value;editSettings(st=>{st.projMeta=st.projMeta||{};st.projMeta[pid]={...(st.projMeta[pid]||{}),end:val||undefined}});return}
   if(d.act==="gtick"){const gid=d.id,on=e.target.checked;editDoc("groceries",x=>{const it=x.items.find(y=>y.id===gid);if(it)it.done=on});return}
   if(d.act==="gaisle"){const gid=d.id,val=e.target.value;editDoc("groceries",x=>{const it=x.items.find(y=>y.id===gid);if(it){it.aisle=val;x.aisleMap={...(x.aisleMap||{}),[gNorm(it.name)]:val}}});return}
@@ -3511,6 +3533,16 @@ document.addEventListener("submit",e=>{
     editDay(vday(),d=>{d.ate=d.ate||[];d.ate.push({id:uid(),text:t,slot,home:!!home});if(home)d.meals.unshift({id:uid(),name:t})});
     toast(home?"Logged, and added to your cooking log":"Logged")}
   if(f==="project"){const n=v("proj-name"),g=v("proj-goal");if(!n)return;editSettings(s=>{s.projects.push({id:uid(),name:n,goal:g,status:"active",created:today()})});toast("Project added")}
+  if(f==="pedit"){const pid=form.dataset.id,title=v("pe-title"),content=document.getElementById("pe-body").value,sec=v("pe-sec"),ns=v("pe-newsec");
+    if(!title){toast("A project needs a name");return}if(sec==="_new"&&!ns){toast("Type a name for the new section");return}
+    const bd=projBoard();const t=bd&&bd.items.find(x=>x.id===pid);if(!t)return;S.pEdit=null;S.dropDraft={"pe-title":1,"pe-body":1,"pe-newsec":1};render(true);
+    (async()=>{let parentId=sec||null;
+      if(sec==="_new"){const r=await call("create_task",{task:{title:ns,projectId:bd.listId,columnId:(bd.cols[0]||{}).id},client_timezone:TZ});parentId=r&&(r.id||(r.result&&r.result.id))||null}
+      keepSections(bd,parentId);
+      await call("update_task",{task_id:pid,task:{id:pid,projectId:bd.listId,title,content,parentId},client_timezone:TZ});
+      toast("Project saved");await ttLoadList(bd.listId);render(true)})().catch(e=>toast(ttErrToast(e)));return}
+  if(f==="gedit"){const gid=form.dataset.id,n=v("ge-name");if(!n)return;const bd=projBoard();S.gEdit=null;render(true);
+    call("update_task",{task_id:gid,task:{id:gid,projectId:bd.listId,title:n},client_timezone:TZ}).then(()=>{toast("Section renamed");return ttLoadList(bd.listId).then(()=>render(true))}).catch(e=>toast(ttErrToast(e)));return}
   if(f==="projstep"){const pid=form.dataset.id,t=v("ps-"+pid);if(!t)return;clear("ps-"+pid);const bd=projBoard();const par=bd&&bd.items.find(x=>x.id===pid);if(!par)return;
     if(!pMeta(pid).kind)editSettings(st=>{st.projMeta=st.projMeta||{};st.projMeta[pid]={...(st.projMeta[pid]||{}),kind:"end"}},{silent:true});
     call("create_task",{task:{title:t,projectId:bd.listId,parentId:pid,columnId:par.columnId||undefined},client_timezone:TZ}).then(()=>ttLoadList(bd.listId).then(()=>render(true))).catch(e=>toast(ttErrToast(e)));return}
