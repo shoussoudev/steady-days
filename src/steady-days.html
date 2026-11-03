@@ -222,6 +222,11 @@ body.modal-open{overflow:hidden}
 .wmedia{display:grid;gap:6px;padding:4px 0 2px 34px}.wlinkchip{text-decoration:none;color:inherit;font-size:.78rem}.wxlink{word-break:break-all;color:var(--muted)}
 .tnlen.over{color:var(--m1);font-weight:600}
 .plast{display:block;padding-top:2px}
+.pkind{color:var(--muted);margin-right:6px;font-weight:600}
+.pbar{display:inline-block;vertical-align:middle;width:46px;height:5px;border-radius:3px;background:var(--line);margin-left:8px;overflow:hidden}.pbar i{display:block;height:100%;background:var(--accent,#3d6b4f)}
+.pbar.big{width:120px;height:7px;margin:0}
+.pend{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.pend input[type=date]{margin-left:6px}
+.psteps{display:flex;flex-direction:column;gap:6px}.pdone summary{cursor:pointer}
 .tnextra{display:flex;gap:14px;flex-wrap:wrap}
 .plink{cursor:pointer;font:inherit;font-size:12px}
 .projask{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:6px 0 10px}
@@ -838,6 +843,8 @@ async function runUndo(uidv){
       toast("Restored");
     }else if(u.kind==="tt"){
       await call("update_task",{task_id:u.tid,task:{id:u.tid,projectId:u.pid,status:0},client_timezone:TZ});
+      if(u.link||u.stepOf)editSettings(st=>{if(u.link){st.taskProj=st.taskProj||{};st.taskProj[u.tid]=u.link}if(u.stepOf&&st.projMeta&&st.projMeta[u.stepOf])st.projMeta[u.stepOf].doneSteps=(st.projMeta[u.stepOf].doneSteps||[]).filter(x=>x.id!==u.tid)},{silent:true});
+      if(S.projAsk&&S.projAsk.text===plainTitle(u.title))S.projAsk=null;
       if((getDay(today()).top3||[]).some(x=>x.id===u.tid))editDay(today(),d=>{d.top3=d.top3.map(x=>x.id===u.tid?{...x,done:false}:x)},{silent:true});
       if((getDay(today()).maybe||[]).some(x=>x.id===u.tid))editDay(today(),d=>{d.maybe=d.maybe.map(x=>x.id===u.tid?{...x,done:false}:x)},{silent:true});
       if(u.buy)editDay(u.buy.date,d=>{d.purchases=d.purchases.filter(p=>p.id!==u.buy.id)});
@@ -1029,9 +1036,12 @@ async function completeTask(tid,pid,msg,extra){
   const snap=JSON.stringify({l:S.tt.lists,t:S.tt.today});
   for(const k in S.tt.lists)S.tt.lists[k].tasks=S.tt.lists[k].tasks.filter(t=>t.id!==tid);
   S.tt.today=S.tt.today.filter(t=>t.id!==tid);render(true);
-  try{await call("complete_task",{project_id:realPid,task_id:tid});if((getDay(today()).top3||[]).some(x=>x.id===tid))editDay(today(),d=>{d.top3=d.top3.map(x=>x.id===tid?{...x,done:true}:x)},{silent:true});if((getDay(today()).maybe||[]).some(x=>x.id===tid))editDay(today(),d=>{d.maybe=d.maybe.map(x=>x.id===tid?{...x,done:true}:x)},{silent:true});if(msg)toast(msg);pushUndo({kind:"tt",tid,pid:realPid,title,...(extra||{})});
-    const lp=(S.settings.taskProj||{})[tid];const lpr=lp&&trackable().find(x=>x.id===lp);
-    if(lp){if(lpr){S.projAsk={pid:lp,name:lpr.name,text:plainTitle(title)};render(true)}editSettings(st=>{if(st.taskProj)delete st.taskProj[tid]},{silent:true})}}
+  try{await call("complete_task",{project_id:realPid,task_id:tid});if((getDay(today()).top3||[]).some(x=>x.id===tid))editDay(today(),d=>{d.top3=d.top3.map(x=>x.id===tid?{...x,done:true}:x)},{silent:true});if((getDay(today()).maybe||[]).some(x=>x.id===tid))editDay(today(),d=>{d.maybe=d.maybe.map(x=>x.id===tid?{...x,done:true}:x)},{silent:true});const link=(S.settings.taskProj||{})[tid];const stepOf=t0&&t0.parentId&&trackable().some(x=>x.id===t0.parentId)?t0.parentId:"";
+    const lp=link||stepOf;const lpr=lp&&trackable().find(x=>x.id===lp);const quiet=S.noAskOnce;S.noAskOnce=false;
+    if(stepOf){const b=projBoard();const st=b&&projSteps({id:stepOf},b);msg=st?(pKind(stepOf)==="ongoing"?`Step done · ${st.done.length+1} so far`:`Step done · ${st.done.length+1}/${st.total+1}`):msg}
+    if(msg)toast(msg);pushUndo({kind:"tt",tid,pid:realPid,title,link,stepOf,...(extra||{})});
+    if(lp){if(lpr&&!quiet){S.projAsk={pid:lp,name:lpr.name,text:plainTitle(title)};render(true)}
+      editSettings(st=>{if(link&&st.taskProj)delete st.taskProj[tid];if(stepOf){st.projMeta=st.projMeta||{};const m=st.projMeta[stepOf]=st.projMeta[stepOf]||{};m.doneSteps=[...(m.doneSteps||[]),{id:tid,t:plainTitle(title),d:today()}]}},{silent:!stepOf})}}
   catch(e){const o=JSON.parse(snap);S.tt.lists=o.l;S.tt.today=o.t;render(true);toast(ttErrToast(e))}
 }
 async function moveTask(tid,colId){
@@ -1060,15 +1070,19 @@ function projBoard(){
   const id=ttMap().projects;const L=id&&S.tt.lists[id];
   if(!L)return null;
   const tasks=L.tasks;const byParent={};tasks.forEach(t=>{if(t.parentId)(byParent[t.parentId]=byParent[t.parentId]||[]).push(t)});
-  const heads=tasks.filter(t=>byParent[t.id]&&byParent[t.id].length);
+  const meta=S.settings.projMeta||{};
+  /* a parent is a group heading unless it's a project (has a kind set here, or itself sits under a group) */
+  const heads=tasks.filter(t=>byParent[t.id]&&byParent[t.id].length&&!meta[t.id]&&!(t.parentId&&tasks.some(x=>x.id===t.parentId)));
   const headIds=new Set(heads.map(t=>t.id));
-  const items=tasks.filter(t=>!headIds.has(t.id));
+  const isStep=t=>t.parentId&&!headIds.has(t.parentId)&&tasks.some(x=>x.id===t.parentId);
+  const steps={};tasks.forEach(t=>{if(isStep(t))(steps[t.parentId]=steps[t.parentId]||[]).push(t)});
+  const items=tasks.filter(t=>!headIds.has(t.id)&&!isStep(t));
   const groups=heads.map(h=>({id:h.id,name:h.title,items:items.filter(t=>t.parentId===h.id)}));
   const loose=items.filter(t=>!t.parentId||!tasks.some(x=>x.id===t.parentId));
   if(loose.length)groups.push({id:"_other",name:"Other",items:loose});
   const cols=L.columns;const doneCol=cols.find(c=>/done|fini|termin/i.test(c.name||""));
   const ongoingCol=cols.find(c=>/ongoing|progress|cours/i.test(c.name||""));
-  return {L,listId:id,groups,items,cols,doneCol,ongoingCol};
+  return {L,listId:id,groups,items,cols,doneCol,ongoingCol,steps};
 }
 const colName=(b,cid)=>{const c=b.cols.find(c=>c.id===cid);return c?c.name:""};
 function trackable(){
@@ -1107,7 +1121,7 @@ const ttTaskLi=(t,extra="",hideToday=false)=>{
   if(isProj&&S.projUpd===t.id)return `<li class="trow editing"><form class="eform" data-form="projupd" data-id="${t.id}"><span class="small"><b>${esc(plainTitle(t.title))}</b> · what did you do?</span>
       <div class="addrow"><input type="text" id="pu-text" placeholder="e.g. Wrote the opening scene" autocomplete="off"><input type="number" id="pu-mins" placeholder="min" min="0" inputmode="numeric" style="max-width:80px" aria-label="Minutes"><button class="btn sm">Log</button></div>
       <div class="btnrow"><button type="button" class="btn ghost sm" data-act="projupd" data-id="">Cancel</button></div></form></li>`;
-  const lp=!isProj&&(S.settings.taskProj||{})[t.id];const lpr=lp&&trackable().find(x=>x.id===lp);
+  const lp=!isProj&&((S.settings.taskProj||{})[t.id]||(t.parentId&&trackable().some(x=>x.id===t.parentId)?t.parentId:""));const lpr=lp&&trackable().find(x=>x.id===lp);
   const linkBits=isProj?"":lpr?`<button type="button" class="pill soft plink" data-act="tlink" data-id="${t.id}" title="Change the linked project">↳ ${esc(lpr.name)}</button>`:"";
   if(!isProj&&S.tLinkOpen===t.id){const tr=trackable();return `<li class="trow editing"><div class="eform"><span class="small"><b>${esc(plainTitle(t.title))}</b> · part of which project?</span>
       <div class="chips">${tr.map(p=>`<button type="button" class="chip" aria-pressed="${p.id===lp}" data-act="tlinkset" data-id="${t.id}" data-p="${esc(p.id)}">${esc(p.name)}</button>`).join("")}</div>
@@ -1512,7 +1526,8 @@ V.projects=()=>{
       html+=`<section class="block card">
         <div class="head"><h2>${esc(projName(b.listId))}</h2><button class="btn ghost" data-act="ttreload">Refresh</button></div>
         <div class="chips">${[["all","Open"],["ongoing",`Ongoing · ${nOn}`],["done","Done"]].filter(x=>x[0]!=="done"||b.doneCol).map(([k,l])=>`<button class="chip" data-act="projfilter" data-f="${k}" aria-pressed="${f===k}">${l}</button>`).join("")}</div>
-        <p class="muted small">Tap a project to log what you did. Notes are saved here and added as a comment on the task in TickTick.</p>
+        <form class="addrow" data-form="projnew"><input type="text" id="pn-name" placeholder="New project" autocomplete="off"><div class="seg">${[["ongoing","∞ No end"],["end","🏁 Has an end"]].map(([k,l])=>`<button type="button" class="chip" data-act="pnkind" data-k="${k}" aria-pressed="${(S.pnKind||"end")===k}">${l}</button>`).join("")}</div><button class="btn">Add</button></form>
+        <p class="muted small">Tap a project to add steps or log what you did.${STANDALONE?"":" Notes are also added as a comment on the task in TickTick."}</p>
       </section>`;
       b.groups.forEach(g=>{
         const items=g.items.filter(show);if(!items.length)return;
@@ -1524,22 +1539,38 @@ V.projects=()=>{
   html+=localProjects(week);
   return html;
 };
+const pMeta=id=>(S.settings.projMeta||{})[id]||{};
+const pKind=id=>pMeta(id).kind||"end";
+function projSteps(t,b){const open=(b.steps[t.id]||[]),done=(pMeta(t.id).doneSteps||[]);return {open,done,total:open.length+done.length}}
+function endLabel(k){const n=dayNum(k)-dayNum(today());return n>1?`${n} days left`:n===1?"ends tomorrow":n===0?"ends today":`${-n} day${n===-1?"":"s"} past`}
 function projRow(t,b,week){
   const es=projEntries(t.id);const worked=new Set(es.map(e=>e.date));const open=S.openProject===t.id;
+  const kind=pKind(t.id),m=pMeta(t.id),st=projSteps(t,b);const pct=st.total?Math.round(st.done.length/st.total*100):0;
+  const monthDone=st.done.filter(x=>x.d&&x.d.slice(0,7)===today().slice(0,7)).length;
   const cn=colName(b,t.columnId);const mins=es.reduce((s,e)=>s+(+e.mins||0),0);
   const isOn=b.ongoingCol&&t.columnId===b.ongoingCol.id,isDone=b.doneCol&&t.columnId===b.doneCol.id;
   return `<li class="prow ${open?"open":""}">
     <button class="prow-h" data-act="openproj" data-id="${t.id}" aria-expanded="${open}">
-      <span class="grow">${esc(t.title)}</span>
+      <span class="grow">${kind==="ongoing"?`<span class="pkind" title="No end">∞</span>`:""}${esc(t.title)}${kind==="end"&&st.total?`<span class="pbar" title="${st.done.length} of ${st.total} steps"><i style="width:${pct}%"></i></span>`:""}</span>
       <span class="week">${week.map(k=>`<i class="${worked.has(k)?"on":""}"></i>`).join("")}</span>
       ${cn?`<span class="pill ${isOn?"":"soft"}">${esc(cn)}</span>`:""}
     </button>
     ${open?`<div class="prow-b">
+      <div class="seg pkindseg" role="group" aria-label="Kind of project"><button type="button" class="chip" data-act="pkind" data-id="${t.id}" data-k="ongoing" aria-pressed="${kind==="ongoing"}">∞ No end</button><button type="button" class="chip" data-act="pkind" data-id="${t.id}" data-k="end" aria-pressed="${kind==="end"}">🏁 Has an end</button></div>
+      ${kind==="end"?`<div class="pend">${st.total?`<span class="pbar big"><i style="width:${pct}%"></i></span><span class="mono small">${st.done.length}/${st.total} steps · ${pct}%</span>`:`<span class="muted small">Add steps below to see how close you are.</span>`}
+        <label class="small muted">Finish by <input type="date" id="pend-${t.id}" value="${m.end||""}" data-act="pendset" data-id="${t.id}" aria-label="Finish by"></label>${m.end?`<span class="pill ${dayNum(m.end)<dayNum(today())?"late":"soft"}">${endLabel(m.end)}</span>`:""}</div>`
+        :`<span class="muted small">No end — keep adding steps as they come.${st.done.length?` ${st.done.length} done so far${monthDone?`, ${monthDone} this month`:""}.`:""}</span>`}
+      <div class="psteps"><span class="eyebrow">Steps</span>
+        ${st.open.length?`<ul class="list">${st.open.map(x=>`<li><input type="checkbox" class="check" data-act="ttdone" data-id="${x.id}" data-pid="${esc(x.pid)}" data-from="board" data-msg="Step done" aria-label="Complete ${esc(plainTitle(x.title))}"><span class="grow">${esc(plainTitle(x.title))}</span>${x.due&&key(new Date(x.due))<=today()?`<span class="pill soft">☀︎ Today</span>`:`<button type="button" class="linkbtn subtle tiny" data-act="projtoday" data-id="${x.id}" title="Add this step to Today">☀︎</button>`}</li>`).join("")}</ul>`:""}
+        <form class="addrow" data-form="projstep" data-id="${t.id}"><input type="text" id="ps-${t.id}" placeholder="${kind==="ongoing"?"Add a step":"Add a step towards done"}" autocomplete="off"><button class="btn sm">Add</button></form>
+        ${st.done.length?`<details class="pdone"><summary class="muted small">${st.done.length} done</summary><ul class="list">${st.done.slice().reverse().slice(0,20).map(x=>`<li class="muted small"><span class="grow">✓ ${esc(x.t)}</span><span class="mono">${x.d?fmtDay(x.d):""}</span></li>`).join("")}</ul></details>`:""}
+      </div>
       ${t.content?`<p class="pcontent">${esc(t.content.length>280?t.content.slice(0,280)+"…":t.content)}</p>`:""}
       <span class="mono muted small">${es.length} entr${es.length===1?"y":"ies"} · ${Math.floor(mins/60)}h ${mins%60}m${es[0]?" · last "+ago(es[0].date):""}</span>
       ${projForm(t.id,"p-"+t.id)}
       ${es.length?`<ul class="list">${es.slice(0,8).map(e=>isEd("prog",e.id)?editForm("prog",e.date,e):`<li><span class="mono muted" style="width:82px;flex:none;font-size:.8rem">${fmtDay(e.date)}</span>${etx("prog",e.date,e.id,esc(e.text))}${e.mins?`<span class="mono muted">${e.mins}m</span>`:""}<button class="x" aria-label="Delete entry" data-act="delprog" data-date="${e.date}" data-id="${e.id}">×</button></li>`).join("")}</ul>`:""}
       <div class="addrow">
+        ${kind==="end"&&!isDone?`<button class="btn" data-act="pcomplete" data-id="${t.id}">${S.pDoneAsk===t.id?"Tap again — it's finished 🏁":"🏁 Mark complete"}</button>`:""}
         ${!isDone?(t.due&&key(new Date(t.due))<=today()?`<span class="pill soft">☀︎ On Today</span>`:`<button class="btn" data-act="projtoday" data-id="${t.id}">☀︎ Add to Today</button>`):""}
         ${b.ongoingCol&&!isOn?`<button class="btn ghost" data-act="ttmove" data-id="${t.id}" data-col="${b.ongoingCol.id}">Move to ${esc(b.ongoingCol.name)}</button>`:""}
         ${b.doneCol&&!isDone?`<button class="btn ghost" data-act="ttmove" data-id="${t.id}" data-col="${b.doneCol.id}">Move to ${esc(b.doneCol.name)}</button>`:""}
@@ -3187,6 +3218,13 @@ document.addEventListener("click",e=>{
   if(a==="mdelloose"){if(!S.mDelLoose){S.mDelLoose=true;render(true);return}S.mDelLoose=false;mDel(mItems().filter(x=>mHome(x).state!=="open").map(x=>x.id))}
   if(a==="mreview"){S.mReview=!S.mReview;S.mDelLoose=false;S.mDelAsk=null;if(S.mReview)S.settingsOpen=false;else editSettings(st=>{st.mediaChecked=today().slice(0,7)},{silent:true});render(true)}
   if(a==="mchecked"){editSettings(st=>{st.mediaChecked=today().slice(0,7)})}
+  if(a==="pkind"){const k=b.dataset.k;editSettings(st=>{st.projMeta=st.projMeta||{};st.projMeta[id]={...(st.projMeta[id]||{}),kind:k}})}
+  if(a==="pnkind"){S.pnKind=b.dataset.k;render(true)}
+  if(a==="pcomplete"){if(S.pDoneAsk!==id){S.pDoneAsk=id;render(true);setTimeout(()=>{if(S.pDoneAsk===id){S.pDoneAsk=null;render(true)}},4000);return}
+    S.pDoneAsk=null;const bd=projBoard();const t=bd&&bd.items.find(x=>x.id===id);if(!t)return;
+    editSettings(st=>{st.projMeta=st.projMeta||{};st.projMeta[id]={...(st.projMeta[id]||{}),completed:today()}},{silent:true});
+    if(bd.doneCol)moveTask(id,bd.doneCol.id).then(()=>toast(`🏁 “${plainTitle(t.title)}” is complete. Well done.`));
+    else completeTask(id,t.pid,`🏁 “${plainTitle(t.title)}” is complete. Well done.`)}
   if(a==="tlink"){if(b.dataset.from==="note")keepNote(id);else if(!id&&S.backNote){reopenNote();return}S.tLinkOpen=id||null;render(true)}
   if(a==="tlinkset"){const p=b.dataset.p;S.tLinkOpen=null;if(S.backNote){S.tNoteOpen=S.backNote;S.backNote=null}editSettings(st=>{st.taskProj=st.taskProj||{};if(p)st.taskProj[id]=p;else delete st.taskProj[id]});if(p){const pr=trackable().find(x=>x.id===p);toast(`Linked to ${pr?pr.name:"the project"}`)}}
   if(a==="projaskskip"){S.projAsk=null;render(true)}
@@ -3390,6 +3428,7 @@ document.addEventListener("click",e=>{
 document.addEventListener("change",e=>{
   if(e.target.dataset&&e.target.dataset.act==="madd"){const d=e.target.dataset;const files=e.target.files;if(files&&files.length)mAdd(files,{t:d.t,id:d.id,title:d.title||""});e.target.value="";return}
   {const d=e.target&&e.target.dataset||{};
+  if(d.act==="pendset"){const pid=d.id,val=e.target.value;editSettings(st=>{st.projMeta=st.projMeta||{};st.projMeta[pid]={...(st.projMeta[pid]||{}),end:val||undefined}});return}
   if(d.act==="gtick"){const gid=d.id,on=e.target.checked;editDoc("groceries",x=>{const it=x.items.find(y=>y.id===gid);if(it)it.done=on});return}
   if(d.act==="gaisle"){const gid=d.id,val=e.target.value;editDoc("groceries",x=>{const it=x.items.find(y=>y.id===gid);if(it){it.aisle=val;x.aisleMap={...(x.aisleMap||{}),[gNorm(it.name)]:val}}});return}
   if(d.act==="trpack"){const tid=d.trip,pid=d.id,on=e.target.checked;editTrip(tid,t=>{const x=(t.pack||[]).find(y=>y.id===pid);if(x)x.done=on});return}
@@ -3414,6 +3453,7 @@ document.addEventListener("change",e=>{
   const b=e.target;if(!b.dataset||!b.dataset.act)return;const id=b.dataset.id;
   if(b.dataset.act==="habit")editDay(today(),d=>{if(b.checked)d.habits[id]=true;else delete d.habits[id]});
   if(b.dataset.act==="todo")editSettings(s=>{const t=s.todos.find(t=>t.id===id);if(t)t.done=b.checked});
+  if(b.dataset.act==="ttdone"&&b.dataset.from==="board")S.noAskOnce=true;
   if(b.dataset.act==="ttdone")completeTask(id,b.dataset.pid,b.dataset.msg);
   if(b.dataset.act==="setmap"){const m=ttMap();editSettings(s=>{s.ttMap={...m,[b.dataset.k]:b.value}});ttLoadLists()}
 });
@@ -3471,6 +3511,13 @@ document.addEventListener("submit",e=>{
     editDay(vday(),d=>{d.ate=d.ate||[];d.ate.push({id:uid(),text:t,slot,home:!!home});if(home)d.meals.unshift({id:uid(),name:t})});
     toast(home?"Logged, and added to your cooking log":"Logged")}
   if(f==="project"){const n=v("proj-name"),g=v("proj-goal");if(!n)return;editSettings(s=>{s.projects.push({id:uid(),name:n,goal:g,status:"active",created:today()})});toast("Project added")}
+  if(f==="projstep"){const pid=form.dataset.id,t=v("ps-"+pid);if(!t)return;clear("ps-"+pid);const bd=projBoard();const par=bd&&bd.items.find(x=>x.id===pid);if(!par)return;
+    if(!pMeta(pid).kind)editSettings(st=>{st.projMeta=st.projMeta||{};st.projMeta[pid]={...(st.projMeta[pid]||{}),kind:"end"}},{silent:true});
+    call("create_task",{task:{title:t,projectId:bd.listId,parentId:pid,columnId:par.columnId||undefined},client_timezone:TZ}).then(()=>ttLoadList(bd.listId).then(()=>render(true))).catch(e=>toast(ttErrToast(e)));return}
+  if(f==="projnew"){const n=v("pn-name");if(!n)return;clear("pn-name");const bd=projBoard();if(!bd)return;const k=S.pnKind||"end";
+    call("create_task",{task:{title:n,projectId:bd.listId,columnId:(bd.ongoingCol||bd.cols[0]||{}).id},client_timezone:TZ}).then(r=>{const nid=r&&(r.id||(r.result&&r.result.id));
+      if(nid){editSettings(st=>{st.projMeta=st.projMeta||{};st.projMeta[nid]={kind:k}},{silent:true});S.openProject=nid}
+      toast(`Project added${k==="ongoing"?" · no end":""}`);return ttLoadList(bd.listId).then(()=>render(true))}).catch(e=>toast(ttErrToast(e)));return}
   if(f==="projask"){const ask=S.projAsk;if(!ask)return;const t=v("pa-text"),m=parseInt(v("pa-mins"))||0;if(!t){toast("Write a line about what you did");return}
     S.projAsk=null;S.dropDraft={"pa-text":1,"pa-mins":1};const tr=trackable().find(x=>x.id===ask.pid);
     editDay(today(),d=>{d.progress=d.progress||[];d.progress.push({id:uid(),pid:ask.pid,text:t,mins:m,pname:ask.name})});

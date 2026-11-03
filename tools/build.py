@@ -11,8 +11,7 @@ WORDING=[("Progress logged and added to TickTick","Progress logged"),("Added to 
   ("Which TickTick lists to use","Which lists to use"),('<optgroup label="TickTick">','<optgroup label="Lists">'),
   ("Couldn't reach TickTick","Couldn't load your tasks"),("Choose your TickTick","Choose your"),
   ("TickTick returned an error: ","Something went wrong: "),("TickTick refused that change: ","That change didn't go through: "),
-  ("Loading TickTick…","Loading your tasks…"),("TickTick unavailable","Tasks unavailable"),
-  ("Notes are saved here and added as a comment on the task in TickTick.","Notes are saved with the project.")]
+  ("Loading TickTick…","Loading your tasks…"),("TickTick unavailable","Tasks unavailable")]
 for a,b in WORDING:
     n=src.count(a)
     if not n:raise SystemExit("wording not found: "+a)
