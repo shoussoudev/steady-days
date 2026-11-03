@@ -220,6 +220,7 @@ body.modal-open{overflow:hidden}
 .dtoday{display:grid;gap:2px;padding:6px 8px}.dline{display:grid;gap:1px;text-align:left;background:none;border:0;padding:6px;border-radius:8px;color:inherit;font:inherit;cursor:pointer}.dgroup{display:grid;gap:0;border-radius:10px;padding:2px 0}.dgroup:not(.single){padding:6px 4px;border:1px solid var(--line)}.dgroup .eyebrow{padding:0 6px}.dgroup.now{background:var(--accent-soft);border-color:var(--accent)}.dlgroup{border-radius:12px;padding:6px 8px;margin-top:6px}.dlgroup.now{background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}.dlhead{display:flex;justify-content:space-between;align-items:baseline;font-weight:600;padding:2px 2px 0}.dbtn{display:flex;gap:10px;align-items:flex-start;text-align:left}
 .wweek{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:2px 0 4px}.whead .linkbtn{margin-left:auto}
 .wmedia{display:grid;gap:6px;padding:4px 0 2px 34px}.wlinkchip{text-decoration:none;color:inherit;font-size:.78rem}.wxlink{word-break:break-all;color:var(--muted)}
+.tnlen.over{color:var(--m1);font-weight:600}
 .ttitle{background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;text-align:left;cursor:pointer;display:inline}
 .tnote{display:block;background:none;border:0;padding:2px 0 0;margin:0;text-align:left;color:var(--muted);font:inherit;font-size:.85rem;white-space:pre-line;cursor:pointer;width:100%}.jpread{font-size:1.12rem;line-height:1.9;margin:4px 0}.jpread.kana{font-size:.95rem;line-height:1.7}.jpwords{margin:0;padding-left:18px;display:grid;gap:2px}
 .jpquiz{display:grid;gap:10px;border-top:1px dashed var(--line);padding-top:10px;margin-top:4px}.jpqq{margin:0 0 6px;line-height:2}.jpopts{display:grid;gap:6px}
@@ -1097,7 +1098,7 @@ const ttTaskLi=(t,extra="",hideToday=false)=>{
   const meta=due+rem+extra+remBtn+noteBtn;
   if(S.tNoteOpen===t.id)return `<li class="trow editing"><form class="eform" data-form="tnote" data-id="${t.id}" data-pid="${esc(t.pid)}">
       <input type="text" id="tn-title" value="${esc(t.title)}" aria-label="Task title" autocomplete="off">
-      <textarea id="tn-body" rows="5" placeholder="Notes, links, details…" aria-label="Notes">${esc(t.content||"")}</textarea>${STANDALONE?mStrip("task",t.id,true,plainTitle(t.title)):""}
+      <textarea id="tn-body" rows="${Math.min(14,Math.max(5,String((S.tNoteKeep&&S.tNoteKeep.content)||t.content||"").split("\n").length+1))}" placeholder="Notes, links, details…" aria-label="Notes" data-act="tnlen">${esc((S.tNoteKeep&&S.tNoteKeep.content)??t.content??"")}</textarea><span class="muted small tnlen" id="tn-len"></span>${STANDALONE?mStrip("task",t.id,true,plainTitle(t.title)):""}
       <div class="btnrow"><button class="btn sm">Save</button><button type="button" class="btn ghost sm" data-act="tnote" data-id="">Cancel</button></div></form></li>`;
   const note=String(t.content||"").replace(/!\[[^\]]*\]\([^)]*\)/g,"").replace(/\[([^\]]*)\]\([^)]*\)/g,"$1").trim();
   if(S.remOpen===t.id){const dflt=t.remindAt?new Date(t.remindAt):(()=>{const d=t.due?new Date(t.due):new Date();d.setHours(new Date().getHours()+1,0,0,0);return d})();const v=new Date(dflt-dflt.getTimezoneOffset()*6e4).toISOString().slice(0,16);
@@ -1114,7 +1115,7 @@ function header(){
   treeHeader();
   $("#dateline").innerHTML=esc(fmtDay(today(),{weekday:"long",day:"numeric",month:"long",year:"numeric"}))+` <span class="daycount">· Day ${dayNum(today())-dayNum(S.settings.startDay||START_DAY)+1}</span>`;
 }
-let deferred=false;
+let deferred=false;S.dropDraft={};
 function render(force){
   try{saveReminderNote()}catch(_){}
   const a=document.activeElement;
@@ -1122,6 +1123,8 @@ function render(force){
   if(typing&&!force){deferred=true;return}
   deferred=false;
   const focusId=typing?a.id:null;
+  /* never lose what's being typed: boxes changed since they were drawn keep their text when the screen is rebuilt */
+  const drafts=[...document.querySelectorAll("#view textarea[id],#view input[id]")].filter(el=>(el.tagName==="TEXTAREA"||["text","number","url","search",""].includes(el.type))&&el.value!==el.defaultValue).map(el=>[el.id,el.value,el.selectionStart,el.selectionEnd]);
   const keepScroll=[...document.querySelectorAll("#view .modal, #view .modal-in")].map(m=>m.scrollTop);
   renderTabs();header();setStatus();
   $("#view").innerHTML=pageHtml()+(S.settingsOpen?`<div class="modal" role="dialog" aria-modal="true" aria-label="Settings"><button type="button" class="modal-bg" data-act="settings" aria-label="Close settings" tabindex="-1"></button><div class="modal-in">${settingsPanel()}</div></div>`:"")
@@ -1131,7 +1134,8 @@ function render(force){
   const g=document.getElementById("gear");if(g)g.setAttribute("aria-expanded",String(!!S.settingsOpen));
   {const gc=document.getElementById("gcount"),n=gItems().filter(x=>!x.done).length;if(gc){gc.hidden=!n;gc.textContent=n}}
   document.querySelectorAll("#view .modal, #view .modal-in").forEach((m,i)=>{if(keepScroll[i])m.scrollTop=keepScroll[i]});
-  if(focusId){const el=document.getElementById(focusId);if(el)el.focus()}
+  drafts.forEach(([id,val])=>{const el=document.getElementById(id);if(el&&!S.dropDraft[id])el.value=val});S.dropDraft={};try{tnLen()}catch(_){}
+  if(focusId){const el=document.getElementById(focusId);if(el){el.focus();const d=drafts.find(x=>x[0]===focusId);if(d&&el.setSelectionRange&&d[2]!=null)try{el.setSelectionRange(d[2],d[3])}catch(_){}}}
   try{useView()}catch(_){}
 }
 const V={};
@@ -2805,6 +2809,8 @@ V.dates=()=>{const L=dItems().map(x=>({x,n:dNext(x)})).sort((a,b)=>a.n.days-b.n.
       ${dPick("da")}<div><button class="btn">Add</button></div></form>
     <p class="muted small" style="margin:0">They show on Today a week ahead and on the day, and in your morning notification.</p></section>
   ${L.length?`<section class="block card"><div class="head"><h2>Coming up</h2></div>${dGroups(L).map(g=>`<div class="dlgroup${g.days===0?" now":""}"><div class="dlhead"><span>${fmtDay(g.k,{day:"numeric",month:"long"})}</span><span class="muted small">${dWhen(g)}${g.items.length>1?` · ${g.items.length} together`:""}</span></div><ul class="list">${g.items.map(row).join("")}</ul></div>`).join("")}</section>`:""}`};
+const NOTE_MAX=20000;
+function tnLen(){const b=document.getElementById("tn-body"),el=document.getElementById("tn-len");if(!b||!el)return;const n=b.value.length;el.textContent=n>NOTE_MAX*.75?`${n.toLocaleString()} / ${NOTE_MAX.toLocaleString()} characters`:"";el.classList.toggle("over",n>NOTE_MAX)}
 function grocToday(){if(isPastView())return "";const n=gItems().filter(x=>!x.done).length;return `<button type="button" class="card foldrow" data-act="groc"><span class="fl">🛒 Groceries</span><span class="fv">${n?`${n} to buy`:"List is empty"}</span><span class="fa">Open</span></button>`}
 
 /* ---------- Trips: packing and planning, with to-dos that land on Today before you go ---------- */
@@ -3154,7 +3160,7 @@ document.addEventListener("click",e=>{
   if(a==="mdelloose"){if(!S.mDelLoose){S.mDelLoose=true;render(true);return}S.mDelLoose=false;mDel(mItems().filter(x=>mHome(x).state!=="open").map(x=>x.id))}
   if(a==="mreview"){S.mReview=!S.mReview;S.mDelLoose=false;S.mDelAsk=null;if(S.mReview)S.settingsOpen=false;else editSettings(st=>{st.mediaChecked=today().slice(0,7)},{silent:true});render(true)}
   if(a==="mchecked"){editSettings(st=>{st.mediaChecked=today().slice(0,7)})}
-  if(a==="tnote"){S.tNoteOpen=id||null;render(true);if(id){const el=document.getElementById("tn-body");if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length)}}}
+  if(a==="tnote"){if(S.tNoteOpen!==id)S.tNoteKeep=null;S.tNoteOpen=id||null;render(true);if(id){const el=document.getElementById("tn-body");if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length)}}}
   if(a==="remclear"){S.remOpen=null;call("update_task",{task_id:id,task:{id,projectId:b.dataset.pid,remindAt:null},client_timezone:TZ}).then(()=>{toast("Reminder removed");ttLoadAll()}).catch(e=>toast(ttErrToast(e)))}
   if(a==="pushon"){window.__sdPush.enable().then(()=>{toast("Notifications are on for this device");render(true)}).catch(e=>{toast(e&&e.code==="denied"?"Notifications are blocked. Allow them in your browser's site settings, then try again.":"Couldn't turn on notifications here.");render(true)})}
   if(a==="pushoff"){window.__sdPush.disable().then(()=>{toast("Notifications are off for this device");render(true)})}
@@ -3381,6 +3387,7 @@ document.addEventListener("change",e=>{
 });
 document.addEventListener("input",e=>{
   const b=e.target;if(!b.dataset)return;
+  if(b.dataset.act==="tnlen"){tnLen();return}
   if(b.dataset.act==="blq"){const q=gNorm(b.value);document.querySelectorAll("#bl-shelf li[data-q]").forEach(li=>{li.hidden=!!q&&!li.dataset.q.includes(q)});document.querySelectorAll("#bl-shelf h3").forEach(h=>{const ul=h.nextElementSibling;h.hidden=!!ul&&![...ul.children].some(li=>!li.hidden)});return}
   if(b.dataset.act==="note")editDay(vday(),d=>{d.note=b.value},{silent:true});
   if(b.dataset.act==="ex")editDay(vday(),d=>{d.body={...bodyOf(d),ex:b.value}},{silent:true});
@@ -3412,7 +3419,7 @@ document.addEventListener("input",e=>{
   if(b.dataset.act==="better")editDay(vday(),d=>{d.better=b.value},{silent:true});
   if(b.dataset.act==="grat")editDay(vday(),d=>{d.gratitude[+b.dataset.i]=b.value},{silent:true});
 });
-document.addEventListener("focusout",()=>{setTimeout(()=>{if(deferred)render()},0)});
+document.addEventListener("focusout",()=>{setTimeout(()=>{if(deferred)render()},350)});
 document.addEventListener("submit",e=>{try{track("form",e.target.dataset.form)}catch(_){}},true);
 document.addEventListener("submit",e=>{
   e.preventDefault();const form=e.target;const f=form.dataset.form;const v=id=>{const el=document.getElementById(id);return el?(el.value||"").trim():""};
@@ -3475,7 +3482,8 @@ document.addEventListener("submit",e=>{
     else{const did=form.dataset.id;const note=(document.getElementById("de-note")||{}).value||"";S.dEdit=null;editDoc("dates",d=>{const x=d.items.find(y=>y.id===did);if(x)Object.assign(x,rec,{note})})}
     return}
   if(f==="tnote"){const tid=form.dataset.id,pid=form.dataset.pid;const title=v("tn-title"),content=(document.getElementById("tn-body")||{}).value||"";if(!title){toast("A task needs a title");return}
-    S.tNoteOpen=null;render(true);call("update_task",{task_id:tid,task:{id:tid,projectId:pid,title,content},client_timezone:TZ}).then(()=>{toast("Saved");ttLoadAll()}).catch(e=>toast(ttErrToast(e)));return}
+    if(content.length>NOTE_MAX){toast(`That note is ${content.length.toLocaleString()} characters; the limit is ${NOTE_MAX.toLocaleString()}. Shorten it, or keep the long version in Lists → Notes.`);return}
+    S.tNoteOpen=null;S.dropDraft={"tn-body":1,"tn-title":1};render(true);call("update_task",{task_id:tid,task:{id:tid,projectId:pid,title,content},client_timezone:TZ}).then(()=>{toast("Saved");ttLoadAll()}).catch(e=>{S.tNoteOpen=tid;S.tNoteKeep={title,content};render(true);toast("Couldn't save the note: "+ttErrToast(e)+" Your text is still here.")});return}
   if(f==="bladd"){const t=v("bl-new"),ty=v("bl-type")||"book";if(!t)return;clear("bl-new");editDoc("backlog",d=>{d.items.unshift({id:uid(),type:ty,title:t,status:"someday",added:today()})});toast("Added to your backlog")}
   if(f==="remind"){const tid=form.dataset.id,pid=form.dataset.pid,val=v("rem-at");if(!val)return;const at=new Date(val);if(isNaN(at)){toast("Pick a date and time");return}S.remOpen=null;
     call("update_task",{task_id:tid,task:{id:tid,projectId:pid,remindAt:at.toISOString()},client_timezone:TZ}).then(()=>{toast(`Reminder set for ${at.toLocaleString("en-GB",{weekday:"short",hour:"2-digit",minute:"2-digit"})}`);ttLoadAll()}).catch(e=>toast(ttErrToast(e)));return}
