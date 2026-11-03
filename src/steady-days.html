@@ -222,6 +222,8 @@ body.modal-open{overflow:hidden}
 .wmedia{display:grid;gap:6px;padding:4px 0 2px 34px}.wlinkchip{text-decoration:none;color:inherit;font-size:.78rem}.wxlink{word-break:break-all;color:var(--muted)}
 .tnlen.over{color:var(--m1);font-weight:600}
 .plast{display:block;padding-top:2px}
+.plink{cursor:pointer;font:inherit;font-size:12px}
+.projask{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:6px 0 10px}
 .ttitle{background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;text-align:left;cursor:pointer;display:inline}
 .tnote{display:block;background:none;border:0;padding:2px 0 0;margin:0;text-align:left;color:var(--muted);font:inherit;font-size:.85rem;white-space:pre-line;cursor:pointer;width:100%}.jpread{font-size:1.12rem;line-height:1.9;margin:4px 0}.jpread.kana{font-size:.95rem;line-height:1.7}.jpwords{margin:0;padding-left:18px;display:grid;gap:2px}
 .jpquiz{display:grid;gap:10px;border-top:1px dashed var(--line);padding-top:10px;margin-top:4px}.jpqq{margin:0 0 6px;line-height:2}.jpopts{display:grid;gap:6px}
@@ -1026,7 +1028,9 @@ async function completeTask(tid,pid,msg,extra){
   const snap=JSON.stringify({l:S.tt.lists,t:S.tt.today});
   for(const k in S.tt.lists)S.tt.lists[k].tasks=S.tt.lists[k].tasks.filter(t=>t.id!==tid);
   S.tt.today=S.tt.today.filter(t=>t.id!==tid);render(true);
-  try{await call("complete_task",{project_id:realPid,task_id:tid});if((getDay(today()).top3||[]).some(x=>x.id===tid))editDay(today(),d=>{d.top3=d.top3.map(x=>x.id===tid?{...x,done:true}:x)},{silent:true});if((getDay(today()).maybe||[]).some(x=>x.id===tid))editDay(today(),d=>{d.maybe=d.maybe.map(x=>x.id===tid?{...x,done:true}:x)},{silent:true});if(msg)toast(msg);pushUndo({kind:"tt",tid,pid:realPid,title,...(extra||{})})}
+  try{await call("complete_task",{project_id:realPid,task_id:tid});if((getDay(today()).top3||[]).some(x=>x.id===tid))editDay(today(),d=>{d.top3=d.top3.map(x=>x.id===tid?{...x,done:true}:x)},{silent:true});if((getDay(today()).maybe||[]).some(x=>x.id===tid))editDay(today(),d=>{d.maybe=d.maybe.map(x=>x.id===tid?{...x,done:true}:x)},{silent:true});if(msg)toast(msg);pushUndo({kind:"tt",tid,pid:realPid,title,...(extra||{})});
+    const lp=(S.settings.taskProj||{})[tid];const lpr=lp&&trackable().find(x=>x.id===lp);
+    if(lp){if(lpr){S.projAsk={pid:lp,name:lpr.name,text:plainTitle(title)};render(true)}editSettings(st=>{if(st.taskProj)delete st.taskProj[tid]},{silent:true})}}
   catch(e){const o=JSON.parse(snap);S.tt.lists=o.l;S.tt.today=o.t;render(true);toast(ttErrToast(e))}
 }
 async function moveTask(tid,colId){
@@ -1102,7 +1106,13 @@ const ttTaskLi=(t,extra="",hideToday=false)=>{
   if(isProj&&S.projUpd===t.id)return `<li class="trow editing"><form class="eform" data-form="projupd" data-id="${t.id}"><span class="small"><b>${esc(plainTitle(t.title))}</b> · what did you do?</span>
       <div class="addrow"><input type="text" id="pu-text" placeholder="e.g. Wrote the opening scene" autocomplete="off"><input type="number" id="pu-mins" placeholder="min" min="0" inputmode="numeric" style="max-width:80px" aria-label="Minutes"><button class="btn sm">Log</button></div>
       <div class="btnrow"><button type="button" class="btn ghost sm" data-act="projupd" data-id="">Cancel</button></div></form></li>`;
-  const noteBtn=projBits+`<button type="button" class="linkbtn subtle tiny" data-act="tnote" data-id="${t.id}" aria-label="Notes for ${esc(plainTitle(t.title))}" title="Notes">✎</button>`;
+  const lp=!isProj&&(S.settings.taskProj||{})[t.id];const lpr=lp&&trackable().find(x=>x.id===lp);
+  const linkBits=isProj?"":lpr?`<button type="button" class="pill soft plink" data-act="tlink" data-id="${t.id}" title="Change the linked project">↳ ${esc(lpr.name)}</button>`:(trackable().length?`<button type="button" class="linkbtn subtle tiny" data-act="tlink" data-id="${t.id}" aria-label="Link ${esc(plainTitle(t.title))} to a project" title="Link to a project">🔗</button>`:"");
+  if(!isProj&&S.tLinkOpen===t.id){const tr=trackable();return `<li class="trow editing"><div class="eform"><span class="small"><b>${esc(plainTitle(t.title))}</b> · part of which project?</span>
+      <div class="chips">${tr.map(p=>`<button type="button" class="chip" aria-pressed="${p.id===lp}" data-act="tlinkset" data-id="${t.id}" data-p="${esc(p.id)}">${esc(p.name)}</button>`).join("")}</div>
+      <p class="muted small" style="margin:0">When you tick it off, you'll get a quick chance to note what it moved forward.</p>
+      <div class="btnrow">${lp?`<button type="button" class="btn ghost sm" data-act="tlinkset" data-id="${t.id}" data-p="">Unlink</button>`:""}<button type="button" class="btn ghost sm" data-act="tlink" data-id="">Cancel</button></div></div></li>`}
+  const noteBtn=linkBits+projBits+`<button type="button" class="linkbtn subtle tiny" data-act="tnote" data-id="${t.id}" aria-label="Notes for ${esc(plainTitle(t.title))}" title="Notes">✎</button>`;
   const meta=due+rem+extra+remBtn+noteBtn;
   if(S.tNoteOpen===t.id)return `<li class="trow editing"><form class="eform" data-form="tnote" data-id="${t.id}" data-pid="${esc(t.pid)}">
       <input type="text" id="tn-title" value="${esc(t.title)}" aria-label="Task title" autocomplete="off">
@@ -1278,6 +1288,10 @@ function therapyBlock(d){
     ${t?`<div><button type="button" class="linkbtn subtle" data-act="therapyrm">${S.confirmTher?"Tap again to remove this session":"Remove session"}</button></div>`:""}
   </div>`;
 }
+function projAskCard(){const a=S.projAsk;if(!a)return "";
+  return `<form class="eform projask" data-form="projask"><span class="small">✓ Done — add an update to <b>${esc(a.name)}</b>?</span>
+    <div class="addrow"><input type="text" id="pa-text" value="${esc(a.text)}" aria-label="What it moved forward" autocomplete="off"><input type="number" id="pa-mins" placeholder="min" min="0" inputmode="numeric" style="max-width:80px" aria-label="Minutes"><button class="btn sm">Log</button></div>
+    <div class="btnrow"><button type="button" class="btn ghost sm" data-act="projaskskip">Skip</button></div></form>`}
 function footerExtras(){
   const vd=vday(),past=isPastView();const todays=getDay(vd).progress||[];const tr=trackable();
   return `<div class="extras">
@@ -1354,7 +1368,7 @@ function todayTasks(){
     const row=t=>ttTaskLi(t,`${top.some(x=>x.id===t.id&&x.bonus)?`<span class="pill soft">bonus</span>`:""}${S.rolled.ids.includes(t.id)||top.some(x=>x.id===t.id&&x.carried)||maybe.some(x=>x.id===t.id&&x.carried)?`<span class="pill soft">from yesterday</span>`:""}${maybeBtn(t.id,maybeIds.includes(t.id),"maybe")}<button class="starbtn" data-act="top3" data-id="${t.id}" aria-pressed="${topIds.includes(t.id)}" aria-label="${topIds.includes(t.id)?"Remove from Top 3":S.bonusPick?"Add as a bonus":"Add to Top 3"}" title="${topIds.includes(t.id)?"In your Top 3":"Add to Top 3"}">${topIds.includes(t.id)?"★":"☆"}</button><button class="btn ghost sm tdiscard" data-act="discard" data-id="${t.id}" data-pid="${esc(t.pid)}" title="Mark as won't do">Discard</button>`,true);
     const dayD=getDay(today());const picking=!top.length;const mx=topMax(today());const choosing=top.length>0&&top.length<mx&&!dayD.topDone;const showRest=picking||choosing||S.showMoreToday||(allDone&&S.bonusPick);
     return `<section class="block card">
-      <div class="head"><h2>${picking?"Today":topLabel(today())}</h2>${picking?`<button class="btn ghost" data-go="todo">All to-dos</button>`:`<span class="topmeta"><span class="mono muted">${coreDone.length}/${core.length} done${bonusDone?` · +${bonusDone} bonus`:""}</span>${top.some(x=>x.bonus)?"":sizeBtn(today())}</span>`}</div>
+      <div class="head"><h2>${picking?"Today":topLabel(today())}</h2>${picking?`<button class="btn ghost" data-go="todo">All to-dos</button>`:`<span class="topmeta"><span class="mono muted">${coreDone.length}/${core.length} done${bonusDone?` · +${bonusDone} bonus`:""}</span>${top.some(x=>x.bonus)?"":sizeBtn(today())}</span>`}</div>${projAskCard()}
       ${picking&&ts.length?`<p class="muted small">Star ★ up to ${mx} that matter most. Mark ◆ for “maybe today” if there's time. The rest will tuck away. ${sizeBtn(today())}</p>`:""}
       ${choosing&&rest.length?`<div class="pickbar"><span class="muted small">Pick ${mx-top.length} more, or stop here.</span><button class="btn ghost sm" data-act="topdone">That's enough</button></div>`:""}
       ${!picking?`<ul class="list">${openTop.map(row).join("")}${doneTop.map(x=>`<li class="trow donerow"><span class="check donechk" aria-hidden="true"></span><div class="tmain"><span>${esc(plainTitle(x.title))}${x.bonus?` <span class="pill soft">bonus</span>`:""}</span></div></li>`).join("")}</ul>
@@ -1460,7 +1474,7 @@ V.todo=()=>{
     if(S.tt.state==="loading"&&!S.tt.projects.length)return `<section class="block card"><h2>To-do</h2><p class="empty">Loading your TickTick lists…</p></section>`;
     const ids=ttMap().todo||[];
     if(!ids.length)return `<section class="block card"><h2>To-do</h2><p class="empty">Pick which TickTick lists count as your to-do in Lists → Choose lists.</p></section>`;
-    return recentBox()+`<div class="head"><span class="eyebrow">From TickTick</span><button class="btn ghost" data-act="ttreload">Refresh</button></div>`+ids.map(id=>{
+    return recentBox()+(S.projAsk?`<div class="block">${projAskCard()}</div>`:"")+`<div class="head"><span class="eyebrow">From TickTick</span><button class="btn ghost" data-act="ttreload">Refresh</button></div>`+ids.map(id=>{
       const L=S.tt.lists[id];const all=L?L.tasks.filter(t=>t.kind!=="NOTE"&&!L.tasks.some(x=>x.parentId===t.id)).sort(byDue):[];
       const more=!S.showAll[id]&&all.length>15;const ts=more?all.slice(0,15):all;
       return `<section class="block card"><div class="head"><h2>${esc(projName(id))}</h2><span class="mono muted">${all.length} open</span></div>
@@ -3169,6 +3183,9 @@ document.addEventListener("click",e=>{
   if(a==="mdelloose"){if(!S.mDelLoose){S.mDelLoose=true;render(true);return}S.mDelLoose=false;mDel(mItems().filter(x=>mHome(x).state!=="open").map(x=>x.id))}
   if(a==="mreview"){S.mReview=!S.mReview;S.mDelLoose=false;S.mDelAsk=null;if(S.mReview)S.settingsOpen=false;else editSettings(st=>{st.mediaChecked=today().slice(0,7)},{silent:true});render(true)}
   if(a==="mchecked"){editSettings(st=>{st.mediaChecked=today().slice(0,7)})}
+  if(a==="tlink"){S.tLinkOpen=id||null;render(true)}
+  if(a==="tlinkset"){const p=b.dataset.p;S.tLinkOpen=null;editSettings(st=>{st.taskProj=st.taskProj||{};if(p)st.taskProj[id]=p;else delete st.taskProj[id]});if(p){const pr=trackable().find(x=>x.id===p);toast(`Linked to ${pr?pr.name:"the project"}`)}}
+  if(a==="projaskskip"){S.projAsk=null;render(true)}
   if(a==="projupd"){S.projUpd=id||null;render(true);if(id){const el=document.getElementById("pu-text");if(el)el.focus()}}
   if(a==="projtoday"){const t=findTask(id);if(!t)return;setDue(t,today()).then(()=>{toast(`“${plainTitle(t.title)}” is on Today`);ttLoadAll()}).catch(e=>toast(ttErrToast(e)))}
   if(a==="tnote"){if(S.tNoteOpen!==id)S.tNoteKeep=null;S.tNoteOpen=id||null;render(true);if(id){const el=document.getElementById("tn-body");if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length)}}}
@@ -3450,6 +3467,11 @@ document.addEventListener("submit",e=>{
     editDay(vday(),d=>{d.ate=d.ate||[];d.ate.push({id:uid(),text:t,slot,home:!!home});if(home)d.meals.unshift({id:uid(),name:t})});
     toast(home?"Logged, and added to your cooking log":"Logged")}
   if(f==="project"){const n=v("proj-name"),g=v("proj-goal");if(!n)return;editSettings(s=>{s.projects.push({id:uid(),name:n,goal:g,status:"active",created:today()})});toast("Project added")}
+  if(f==="projask"){const ask=S.projAsk;if(!ask)return;const t=v("pa-text"),m=parseInt(v("pa-mins"))||0;if(!t){toast("Write a line about what you did");return}
+    S.projAsk=null;S.dropDraft={"pa-text":1,"pa-mins":1};const tr=trackable().find(x=>x.id===ask.pid);
+    editDay(today(),d=>{d.progress=d.progress||[];d.progress.push({id:uid(),pid:ask.pid,text:t,mins:m,pname:ask.name})});
+    if(tr&&tr.tt)call("add_comment",{project_id:tr.tt.pid,task_id:tr.tt.id,title:`${fmtDay(today())} · ${t}${m?` (${m} min)`:""}`}).catch(()=>{});
+    toast(`Update logged for ${ask.name} 📈`);return}
   if(f==="projupd"){const pid=form.dataset.id,t=v("pu-text"),m=parseInt(v("pu-mins"))||0;if(!t){toast("Write a line about what you did");return}
     S.projUpd=null;S.dropDraft={"pu-text":1,"pu-mins":1};const tr=trackable().find(x=>x.id===pid);
     editDay(today(),d=>{d.progress=d.progress||[];d.progress.push({id:uid(),pid,text:t,mins:m,pname:tr?tr.name:""})});

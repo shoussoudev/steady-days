@@ -4,7 +4,7 @@
 - Your tree, quietly drawn (header) and Rings as the yearly story (tap the tree).
 - Longer Japanese readings with 3 questions in Japanese.
 - Dates: birthdays, anniversaries and days to remember.
-- Projects ↔ Today: Add to Today from the board, 📈 Update from the Today row.
+- Projects ↔ Today: Add to Today from the board, 📈 Update from the Today row, 🔗 link any task to a project and log an update when you tick it off.
 
 ## Ideas to build
 - **N4 Japanese** — grammar library, Go deeper lessons and readings for the next level.
