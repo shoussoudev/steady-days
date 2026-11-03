@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261103113753"></script>
-<script type="module" src="boot.js?v=20261103113753"></script>
+<script src="shim.js?v=20261103120237"></script>
+<script type="module" src="boot.js?v=20261103120237"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -249,6 +249,7 @@ body.modal-open{overflow:hidden}
 .wmedia{display:grid;gap:6px;padding:4px 0 2px 34px}.wlinkchip{text-decoration:none;color:inherit;font-size:.78rem}.wxlink{word-break:break-all;color:var(--muted)}
 .tnlen.over{color:var(--m1);font-weight:600}
 .plast{display:block;padding-top:2px}
+.tnextra{display:flex;gap:14px;flex-wrap:wrap}
 .plink{cursor:pointer;font:inherit;font-size:12px}
 .projask{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:6px 0 10px}
 .ttitle{background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;text-align:left;cursor:pointer;display:inline}
@@ -1124,8 +1125,8 @@ function dueLabel(t){
 const prioDot=t=>t.priority>=5?`<i class="prio p5" title="High priority"></i>`:t.priority>=3?`<i class="prio p3" title="Medium priority"></i>`:t.priority>=1?`<i class="prio p1" title="Low priority"></i>`:"";
 const ttTaskLi=(t,extra="",hideToday=false)=>{
   const dk=t.due&&key(new Date(t.due));const due=hideToday&&dk&&(dk===today()||dk===key())?"":dueLabel(t);
-  const rem=STANDALONE&&t.remindAt&&Date.parse(t.remindAt)>Date.now()-864e5?`<span class="pill soft remp">⏰ ${new Date(t.remindAt).toLocaleString("en-GB",{weekday:Date.parse(t.remindAt)-Date.now()>864e5?"short":undefined,hour:"2-digit",minute:"2-digit"})}</span>`:"";
-  const remBtn=STANDALONE?`<button type="button" class="linkbtn subtle tiny" data-act="remopen" data-id="${t.id}" data-pid="${esc(t.pid)}" aria-label="Set a reminder for ${esc(plainTitle(t.title))}">⏰</button>`:"";
+  const rem=STANDALONE&&t.remindAt&&Date.parse(t.remindAt)>Date.now()-864e5?`<button type="button" class="pill soft remp plink" data-act="remopen" data-id="${t.id}" title="Change reminder">⏰ ${new Date(t.remindAt).toLocaleString("en-GB",{weekday:Date.parse(t.remindAt)-Date.now()>864e5?"short":undefined,hour:"2-digit",minute:"2-digit"})}</button>`:"";
+  /* reminder and project link live in the task's details (tap the title); the row only shows them once set */
   /* project tasks on Today: post an update in two taps, and see the last one */
   const isProj=STANDALONE||ttOn()?trackable().some(x=>x.id===t.id):false;
   const pes=isProj?projEntries(t.id):[];const updToday=pes.some(e=>e.date===today());
@@ -1134,16 +1135,16 @@ const ttTaskLi=(t,extra="",hideToday=false)=>{
       <div class="addrow"><input type="text" id="pu-text" placeholder="e.g. Wrote the opening scene" autocomplete="off"><input type="number" id="pu-mins" placeholder="min" min="0" inputmode="numeric" style="max-width:80px" aria-label="Minutes"><button class="btn sm">Log</button></div>
       <div class="btnrow"><button type="button" class="btn ghost sm" data-act="projupd" data-id="">Cancel</button></div></form></li>`;
   const lp=!isProj&&(S.settings.taskProj||{})[t.id];const lpr=lp&&trackable().find(x=>x.id===lp);
-  const linkBits=isProj?"":lpr?`<button type="button" class="pill soft plink" data-act="tlink" data-id="${t.id}" title="Change the linked project">↳ ${esc(lpr.name)}</button>`:(trackable().length?`<button type="button" class="linkbtn subtle tiny" data-act="tlink" data-id="${t.id}" aria-label="Link ${esc(plainTitle(t.title))} to a project" title="Link to a project">🔗</button>`:"");
+  const linkBits=isProj?"":lpr?`<button type="button" class="pill soft plink" data-act="tlink" data-id="${t.id}" title="Change the linked project">↳ ${esc(lpr.name)}</button>`:"";
   if(!isProj&&S.tLinkOpen===t.id){const tr=trackable();return `<li class="trow editing"><div class="eform"><span class="small"><b>${esc(plainTitle(t.title))}</b> · part of which project?</span>
       <div class="chips">${tr.map(p=>`<button type="button" class="chip" aria-pressed="${p.id===lp}" data-act="tlinkset" data-id="${t.id}" data-p="${esc(p.id)}">${esc(p.name)}</button>`).join("")}</div>
       <p class="muted small" style="margin:0">When you tick it off, you'll get a quick chance to note what it moved forward.</p>
       <div class="btnrow">${lp?`<button type="button" class="btn ghost sm" data-act="tlinkset" data-id="${t.id}" data-p="">Unlink</button>`:""}<button type="button" class="btn ghost sm" data-act="tlink" data-id="">Cancel</button></div></div></li>`}
-  const noteBtn=linkBits+projBits+`<button type="button" class="linkbtn subtle tiny" data-act="tnote" data-id="${t.id}" aria-label="Notes for ${esc(plainTitle(t.title))}" title="Notes">✎</button>`;
-  const meta=due+rem+extra+remBtn+noteBtn;
+  const meta=due+rem+linkBits+extra+projBits;
   if(S.tNoteOpen===t.id)return `<li class="trow editing"><form class="eform" data-form="tnote" data-id="${t.id}" data-pid="${esc(t.pid)}">
-      <input type="text" id="tn-title" value="${esc(t.title)}" aria-label="Task title" autocomplete="off">
+      <input type="text" id="tn-title" value="${esc((S.tNoteKeep&&S.tNoteKeep.title)??t.title)}" aria-label="Task title" autocomplete="off">
       <textarea id="tn-body" rows="${Math.min(14,Math.max(5,String((S.tNoteKeep&&S.tNoteKeep.content)||t.content||"").split("\n").length+1))}" placeholder="Notes, links, details…" aria-label="Notes" data-act="tnlen">${esc((S.tNoteKeep&&S.tNoteKeep.content)??t.content??"")}</textarea><span class="muted small tnlen" id="tn-len"></span>${STANDALONE?mStrip("task",t.id,true,plainTitle(t.title)):""}
+      ${STANDALONE||(!isProj&&trackable().length)?`<div class="tnextra">${STANDALONE?`<button type="button" class="linkbtn subtle" data-act="remopen" data-id="${t.id}" data-from="note">⏰ ${t.remindAt&&Date.parse(t.remindAt)>Date.now()?"Change reminder":"Remind me"}</button>`:""}${!isProj&&trackable().length?`<button type="button" class="linkbtn subtle" data-act="tlink" data-id="${t.id}" data-from="note">🔗 ${lpr?"Project: "+esc(lpr.name):"Link to a project"}</button>`:""}</div>`:""}
       <div class="btnrow"><button class="btn sm">Save</button><button type="button" class="btn ghost sm" data-act="tnote" data-id="">Cancel</button></div></form></li>`;
   const note=String(t.content||"").replace(/!\[[^\]]*\]\([^)]*\)/g,"").replace(/\[([^\]]*)\]\([^)]*\)/g,"$1").trim();
   if(S.remOpen===t.id){const dflt=t.remindAt?new Date(t.remindAt):(()=>{const d=t.due?new Date(t.due):new Date();d.setHours(new Date().getHours()+1,0,0,0);return d})();const v=new Date(dflt-dflt.getTimezoneOffset()*6e4).toISOString().slice(0,16);
@@ -1315,6 +1316,8 @@ function therapyBlock(d){
     ${t?`<div><button type="button" class="linkbtn subtle" data-act="therapyrm">${S.confirmTher?"Tap again to remove this session":"Remove session"}</button></div>`:""}
   </div>`;
 }
+function keepNote(id){const b=document.getElementById("tn-body"),ti=document.getElementById("tn-title");if(b)S.tNoteKeep={content:b.value,title:ti?ti.value:undefined};S.tNoteOpen=null;S.backNote=id;S.dropDraft={"tn-body":1,"tn-title":1}}
+function reopenNote(){S.tNoteOpen=S.backNote;S.backNote=null;S.remOpen=null;S.tLinkOpen=null;render(true)}
 function projAskCard(){const a=S.projAsk;if(!a)return "";
   return `<form class="eform projask" data-form="projask"><span class="small">✓ Done — add an update to <b>${esc(a.name)}</b>?</span>
     <div class="addrow"><input type="text" id="pa-text" value="${esc(a.text)}" aria-label="What it moved forward" autocomplete="off"><input type="number" id="pa-mins" placeholder="min" min="0" inputmode="numeric" style="max-width:80px" aria-label="Minutes"><button class="btn sm">Log</button></div>
@@ -3188,7 +3191,7 @@ document.addEventListener("click",e=>{
   if(a==="vsortadd"&&S.vsort){const rows=S.vsort.rows.filter(r=>r.on);const tiles=rows.filter(r=>!r.bucket).map(r=>JSON.parse(JSON.stringify(r.t))),dreams=rows.filter(r=>r.bucket).map(r=>({id:uid(),title:r.t.title,area:"exp",emoji:"",note:r.t.note||"",added:today(),lived:[]}));
     if(tiles.length)editDoc("vision",d=>{d.items=[...(d.items||[]),...tiles]});if(dreams.length)editDoc("bucket",d=>{d.items=[...(d.items||[]),...dreams]});
     S.vsort=null;S.vsortText="";toast(`Added ${tiles.length} tile${tiles.length===1?"":"s"}${dreams.length?` and ${dreams.length} dream${dreams.length===1?"":"s"}`:""}`)}
-  if(a==="remopen"){S.remOpen=id||null;render(true)}
+  if(a==="remopen"){if(b.dataset.from==="note")keepNote(id);else if(!id&&S.backNote){reopenNote();return}S.remOpen=id||null;render(true)}
   if(a==="useopen"){S.useOpen=!S.useOpen;if(S.useOpen){S.settingsOpen=false;loadUse()}else render(true)}
   if(a==="useexport"){const rows=(S.useData&&S.useData.rows)||[];const blob=new Blob([JSON.stringify({app:"Steady Days",kind:"usage",exported:new Date().toISOString(),days:rows.sort((a,b)=>a.date<b.date?-1:1)},null,2)],{type:"application/json"});
     if(DL)DL.save({filename:`steady-days-usage-${today()}.json`,data:blob}).catch(()=>{});else{const a2=document.createElement("a");a2.href=URL.createObjectURL(blob);a2.download=`steady-days-usage-${today()}.json`;a2.click()}}
@@ -3210,13 +3213,13 @@ document.addEventListener("click",e=>{
   if(a==="mdelloose"){if(!S.mDelLoose){S.mDelLoose=true;render(true);return}S.mDelLoose=false;mDel(mItems().filter(x=>mHome(x).state!=="open").map(x=>x.id))}
   if(a==="mreview"){S.mReview=!S.mReview;S.mDelLoose=false;S.mDelAsk=null;if(S.mReview)S.settingsOpen=false;else editSettings(st=>{st.mediaChecked=today().slice(0,7)},{silent:true});render(true)}
   if(a==="mchecked"){editSettings(st=>{st.mediaChecked=today().slice(0,7)})}
-  if(a==="tlink"){S.tLinkOpen=id||null;render(true)}
-  if(a==="tlinkset"){const p=b.dataset.p;S.tLinkOpen=null;editSettings(st=>{st.taskProj=st.taskProj||{};if(p)st.taskProj[id]=p;else delete st.taskProj[id]});if(p){const pr=trackable().find(x=>x.id===p);toast(`Linked to ${pr?pr.name:"the project"}`)}}
+  if(a==="tlink"){if(b.dataset.from==="note")keepNote(id);else if(!id&&S.backNote){reopenNote();return}S.tLinkOpen=id||null;render(true)}
+  if(a==="tlinkset"){const p=b.dataset.p;S.tLinkOpen=null;if(S.backNote){S.tNoteOpen=S.backNote;S.backNote=null}editSettings(st=>{st.taskProj=st.taskProj||{};if(p)st.taskProj[id]=p;else delete st.taskProj[id]});if(p){const pr=trackable().find(x=>x.id===p);toast(`Linked to ${pr?pr.name:"the project"}`)}}
   if(a==="projaskskip"){S.projAsk=null;render(true)}
   if(a==="projupd"){S.projUpd=id||null;render(true);if(id){const el=document.getElementById("pu-text");if(el)el.focus()}}
   if(a==="projtoday"){const t=findTask(id);if(!t)return;setDue(t,today()).then(()=>{toast(`“${plainTitle(t.title)}” is on Today`);ttLoadAll()}).catch(e=>toast(ttErrToast(e)))}
-  if(a==="tnote"){if(S.tNoteOpen!==id)S.tNoteKeep=null;S.tNoteOpen=id||null;render(true);if(id){const el=document.getElementById("tn-body");if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length)}}}
-  if(a==="remclear"){S.remOpen=null;call("update_task",{task_id:id,task:{id,projectId:b.dataset.pid,remindAt:null},client_timezone:TZ}).then(()=>{toast("Reminder removed");ttLoadAll()}).catch(e=>toast(ttErrToast(e)))}
+  if(a==="tnote"){if(S.tNoteOpen!==id)S.tNoteKeep=null;S.backNote=null;S.tNoteOpen=id||null;render(true);if(id){const el=document.getElementById("tn-body");if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length)}}}
+  if(a==="remclear"){S.remOpen=null;if(S.backNote){S.tNoteOpen=S.backNote;S.backNote=null;render(true)}call("update_task",{task_id:id,task:{id,projectId:b.dataset.pid,remindAt:null},client_timezone:TZ}).then(()=>{toast("Reminder removed");ttLoadAll()}).catch(e=>toast(ttErrToast(e)))}
   if(a==="pushon"){window.__sdPush.enable().then(()=>{toast("Notifications are on for this device");render(true)}).catch(e=>{toast(e&&e.code==="denied"?"Notifications are blocked. Allow them in your browser's site settings, then try again.":"Couldn't turn on notifications here.");render(true)})}
   if(a==="pushoff"){window.__sdPush.disable().then(()=>{toast("Notifications are off for this device");render(true)})}
   if(a==="nudgeon2"){editSettings(st=>{st.nudgeOn=st.nudgeOn===false;st.timeZone=TZ})}
@@ -3550,7 +3553,7 @@ document.addEventListener("submit",e=>{
     if(content.length>NOTE_MAX){toast(`That note is ${content.length.toLocaleString()} characters; the limit is ${NOTE_MAX.toLocaleString()}. Shorten it, or keep the long version in Lists → Notes.`);return}
     S.tNoteOpen=null;S.dropDraft={"tn-body":1,"tn-title":1};render(true);call("update_task",{task_id:tid,task:{id:tid,projectId:pid,title,content},client_timezone:TZ}).then(()=>{toast("Saved");ttLoadAll()}).catch(e=>{S.tNoteOpen=tid;S.tNoteKeep={title,content};render(true);toast("Couldn't save the note: "+ttErrToast(e)+" Your text is still here.")});return}
   if(f==="bladd"){const t=v("bl-new"),ty=v("bl-type")||"book";if(!t)return;clear("bl-new");editDoc("backlog",d=>{d.items.unshift({id:uid(),type:ty,title:t,status:"someday",added:today()})});toast("Added to your backlog")}
-  if(f==="remind"){const tid=form.dataset.id,pid=form.dataset.pid,val=v("rem-at");if(!val)return;const at=new Date(val);if(isNaN(at)){toast("Pick a date and time");return}S.remOpen=null;
+  if(f==="remind"){const tid=form.dataset.id,pid=form.dataset.pid,val=v("rem-at");if(!val)return;const at=new Date(val);if(isNaN(at)){toast("Pick a date and time");return}S.remOpen=null;if(S.backNote){S.tNoteOpen=S.backNote;S.backNote=null}
     call("update_task",{task_id:tid,task:{id:tid,projectId:pid,remindAt:at.toISOString()},client_timezone:TZ}).then(()=>{toast(`Reminder set for ${at.toLocaleString("en-GB",{weekday:"short",hour:"2-digit",minute:"2-digit"})}`);ttLoadAll()}).catch(e=>toast(ttErrToast(e)));return}
   if(f==="gadd"){const t=v("gadd");if(!t)return;clear("gadd");gAdd(t);setTimeout(()=>{const el=document.getElementById("gadd");if(el)el.focus()},0);return}
   if(f==="tradd"){const t=v("tradd");if(!t)return;clear("tradd");const id=uid();editDoc("trips",d=>{d.items=[...(d.items||[]),{id,title:t,status:"idea",place:"",emoji:"🧳",todos:[],pack:[],plan:[],added:today()}]});S.tripOpen=id;render(true);return}
