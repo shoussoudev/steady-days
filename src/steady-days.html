@@ -224,6 +224,15 @@ body.modal-open{overflow:hidden}
 .plast{display:block;padding-top:2px}
 .pedtop{display:flex;justify-content:flex-end;margin-bottom:-4px}.ghead{display:flex;gap:10px;align-items:center}.pdiscard{color:var(--late,#a4483a)}
 .pparked{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--bg);border:1px dashed var(--line);border-radius:10px;padding:8px 10px}
+.pback{margin:0 0 6px 2px}.ppage{gap:10px}
+.ptitle{font-size:1.35rem;font-weight:600;border:1px solid transparent;background:transparent;padding:4px 6px;margin-left:-6px;border-radius:8px;width:100%}
+.ptitle:hover,.ptitle:focus,.pdesc:hover,.pdesc:focus{border-color:var(--line);background:var(--bg)}
+.pdesc{border:1px solid transparent;background:transparent;padding:4px 6px;margin-left:-6px;border-radius:8px;resize:vertical;color:var(--muted)}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.pgrid label{display:flex;flex-direction:column;gap:4px}
+.sunbtn{border:1px solid var(--line);background:var(--bg);color:var(--muted);border-radius:999px;width:34px;height:34px;flex:none;cursor:pointer;font-size:1rem}
+.sunbtn[aria-pressed=true]{background:var(--warm-soft);border-color:var(--warm);color:var(--warm)}
+.pactions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0 18px}.pweek{margin-bottom:4px}
+form[data-form="tttoday"]{flex-wrap:nowrap}form[data-form="tttoday"] input{min-width:0;flex:1}.projpick{width:112px;flex:none;min-width:0}
 .pkind{color:var(--muted);margin-right:6px;font-weight:600}
 .pbar{display:inline-block;vertical-align:middle;width:46px;height:5px;border-radius:3px;background:var(--line);margin-left:8px;overflow:hidden}.pbar i{display:block;height:100%;background:var(--accent,#3d6b4f)}
 .pbar.big{width:120px;height:7px;margin:0}
@@ -924,6 +933,11 @@ function carryPicks(){
 }
 function keepSections(bd,extra){const ids=[...bd.groups.filter(g=>g.id!=="_other").map(g=>g.id),...(extra?[extra]:[])];const m=S.settings.projMeta||{};
   if(ids.some(i=>!(m[i]||{}).section))editSettings(st=>{st.projMeta=st.projMeta||{};ids.forEach(i=>{st.projMeta[i]={...(st.projMeta[i]||{}),section:true}})},{silent:true})}
+async function setProjSection(pid,sec,newName){const bd=projBoard();if(!bd)return;
+  try{let parentId=sec;if(sec==="_new"){const r=await call("create_task",{task:{title:newName,projectId:bd.listId,columnId:(bd.cols[0]||{}).id},client_timezone:TZ});parentId=r&&(r.id||(r.result&&r.result.id))||null}
+    keepSections(bd,parentId);await call("update_task",{task_id:pid,task:{id:pid,projectId:bd.listId,parentId},client_timezone:TZ});
+    toast(sec==="_new"?`Moved to new section “${newName}”`:"Section changed");await ttLoadList(bd.listId);render(true)}
+  catch(e){toast(ttErrToast(e))}}
 async function discardProject(id){
   const bd=projBoard();const t=bd&&bd.items.find(x=>x.id===id);if(!t)return;keepSections(bd);const steps=(bd.steps[id]||[]).map(x=>x.id);const L=bd.listId;
   const snap=JSON.stringify(S.tt.lists[L].tasks);S.tt.lists[L].tasks=S.tt.lists[L].tasks.filter(x=>x.id!==id&&!steps.includes(x.id));S.tt.today=S.tt.today.filter(x=>x.id!==id&&!steps.includes(x.id));render(true);
@@ -1037,11 +1051,12 @@ async function addTask(listId,title,{dueToday=false}={}){
   const task={title};
   if(listId&&listId!=="inbox")task.projectId=listId;
   if(dueToday){task.isAllDay=true;task.dueDate=dueTodayISO();task.startDate=task.dueDate;task.timeZone=TZ}
-  try{await call("create_task",{task,client_timezone:TZ});toast("Added to TickTick")}
+  let made=null;try{made=await call("create_task",{task,client_timezone:TZ});toast("Added to TickTick")}
   catch(e){toast(ttErrToast(e));return}
   /* show the new task straight away, even while you keep typing in the box */
   if(listId&&S.tt.lists[listId])ttLoadList(listId).then(()=>render(true));
   if(dueToday)ttLoadToday().then(()=>render(true));
+  return made;
 }
 async function completeTask(tid,pid,msg,extra){
   const t0=findTask(tid);const title=t0?t0.title:"task";const realPid=(t0&&t0.pid)||pid;
@@ -1408,7 +1423,7 @@ function todayTasks(){
         !ts.length&&!top.length?`<p class="empty">Nothing due today in TickTick. Enjoy the space, or pick one thing that matters.</p>`:
         !rest.length?"":showRest?`${!picking?`<div class="head"><span class="eyebrow">Everything else today</span>${choosing?"":`<button class="btn ghost sm" data-act="moretoday">Hide</button>`}</div>`:""}<ul class="list">${rest.map(row).join("")}</ul>`:
         `<button class="btn ghost" data-act="moretoday">+ ${rest.length} more today</button>`}
-      <form class="addrow" data-form="tttoday"><input type="text" id="tttoday-new" placeholder="Add a task for today" autocomplete="off"><button class="btn">Add</button></form>
+      <form class="addrow" data-form="tttoday"><input type="text" id="tttoday-new" placeholder="Add a task for today" autocomplete="off">${(()=>{const tr=trackable();return tr.length?`<select id="tttoday-proj" class="projpick" aria-label="Part of a project?"><option value="">No project</option>${tr.map(x=>`<option value="${esc(x.id)}">↳ ${esc(x.name)}</option>`).join("")}</select>`:""})()}<button class="btn">Add</button></form>
       ${S.planOpen?planPanel():(()=>{const tt3=getDay(tmKey()).top3||[];{const hh=new Date().getHours();if(!tt3.length&&hh<17&&hh>=DAY_START_HOUR)return ""}return `<div class="plansum">${tt3.length?`<span class="muted small">Tomorrow: ${tt3.map(x=>"★ "+esc(x.title)).join(" · ")}</span>`:""}<button class="btn ghost sm" data-act="planopen">${tt3.length?"Edit tomorrow's "+topLabel(tmKey()):"Plan tomorrow's Top 3"}</button></div>`})()}
     </section>`;
   }
@@ -1532,6 +1547,8 @@ V.projects=()=>{
     else if(!b){html+=`<section class="block card"><h2>Projects</h2><p class="empty">${S.tt.state==="loading"||(ttMap().projects&&!S.tt.lists[ttMap().projects])?"Loading your project board…":"Choose your TickTick project list in Lists → Choose lists."}</p></section>`}
     else if(b.L.err)html+=`<section class="block card"><h2>${esc(projName(b.listId))}</h2>${ttErrBox(b.L.err)}</section>`;
     else{
+      const pp=S.projPage&&b.items.find(x=>x.id===S.projPage);
+      if(pp)return projPage(pp,b,week);
       const f=S.projFilter;
       const pk=t=>!!pMeta(t.id).parked,dn=t=>!!b.doneCol&&t.columnId===b.doneCol.id;
       const show=t=>f==="parked"?pk(t)&&!dn(t):f==="done"?dn(t):pk(t)?false:f==="ongoing"?t.columnId===(b.ongoingCol||{}).id:!dn(t);
@@ -1557,48 +1574,58 @@ const pKind=id=>pMeta(id).kind||"end";
 function projSteps(t,b){const open=(b.steps[t.id]||[]),done=(pMeta(t.id).doneSteps||[]);return {open,done,total:open.length+done.length}}
 function endLabel(k){const n=dayNum(k)-dayNum(today());return n>1?`${n} days left`:n===1?"ends tomorrow":n===0?"ends today":`${-n} day${n===-1?"":"s"} past`}
 function projRow(t,b,week){
-  const es=projEntries(t.id);const worked=new Set(es.map(e=>e.date));const open=S.openProject===t.id;
+  const es=projEntries(t.id);const worked=new Set(es.map(e=>e.date));
   const kind=pKind(t.id),m=pMeta(t.id),st=projSteps(t,b);const pct=st.total?Math.round(st.done.length/st.total*100):0;
-  const monthDone=st.done.filter(x=>x.d&&x.d.slice(0,7)===today().slice(0,7)).length;
-  const cn=colName(b,t.columnId);const mins=es.reduce((s,e)=>s+(+e.mins||0),0);
-  const isOn=b.ongoingCol&&t.columnId===b.ongoingCol.id,isDone=b.doneCol&&t.columnId===b.doneCol.id;
-  return `<li class="prow ${open?"open":""}">
-    <button class="prow-h" data-act="openproj" data-id="${t.id}" aria-expanded="${open}">
-      <span class="grow">${m.parked?`<span class="pkind" title="Parked">⏸</span>`:""}${kind==="ongoing"?`<span class="pkind" title="No end">∞</span>`:""}${esc(t.title)}${kind==="end"&&st.total?`<span class="pbar" title="${st.done.length} of ${st.total} steps"><i style="width:${pct}%"></i></span>`:""}</span>
+  const cn=colName(b,t.columnId);const isOn=b.ongoingCol&&t.columnId===b.ongoingCol.id;
+  return `<li class="prow">
+    <button class="prow-h" data-act="openproj" data-id="${t.id}">
+      <span class="grow">${m.parked?`<span class="pkind" title="Parked">⏸</span>`:""}${kind==="ongoing"?`<span class="pkind" title="No end">∞</span>`:""}${esc(t.title)}${kind==="end"&&st.total?`<span class="pbar" title="${st.done.length} of ${st.total} steps"><i style="width:${pct}%"></i></span>`:""}${st.open.length?`<span class="muted small pnext"> · ${st.open.length} step${st.open.length===1?"":"s"}</span>`:""}</span>
       <span class="week">${week.map(k=>`<i class="${worked.has(k)?"on":""}"></i>`).join("")}</span>
       ${cn?`<span class="pill ${isOn?"":"soft"}">${esc(cn)}</span>`:""}
     </button>
-    ${open&&S.pEdit===t.id?`<div class="prow-b"><form class="eform" data-form="pedit" data-id="${t.id}">
-      <input type="text" id="pe-title" value="${esc(t.title)}" aria-label="Project name" autocomplete="off">
-      <textarea id="pe-body" rows="3" placeholder="What is it, what does done look like…" aria-label="Description">${esc(t.content||"")}</textarea>
-      <label class="small muted">Section <select id="pe-sec" aria-label="Section" data-act="pesec">${b.groups.filter(g=>g.id!=="_other").map(g=>`<option value="${g.id}" ${t.parentId===g.id?"selected":""}>${esc(g.name)}</option>`).join("")}<option value="" ${!t.parentId||!b.groups.some(g=>g.id===t.parentId)?"selected":""}>Other (no section)</option><option value="_new">＋ New section…</option></select></label>
-      <input type="text" id="pe-newsec" placeholder="New section name" autocomplete="off" hidden>
-      <div class="btnrow"><button class="btn sm">Save</button><button type="button" class="btn ghost sm" data-act="pedit" data-id="">Cancel</button><span class="grow"></span><button type="button" class="btn ghost sm pdiscard" data-act="pdiscard" data-id="${t.id}">${S.pDiscAsk===t.id?`Tap again to discard${(b.steps[t.id]||[]).length?` (and its ${(b.steps[t.id]||[]).length} open step${(b.steps[t.id]||[]).length===1?"":"s"})`:""}`:"Discard project"}</button></div></form></div>`:open?`<div class="prow-b">
-      ${m.parked?`<div class="pparked"><span class="small">⏸ Parked ${ago(m.parked)==="today"?"today":ago(m.parked)} — not sure yet. It stays out of Today and your project picks.</span><button class="btn sm" data-act="ppark" data-id="${t.id}">Bring it back</button></div>`:""}
-      <div class="pedtop"><button type="button" class="linkbtn subtle" data-act="pedit" data-id="${t.id}">✎ Edit or discard</button></div>
-      <div class="seg pkindseg" role="group" aria-label="Kind of project"><button type="button" class="chip" data-act="pkind" data-id="${t.id}" data-k="ongoing" aria-pressed="${kind==="ongoing"}">∞ No end</button><button type="button" class="chip" data-act="pkind" data-id="${t.id}" data-k="end" aria-pressed="${kind==="end"}">🏁 Has an end</button></div>
-      ${kind==="end"?`<div class="pend">${st.total?`<span class="pbar big"><i style="width:${pct}%"></i></span><span class="mono small">${st.done.length}/${st.total} steps · ${pct}%</span>`:`<span class="muted small">Add steps below to see how close you are.</span>`}
-        <label class="small muted">Finish by <input type="date" id="pend-${t.id}" value="${m.end||""}" data-act="pendset" data-id="${t.id}" aria-label="Finish by"></label>${m.end?`<span class="pill ${dayNum(m.end)<dayNum(today())?"late":"soft"}">${endLabel(m.end)}</span>`:""}</div>`
-        :`<span class="muted small">No end — keep adding steps as they come.${st.done.length?` ${st.done.length} done so far${monthDone?`, ${monthDone} this month`:""}.`:""}</span>`}
-      <div class="psteps"><span class="eyebrow">Steps</span>
-        ${st.open.length?`<ul class="list">${st.open.map(x=>`<li><input type="checkbox" class="check" data-act="ttdone" data-id="${x.id}" data-pid="${esc(x.pid)}" data-from="board" data-msg="Step done" aria-label="Complete ${esc(plainTitle(x.title))}"><span class="grow">${esc(plainTitle(x.title))}</span>${x.due&&key(new Date(x.due))<=today()?`<span class="pill soft">☀︎ Today</span>`:`<button type="button" class="linkbtn subtle tiny" data-act="projtoday" data-id="${x.id}" title="Add this step to Today">☀︎</button>`}</li>`).join("")}</ul>`:""}
-        <form class="addrow" data-form="projstep" data-id="${t.id}"><input type="text" id="ps-${t.id}" placeholder="${kind==="ongoing"?"Add a step":"Add a step towards done"}" autocomplete="off"><button class="btn sm">Add</button></form>
-        ${st.done.length?`<details class="pdone"><summary class="muted small">${st.done.length} done</summary><ul class="list">${st.done.slice().reverse().slice(0,20).map(x=>`<li class="muted small"><span class="grow">✓ ${esc(x.t)}</span><span class="mono">${x.d?fmtDay(x.d):""}</span></li>`).join("")}</ul></details>`:""}
-      </div>
-      ${t.content?`<p class="pcontent">${esc(t.content.length>280?t.content.slice(0,280)+"…":t.content)}</p>`:""}
-      <span class="mono muted small">${es.length} entr${es.length===1?"y":"ies"} · ${Math.floor(mins/60)}h ${mins%60}m${es[0]?" · last "+ago(es[0].date):""}</span>
-      ${projForm(t.id,"p-"+t.id)}
-      ${es.length?`<ul class="list">${es.slice(0,8).map(e=>isEd("prog",e.id)?editForm("prog",e.date,e):`<li><span class="mono muted" style="width:82px;flex:none;font-size:.8rem">${fmtDay(e.date)}</span>${etx("prog",e.date,e.id,esc(e.text))}${e.mins?`<span class="mono muted">${e.mins}m</span>`:""}<button class="x" aria-label="Delete entry" data-act="delprog" data-date="${e.date}" data-id="${e.id}">×</button></li>`).join("")}</ul>`:""}
-      <div class="addrow">
-        ${!isDone&&!m.parked?`<button class="btn ghost" data-act="ppark" data-id="${t.id}" title="Not sure you'll work on it? Park it — nothing is lost.">⏸ Park</button>`:""}
-        ${kind==="end"&&!isDone&&!m.parked?`<button class="btn" data-act="pcomplete" data-id="${t.id}">${S.pDoneAsk===t.id?"Tap again — it's finished 🏁":"🏁 Mark complete"}</button>`:""}
-        ${!isDone?(t.due&&key(new Date(t.due))<=today()?`<span class="pill soft">☀︎ On Today</span>`:`<button class="btn" data-act="projtoday" data-id="${t.id}">☀︎ Add to Today</button>`):""}
-        ${b.ongoingCol&&!isOn?`<button class="btn ghost" data-act="ttmove" data-id="${t.id}" data-col="${b.ongoingCol.id}">Move to ${esc(b.ongoingCol.name)}</button>`:""}
-        ${b.doneCol&&!isDone?`<button class="btn ghost" data-act="ttmove" data-id="${t.id}" data-col="${b.doneCol.id}">Move to ${esc(b.doneCol.name)}</button>`:""}
-        ${b.cols.filter(c=>c!==b.ongoingCol&&c!==b.doneCol&&c.id!==t.columnId).map(c=>`<button class="btn ghost" data-act="ttmove" data-id="${t.id}" data-col="${c.id}">Move to ${esc(c.name)}</button>`).join("")}
-      </div>
-    </div>`:""}
   </li>`;
+}
+/* one project, on its own page: everything editable in place, saved as you go */
+function projPage(t,b,week){
+  const es=projEntries(t.id);const worked=new Set(es.map(e=>e.date));
+  const kind=pKind(t.id),m=pMeta(t.id),st=projSteps(t,b);const pct=st.total?Math.round(st.done.length/st.total*100):0;
+  const monthDone=st.done.filter(x=>x.d&&x.d.slice(0,7)===today().slice(0,7)).length;
+  const mins=es.reduce((s,e)=>s+(+e.mins||0),0);const isDone=b.doneCol&&t.columnId===b.doneCol.id;
+  const onToday=x=>x.due&&key(new Date(x.due))<=today();const nOpen=(b.steps[t.id]||[]).length;
+  const secs=b.groups.filter(g=>g.id!=="_other");
+  return `<button type="button" class="linkbtn pback" data-act="openproj" data-id="">← ${esc(projName(b.listId))}</button>
+  <section class="block card ppage">
+    ${m.parked?`<div class="pparked"><span class="small">⏸ Parked ${ago(m.parked)} — it stays out of Today and your project picks.</span><button class="btn sm" data-act="ppark" data-id="${t.id}">Bring it back</button></div>`:""}
+    <input type="text" class="ptitle" id="pf-title-${t.id}" value="${esc(t.title)}" data-act="pfield" data-f="title" data-id="${t.id}" aria-label="Project name" autocomplete="off">
+    <textarea class="pdesc" id="pf-content-${t.id}" rows="2" data-act="pfield" data-f="content" data-id="${t.id}" placeholder="What is it? What does done look like?" aria-label="Description">${esc(t.content||"")}</textarea>
+    <div class="pgrid">
+      <label class="small muted">Section<select id="pf-sec-${t.id}" data-act="pesec" data-id="${t.id}" aria-label="Section">${secs.map(g=>`<option value="${g.id}" ${t.parentId===g.id?"selected":""}>${esc(g.name)}</option>`).join("")}<option value="" ${!secs.some(g=>g.id===t.parentId)?"selected":""}>No section</option><option value="_new">＋ New section…</option></select></label>
+      ${b.cols.length?`<label class="small muted">Status<select id="pf-col-${t.id}" data-act="pcol" data-id="${t.id}" aria-label="Status">${b.cols.map(c=>`<option value="${c.id}" ${t.columnId===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}</select></label>`:""}
+    </div>
+    <input type="text" id="pe-newsec" data-act="pnewsec" data-id="${t.id}" placeholder="New section name, then press Enter" autocomplete="off" hidden>
+    <div class="seg pkindseg" role="group" aria-label="Kind of project"><button type="button" class="chip" data-act="pkind" data-id="${t.id}" data-k="ongoing" aria-pressed="${kind==="ongoing"}">∞ No end</button><button type="button" class="chip" data-act="pkind" data-id="${t.id}" data-k="end" aria-pressed="${kind==="end"}">🏁 Has an end</button></div>
+    ${kind==="end"?`<div class="pend">${st.total?`<span class="pbar big"><i style="width:${pct}%"></i></span><span class="mono small">${st.done.length}/${st.total} steps · ${pct}%</span>`:""}
+      <label class="small muted">Finish by <input type="date" id="pend-${t.id}" value="${m.end||""}" data-act="pendset" data-id="${t.id}" aria-label="Finish by"></label>${m.end?`<span class="pill ${dayNum(m.end)<dayNum(today())?"late":"soft"}">${endLabel(m.end)}</span>`:""}</div>`
+      :`<span class="muted small">No end — keep adding steps as they come.${st.done.length?` ${st.done.length} done so far${monthDone?`, ${monthDone} this month`:""}.`:""}</span>`}
+  </section>
+  <section class="block card">
+    <div class="head"><h2>Steps</h2><span class="muted small">☀︎ = do it today</span></div>
+    ${st.open.length?`<ul class="list">${st.open.map(x=>`<li><input type="checkbox" class="check" data-act="ttdone" data-id="${x.id}" data-pid="${esc(x.pid)}" data-from="board" data-msg="Step done" aria-label="Complete ${esc(plainTitle(x.title))}"><span class="grow">${esc(plainTitle(x.title))}</span><button type="button" class="sunbtn" data-act="steptoday" data-id="${x.id}" aria-pressed="${!!onToday(x)}" title="${onToday(x)?"On Today — tap to take it off":"Do this today"}">☀︎</button></li>`).join("")}</ul>`:`<p class="empty">${kind==="ongoing"?"No steps yet. Add them as they come.":"Break it into steps to see how close you are."}</p>`}
+    <form class="addrow" data-form="projstep" data-id="${t.id}"><input type="text" id="ps-${t.id}" placeholder="Add a step" autocomplete="off"><button type="button" class="sunbtn" data-act="pstoday" aria-pressed="${!!S.psToday}" title="Add it to Today too">☀︎</button><button class="btn sm">Add</button></form>
+    ${st.done.length?`<details class="pdone"><summary class="muted small">${st.done.length} done</summary><ul class="list">${st.done.slice().reverse().slice(0,30).map(x=>`<li class="muted small"><span class="grow">✓ ${esc(x.t)}</span><span class="mono">${x.d?fmtDay(x.d):""}</span></li>`).join("")}</ul></details>`:""}
+  </section>
+  <section class="block card">
+    <div class="head"><h2>Updates</h2><span class="mono muted small">${es.length?`${Math.floor(mins/60)}h ${mins%60}m · last ${ago(es[0].date)}`:""}</span></div>
+    <div class="week pweek">${week.map(k=>`<i class="${worked.has(k)?"on":""}" title="${fmtDay(k)}"></i>`).join("")}</div>
+    ${projForm(t.id,"p-"+t.id)}
+    ${es.length?`<ul class="list">${es.slice(0,12).map(e=>isEd("prog",e.id)?editForm("prog",e.date,e):`<li><span class="mono muted" style="width:82px;flex:none;font-size:.8rem">${fmtDay(e.date)}</span>${etx("prog",e.date,e.id,esc(e.text))}${e.mins?`<span class="mono muted">${e.mins}m</span>`:""}<button class="x" aria-label="Delete entry" data-act="delprog" data-date="${e.date}" data-id="${e.id}">×</button></li>`).join("")}</ul>`:""}
+  </section>
+  <div class="pactions">
+    ${!isDone&&!m.parked?(onToday(t)?`<span class="pill soft">☀︎ On Today</span>`:`<button class="btn" data-act="projtoday" data-id="${t.id}">☀︎ Add to Today</button>`):""}
+    ${kind==="end"&&!isDone&&!m.parked?`<button class="btn" data-act="pcomplete" data-id="${t.id}">${S.pDoneAsk===t.id?"Tap again — it's finished 🏁":"🏁 Complete"}</button>`:""}
+    ${!isDone&&!m.parked?`<button class="btn ghost" data-act="ppark" data-id="${t.id}" title="Not sure you'll work on it? Park it — nothing is lost.">⏸ Park</button>`:""}
+    <button type="button" class="btn ghost pdiscard" data-act="pdiscard" data-id="${t.id}">${S.pDiscAsk===t.id?`Tap again to discard${nOpen?` (and ${nOpen} open step${nOpen===1?"":"s"})`:""}`:"Discard"}</button>
+  </div>`;
 }
 function localProjects(week){
   const ps=S.settings.projects;const hasTT=MCP&&S.tt.state!=="off";
@@ -3196,7 +3223,10 @@ document.addEventListener("click",e=>{
   if(a==="jpnext"){const cur=jpOfDay();let k=0;do{S.jpShift=(S.jpShift||0)+1;k++}while(cur&&jpOfDay()===cur&&k<JP_N5.length);render(true)}
   if(a==="jpfilter"){S.jpFilter=b.dataset.t;render(true)}
   if(a==="learntheme"){S.learnTheme=b.dataset.t;render(true)}
-  if(a==="openproj"){S.openProject=S.openProject===id?null:id;render(true)}
+  if(a==="openproj"){S.projPage=id||null;S.pDiscAsk=null;S.pDoneAsk=null;S.psToday=false;render(true);window.scrollTo({top:0})}
+  if(a==="pstoday"){S.psToday=!S.psToday;b.setAttribute("aria-pressed",S.psToday);return}
+  if(a==="steptoday"){const t=findTask(id);if(!t)return;const on=t.due&&key(new Date(t.due))<=today();
+    (on?call("update_task",{task_id:t.id,task:{id:t.id,projectId:t.pid,dueDate:null,startDate:null},client_timezone:TZ}):setDue(t,today())).then(()=>{toast(on?"Taken off Today":"On Today ☀︎");ttLoadAll()}).catch(e=>toast(ttErrToast(e)))}
   if(a==="projfilter"){S.projFilter=b.dataset.f;render(true)}
   if(a==="projstatus")editSettings(s=>{const p=s.projects.find(p=>p.id===id);if(p)p.status=b.dataset.s});
   if(a==="delproj"){if(S.confirmDel!==id){S.confirmDel=id;render(true);return}S.confirmDel=null;delLocal("project",null,id,x=>`Deleted project “${x.name}”`)}
@@ -3242,10 +3272,10 @@ document.addEventListener("click",e=>{
   if(a==="pedit"){S.pEdit=id||null;S.pDiscAsk=null;render(true)}
   if(a==="gedit"){S.gEdit=id||null;render(true);const el=document.getElementById("ge-name");if(el)el.focus()}
   if(a==="pdiscard"){if(S.pDiscAsk!==id){S.pDiscAsk=id;render(true);setTimeout(()=>{if(S.pDiscAsk===id){S.pDiscAsk=null;render(true)}},4000);return}
-    S.pDiscAsk=null;S.pEdit=null;S.openProject=null;discardProject(id)}
-  if(a==="ppark"){const on=!pMeta(id).parked;const bd=projBoard();const t=bd&&bd.items.find(x=>x.id===id);
+    S.pDiscAsk=null;S.projPage=null;discardProject(id)}
+  if(a==="ppark"){const on=!pMeta(id).parked;const bd=projBoard();const t=bd&&bd.items.find(x=>x.id===id);if(on)S.projPage=null;
     editSettings(st=>{st.projMeta=st.projMeta||{};const m={...(st.projMeta[id]||{})};if(on)m.parked=today();else delete m.parked;st.projMeta[id]=m});
-    if(on)S.openProject=null;toast(on?`Parked “${t?plainTitle(t.title):"project"}” — find it under Parked`:"Back with your open projects")}
+    toast(on?`Parked “${t?plainTitle(t.title):"project"}” — find it under Parked`:"Back with your open projects")}
   if(a==="pkind"){const k=b.dataset.k;editSettings(st=>{st.projMeta=st.projMeta||{};st.projMeta[id]={...(st.projMeta[id]||{}),kind:k}})}
   if(a==="pnkind"){S.pnKind=b.dataset.k;render(true)}
   if(a==="pcomplete"){if(S.pDoneAsk!==id){S.pDoneAsk=id;render(true);setTimeout(()=>{if(S.pDoneAsk===id){S.pDoneAsk=null;render(true)}},4000);return}
@@ -3456,7 +3486,12 @@ document.addEventListener("click",e=>{
 document.addEventListener("change",e=>{
   if(e.target.dataset&&e.target.dataset.act==="madd"){const d=e.target.dataset;const files=e.target.files;if(files&&files.length)mAdd(files,{t:d.t,id:d.id,title:d.title||""});e.target.value="";return}
   {const d=e.target&&e.target.dataset||{};
-  if(d.act==="pesec"){const n=document.getElementById("pe-newsec");if(n){n.hidden=e.target.value!=="_new";if(!n.hidden)n.focus()}return}
+  if(d.act==="pesec"){const val=e.target.value;const n=document.getElementById("pe-newsec");if(val==="_new"){if(n){n.hidden=false;n.focus()}return}if(n)n.hidden=true;setProjSection(d.id,val||null);return}
+  if(d.act==="pnewsec"){const nm=e.target.value.trim();if(!nm)return;setProjSection(d.id,"_new",nm);return}
+  if(d.act==="pcol"){moveTask(d.id,e.target.value);return}
+  if(d.act==="pfield"){const bd=projBoard();const t=bd&&bd.items.find(x=>x.id===d.id);const val=e.target.value;if(!t)return;const fld=d.f;
+    if(fld==="title"&&!val.trim()){e.target.value=t.title;toast("A project needs a name");return}if(String(t[fld]||"")===val)return;t[fld]=val;
+    call("update_task",{task_id:t.id,task:{id:t.id,projectId:bd.listId,[fld]:val},client_timezone:TZ}).then(()=>toast("Saved")).catch(er=>toast(ttErrToast(er)));return}
   if(d.act==="pendset"){const pid=d.id,val=e.target.value;editSettings(st=>{st.projMeta=st.projMeta||{};st.projMeta[pid]={...(st.projMeta[pid]||{}),end:val||undefined}});return}
   if(d.act==="gtick"){const gid=d.id,on=e.target.checked;editDoc("groceries",x=>{const it=x.items.find(y=>y.id===gid);if(it)it.done=on});return}
   if(d.act==="gaisle"){const gid=d.id,val=e.target.value;editDoc("groceries",x=>{const it=x.items.find(y=>y.id===gid);if(it){it.aisle=val;x.aisleMap={...(x.aisleMap||{}),[gNorm(it.name)]:val}}});return}
@@ -3552,10 +3587,11 @@ document.addEventListener("submit",e=>{
     call("update_task",{task_id:gid,task:{id:gid,projectId:bd.listId,title:n},client_timezone:TZ}).then(()=>{toast("Section renamed");return ttLoadList(bd.listId).then(()=>render(true))}).catch(e=>toast(ttErrToast(e)));return}
   if(f==="projstep"){const pid=form.dataset.id,t=v("ps-"+pid);if(!t)return;clear("ps-"+pid);const bd=projBoard();const par=bd&&bd.items.find(x=>x.id===pid);if(!par)return;
     if(!pMeta(pid).kind)editSettings(st=>{st.projMeta=st.projMeta||{};st.projMeta[pid]={...(st.projMeta[pid]||{}),kind:"end"}},{silent:true});
-    call("create_task",{task:{title:t,projectId:bd.listId,parentId:pid,columnId:par.columnId||undefined},client_timezone:TZ}).then(()=>ttLoadList(bd.listId).then(()=>render(true))).catch(e=>toast(ttErrToast(e)));return}
+    const td=S.psToday?{isAllDay:true,dueDate:dueTodayISO(),startDate:dueTodayISO(),timeZone:TZ}:{};
+    call("create_task",{task:{title:t,projectId:bd.listId,parentId:pid,columnId:par.columnId||undefined,...td},client_timezone:TZ}).then(r=>{if(S.psToday)ttLoadToday();return r}).then(()=>ttLoadList(bd.listId).then(()=>render(true))).catch(e=>toast(ttErrToast(e)));return}
   if(f==="projnew"){const n=v("pn-name");if(!n)return;clear("pn-name");const bd=projBoard();if(!bd)return;const k=S.pnKind||"end";
     call("create_task",{task:{title:n,projectId:bd.listId,columnId:(bd.ongoingCol||bd.cols[0]||{}).id},client_timezone:TZ}).then(r=>{const nid=r&&(r.id||(r.result&&r.result.id));
-      if(nid){editSettings(st=>{st.projMeta=st.projMeta||{};st.projMeta[nid]={kind:k}},{silent:true});S.openProject=nid}
+      if(nid){editSettings(st=>{st.projMeta=st.projMeta||{};st.projMeta[nid]={kind:k}},{silent:true});S.projPage=nid}
       toast(`Project added${k==="ongoing"?" · no end":""}`);return ttLoadList(bd.listId).then(()=>render(true))}).catch(e=>toast(ttErrToast(e)));return}
   if(f==="projask"){const ask=S.projAsk;if(!ask)return;const t=v("pa-text"),m=parseInt(v("pa-mins"))||0;if(!t){toast("Write a line about what you did");return}
     S.projAsk=null;S.dropDraft={"pa-text":1,"pa-mins":1};const tr=trackable().find(x=>x.id===ask.pid);
@@ -3582,7 +3618,12 @@ document.addEventListener("submit",e=>{
   }
   if(f==="ttadd"){const list=form.dataset.list;const inp=form.querySelector("input[type=text]");const t=(inp.value||"").trim();if(!t)return;inp.value="";addTask(list,t)}
   if(f==="tmadd"){const t=v("tmadd-new");if(!t)return;clear("tmadd-new");addTomorrowTask(t)}
-  if(f==="tttoday"){const t=v("tttoday-new");if(!t)return;clear("tttoday-new");addTask("inbox",t,{dueToday:true})}
+  if(f==="tttoday"){const t=v("tttoday-new");if(!t)return;clear("tttoday-new");const pj=v("tttoday-proj");const sel=document.getElementById("tttoday-proj");if(sel)sel.value="";
+    const tr=pj&&trackable().find(x=>x.id===pj);
+    if(tr&&tr.tt){const bd=projBoard();if(!pMeta(pj).kind)editSettings(st=>{st.projMeta=st.projMeta||{};st.projMeta[pj]={...(st.projMeta[pj]||{}),kind:"end"}},{silent:true});
+      call("create_task",{task:{title:t,projectId:bd.listId,parentId:pj,columnId:tr.tt.columnId||undefined,isAllDay:true,dueDate:dueTodayISO(),startDate:dueTodayISO(),timeZone:TZ},client_timezone:TZ})
+        .then(()=>{toast(`Added to Today as a step of ${tr.name}`);ttLoadToday().then(()=>render(true));ttLoadList(bd.listId)}).catch(e=>toast(ttErrToast(e)))}
+    else{addTask("inbox",t,{dueToday:true}).then(r=>{if(tr){const nid=r&&(r.id||(r.result&&r.result.id));if(nid)editSettings(st=>{st.taskProj=st.taskProj||{};st.taskProj[nid]=pj},{silent:true})}})}}
   if(f==="buy"){
     const it=findWish(form.dataset.id);if(!it)return;const early=wState(it)==="cooling";const why=v("wb-why");
     if(early&&!why){toast("Add a line on why now first");const el=document.getElementById("wb-why");if(el)el.focus();return}
