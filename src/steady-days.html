@@ -223,6 +223,7 @@ body.modal-open{overflow:hidden}
 .tnlen.over{color:var(--m1);font-weight:600}
 .plast{display:block;padding-top:2px}
 .pedtop{display:flex;justify-content:flex-end;margin-bottom:-4px}.ghead{display:flex;gap:10px;align-items:center}.pdiscard{color:var(--late,#a4483a)}
+.pparked{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--bg);border:1px dashed var(--line);border-radius:10px;padding:8px 10px}
 .pkind{color:var(--muted);margin-right:6px;font-weight:600}
 .pbar{display:inline-block;vertical-align:middle;width:46px;height:5px;border-radius:3px;background:var(--line);margin-left:8px;overflow:hidden}.pbar i{display:block;height:100%;background:var(--accent,#3d6b4f)}
 .pbar.big{width:120px;height:7px;margin:0}
@@ -1099,7 +1100,7 @@ const colName=(b,cid)=>{const c=b.cols.find(c=>c.id===cid);return c?c.name:""};
 function trackable(){
   const out=[];const b=ttOn()&&projBoard();
   if(b){const rank=t=>t.columnId===(b.ongoingCol||{}).id?0:1;
-    b.items.filter(t=>!b.doneCol||t.columnId!==b.doneCol.id).sort((x,y)=>rank(x)-rank(y)).forEach(t=>out.push({id:t.id,name:t.title,tt:t,ongoing:rank(t)===0}))}
+    b.items.filter(t=>(!b.doneCol||t.columnId!==b.doneCol.id)&&!pMeta(t.id).parked).sort((x,y)=>rank(x)-rank(y)).forEach(t=>out.push({id:t.id,name:t.title,tt:t,ongoing:rank(t)===0}))}
   S.settings.projects.filter(p=>p.status==="active").forEach(p=>out.push({id:p.id,name:p.name,local:true}));
   return out;
 }
@@ -1532,11 +1533,12 @@ V.projects=()=>{
     else if(b.L.err)html+=`<section class="block card"><h2>${esc(projName(b.listId))}</h2>${ttErrBox(b.L.err)}</section>`;
     else{
       const f=S.projFilter;
-      const show=t=>f==="all"?(!b.doneCol||t.columnId!==b.doneCol.id):f==="ongoing"?t.columnId===(b.ongoingCol||{}).id:f==="done"?t.columnId===(b.doneCol||{}).id:true;
-      const nOn=b.ongoingCol?b.items.filter(t=>t.columnId===b.ongoingCol.id).length:0;
+      const pk=t=>!!pMeta(t.id).parked,dn=t=>!!b.doneCol&&t.columnId===b.doneCol.id;
+      const show=t=>f==="parked"?pk(t)&&!dn(t):f==="done"?dn(t):pk(t)?false:f==="ongoing"?t.columnId===(b.ongoingCol||{}).id:!dn(t);
+      const nOn=b.ongoingCol?b.items.filter(t=>t.columnId===b.ongoingCol.id&&!pk(t)).length:0,nPk=b.items.filter(t=>pk(t)&&!dn(t)).length;
       html+=`<section class="block card">
         <div class="head"><h2>${esc(projName(b.listId))}</h2><button class="btn ghost" data-act="ttreload">Refresh</button></div>
-        <div class="chips">${[["all","Open"],["ongoing",`Ongoing · ${nOn}`],["done","Done"]].filter(x=>x[0]!=="done"||b.doneCol).map(([k,l])=>`<button class="chip" data-act="projfilter" data-f="${k}" aria-pressed="${f===k}">${l}</button>`).join("")}</div>
+        <div class="chips">${[["all","Open"],["ongoing",`Ongoing · ${nOn}`],["parked",`Parked${nPk?` · ${nPk}`:""}`],["done","Done"]].filter(x=>(x[0]!=="done"||b.doneCol)&&(x[0]!=="parked"||nPk||f==="parked")).map(([k,l])=>`<button class="chip" data-act="projfilter" data-f="${k}" aria-pressed="${f===k}">${l}</button>`).join("")}</div>
         <form class="addrow" data-form="projnew"><input type="text" id="pn-name" placeholder="New project" autocomplete="off"><div class="seg">${[["ongoing","∞ No end"],["end","🏁 Has an end"]].map(([k,l])=>`<button type="button" class="chip" data-act="pnkind" data-k="${k}" aria-pressed="${(S.pnKind||"end")===k}">${l}</button>`).join("")}</div><button class="btn">Add</button></form>
         <p class="muted small">Tap a project to add steps or log what you did.${STANDALONE?"":" Notes are also added as a comment on the task in TickTick."}</p>
       </section>`;
@@ -1562,7 +1564,7 @@ function projRow(t,b,week){
   const isOn=b.ongoingCol&&t.columnId===b.ongoingCol.id,isDone=b.doneCol&&t.columnId===b.doneCol.id;
   return `<li class="prow ${open?"open":""}">
     <button class="prow-h" data-act="openproj" data-id="${t.id}" aria-expanded="${open}">
-      <span class="grow">${kind==="ongoing"?`<span class="pkind" title="No end">∞</span>`:""}${esc(t.title)}${kind==="end"&&st.total?`<span class="pbar" title="${st.done.length} of ${st.total} steps"><i style="width:${pct}%"></i></span>`:""}</span>
+      <span class="grow">${m.parked?`<span class="pkind" title="Parked">⏸</span>`:""}${kind==="ongoing"?`<span class="pkind" title="No end">∞</span>`:""}${esc(t.title)}${kind==="end"&&st.total?`<span class="pbar" title="${st.done.length} of ${st.total} steps"><i style="width:${pct}%"></i></span>`:""}</span>
       <span class="week">${week.map(k=>`<i class="${worked.has(k)?"on":""}"></i>`).join("")}</span>
       ${cn?`<span class="pill ${isOn?"":"soft"}">${esc(cn)}</span>`:""}
     </button>
@@ -1572,6 +1574,7 @@ function projRow(t,b,week){
       <label class="small muted">Section <select id="pe-sec" aria-label="Section" data-act="pesec">${b.groups.filter(g=>g.id!=="_other").map(g=>`<option value="${g.id}" ${t.parentId===g.id?"selected":""}>${esc(g.name)}</option>`).join("")}<option value="" ${!t.parentId||!b.groups.some(g=>g.id===t.parentId)?"selected":""}>Other (no section)</option><option value="_new">＋ New section…</option></select></label>
       <input type="text" id="pe-newsec" placeholder="New section name" autocomplete="off" hidden>
       <div class="btnrow"><button class="btn sm">Save</button><button type="button" class="btn ghost sm" data-act="pedit" data-id="">Cancel</button><span class="grow"></span><button type="button" class="btn ghost sm pdiscard" data-act="pdiscard" data-id="${t.id}">${S.pDiscAsk===t.id?`Tap again to discard${(b.steps[t.id]||[]).length?` (and its ${(b.steps[t.id]||[]).length} open step${(b.steps[t.id]||[]).length===1?"":"s"})`:""}`:"Discard project"}</button></div></form></div>`:open?`<div class="prow-b">
+      ${m.parked?`<div class="pparked"><span class="small">⏸ Parked ${ago(m.parked)==="today"?"today":ago(m.parked)} — not sure yet. It stays out of Today and your project picks.</span><button class="btn sm" data-act="ppark" data-id="${t.id}">Bring it back</button></div>`:""}
       <div class="pedtop"><button type="button" class="linkbtn subtle" data-act="pedit" data-id="${t.id}">✎ Edit or discard</button></div>
       <div class="seg pkindseg" role="group" aria-label="Kind of project"><button type="button" class="chip" data-act="pkind" data-id="${t.id}" data-k="ongoing" aria-pressed="${kind==="ongoing"}">∞ No end</button><button type="button" class="chip" data-act="pkind" data-id="${t.id}" data-k="end" aria-pressed="${kind==="end"}">🏁 Has an end</button></div>
       ${kind==="end"?`<div class="pend">${st.total?`<span class="pbar big"><i style="width:${pct}%"></i></span><span class="mono small">${st.done.length}/${st.total} steps · ${pct}%</span>`:`<span class="muted small">Add steps below to see how close you are.</span>`}
@@ -1587,7 +1590,8 @@ function projRow(t,b,week){
       ${projForm(t.id,"p-"+t.id)}
       ${es.length?`<ul class="list">${es.slice(0,8).map(e=>isEd("prog",e.id)?editForm("prog",e.date,e):`<li><span class="mono muted" style="width:82px;flex:none;font-size:.8rem">${fmtDay(e.date)}</span>${etx("prog",e.date,e.id,esc(e.text))}${e.mins?`<span class="mono muted">${e.mins}m</span>`:""}<button class="x" aria-label="Delete entry" data-act="delprog" data-date="${e.date}" data-id="${e.id}">×</button></li>`).join("")}</ul>`:""}
       <div class="addrow">
-        ${kind==="end"&&!isDone?`<button class="btn" data-act="pcomplete" data-id="${t.id}">${S.pDoneAsk===t.id?"Tap again — it's finished 🏁":"🏁 Mark complete"}</button>`:""}
+        ${!isDone&&!m.parked?`<button class="btn ghost" data-act="ppark" data-id="${t.id}" title="Not sure you'll work on it? Park it — nothing is lost.">⏸ Park</button>`:""}
+        ${kind==="end"&&!isDone&&!m.parked?`<button class="btn" data-act="pcomplete" data-id="${t.id}">${S.pDoneAsk===t.id?"Tap again — it's finished 🏁":"🏁 Mark complete"}</button>`:""}
         ${!isDone?(t.due&&key(new Date(t.due))<=today()?`<span class="pill soft">☀︎ On Today</span>`:`<button class="btn" data-act="projtoday" data-id="${t.id}">☀︎ Add to Today</button>`):""}
         ${b.ongoingCol&&!isOn?`<button class="btn ghost" data-act="ttmove" data-id="${t.id}" data-col="${b.ongoingCol.id}">Move to ${esc(b.ongoingCol.name)}</button>`:""}
         ${b.doneCol&&!isDone?`<button class="btn ghost" data-act="ttmove" data-id="${t.id}" data-col="${b.doneCol.id}">Move to ${esc(b.doneCol.name)}</button>`:""}
@@ -3239,6 +3243,9 @@ document.addEventListener("click",e=>{
   if(a==="gedit"){S.gEdit=id||null;render(true);const el=document.getElementById("ge-name");if(el)el.focus()}
   if(a==="pdiscard"){if(S.pDiscAsk!==id){S.pDiscAsk=id;render(true);setTimeout(()=>{if(S.pDiscAsk===id){S.pDiscAsk=null;render(true)}},4000);return}
     S.pDiscAsk=null;S.pEdit=null;S.openProject=null;discardProject(id)}
+  if(a==="ppark"){const on=!pMeta(id).parked;const bd=projBoard();const t=bd&&bd.items.find(x=>x.id===id);
+    editSettings(st=>{st.projMeta=st.projMeta||{};const m={...(st.projMeta[id]||{})};if(on)m.parked=today();else delete m.parked;st.projMeta[id]=m});
+    if(on)S.openProject=null;toast(on?`Parked “${t?plainTitle(t.title):"project"}” — find it under Parked`:"Back with your open projects")}
   if(a==="pkind"){const k=b.dataset.k;editSettings(st=>{st.projMeta=st.projMeta||{};st.projMeta[id]={...(st.projMeta[id]||{}),kind:k}})}
   if(a==="pnkind"){S.pnKind=b.dataset.k;render(true)}
   if(a==="pcomplete"){if(S.pDoneAsk!==id){S.pDoneAsk=id;render(true);setTimeout(()=>{if(S.pDoneAsk===id){S.pDoneAsk=null;render(true)}},4000);return}
