@@ -2491,10 +2491,11 @@ function jpReadBody(r,where){const o=(S.jpReadOpen||{})[where+r[0]]||{};const tg
     ${jpKnown()?`<p class="muted small" style="margin:0">Furigana only on kanji you haven't reached Guru on in WaniKani.</p>`:""}
     ${jpQuiz(r,where,A,o)}`}
 /* three questions in Japanese; options shuffled the same way every time */
-function jpShuffle(id,qi){const r=rng(([...String(id)].reduce((a,c)=>a*31+c.charCodeAt(0),7)+qi*977)>>>0);const ix=[0,1,2];for(let i=2;i>0;i--){const j=Math.floor(r()*(i+1));[ix[i],ix[j]]=[ix[j],ix[i]]}return ix}
+/* answer order: truly random each time a passage is shown (kept steady while you answer, reshuffled on retry) */
+function jpShuffle(k,qi){S.jpOrd=S.jpOrd||{};const id=k+"/"+qi;if(!S.jpOrd[id]){const ix=[0,1,2];for(let i=2;i>0;i--){const j=Math.floor(Math.random()*(i+1));[ix[i],ix[j]]=[ix[j],ix[i]]}S.jpOrd[id]=ix}return S.jpOrd[id]}
 function jpQuiz(r,where,A,o){const Q=r[6]||[];if(!Q.length)return "";const done=Q.every((_,qi)=>A[qi]!=null),score=Q.filter((q,qi)=>A[qi]===q.a).length;
   return `<div class="jpquiz" lang="ja"><span class="eyebrow">しつもん</span>
-    ${Q.map((q,qi)=>{const ch=A[qi];return `<div class="jpq"><p class="jpqq">${qi+1}. ${jpRubyStr(q.q,!!o.allfuri)}</p><div class="jpopts">${jpShuffle(r[0],qi).map(oi=>{const cls=ch==null?"":oi===q.a?"ok":oi===ch?"no":"";
+    ${Q.map((q,qi)=>{const ch=A[qi];return `<div class="jpq"><p class="jpqq">${qi+1}. ${jpRubyStr(q.q,!!o.allfuri)}</p><div class="jpopts">${jpShuffle(where+r[0],qi).map(oi=>{const cls=ch==null?"":oi===q.a?"ok":oi===ch?"no":"";
       return `<button type="button" class="jpopt ${cls}" data-act="jpans" data-k="${where+r[0]}" data-id="${r[0]}" data-q="${qi}" data-o="${oi}" ${ch!=null?"disabled":""}>${jpRubyStr(q.o[oi],!!o.allfuri)}</button>`}).join("")}</div>
       ${ch!=null?`<p class="jpfb ${ch===q.a?"ok":"no"}">${ch===q.a?"せいかい!":"ざんねん… こたえは うえの ぶんに あります。"}</p>`:""}</div>`}).join("")}
     ${done?`<div class="jpscore"><b>${score} / ${Q.length}</b> ${score===Q.length?"すばらしい! 🌿":score?"いいですね。":"また よんで みましょう。"}<button type="button" class="linkbtn subtle" data-act="jpretry" data-k="${where+r[0]}">もういちど</button></div>`:""}</div>`}
@@ -3135,7 +3136,7 @@ document.addEventListener("click",e=>{
     if(Q.length&&Q.every((_,i)=>A[i]!=null)){const sc=Q.filter((q,i)=>A[i]===q.a).length;
       editSettings(st=>{st.jpReadDone={...(st.jpReadDone||{}),[rid]:st.jpReadDone&&st.jpReadDone[rid]||today()};const qz={...(st.jpQuiz||{})};const prev=qz[rid];qz[rid]={s:sc,n:Q.length,d:today(),best:Math.max(sc,prev&&prev.best||0)};st.jpQuiz=qz})}
     else render(true)}
-  if(a==="jpretry"){const k=b.dataset.k;if(S.jpAns)delete S.jpAns[k];render(true)}
+  if(a==="jpretry"){const k=b.dataset.k;if(S.jpAns)delete S.jpAns[k];if(S.jpOrd)for(const x in S.jpOrd)if(x.startsWith(k+"/"))delete S.jpOrd[x];render(true)}
   if(a==="jpreadtg"){const k=b.dataset.k,w=b.dataset.w;S.jpReadOpen=S.jpReadOpen||{};const o=S.jpReadOpen[k]=S.jpReadOpen[k]||{};o[w]=!o[w];render(true)}
   if(a==="jpreaddone"){const id=b.dataset.id,on=jpReadDone(id);editSettings(st=>{const m={...(st.jpReadDone||{})};if(on)delete m[id];else m[id]=today();st.jpReadDone=m});if(!on)toast("Nice reading. 🌿")}
   if(a==="jpreadnext"){const cur=jpReadOfDay();let k=0;do{S.jpReadShift=(S.jpReadShift||0)+1;k++}while(jpReadOfDay()===cur&&k<JP_READ.length);render(true)}
