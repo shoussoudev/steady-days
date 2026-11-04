@@ -3809,12 +3809,16 @@ async function connectDb(){
     if(!db||!id){offlineDb();return}
     S.db=db;S.uid=id;S.live=true;setStatus();
     const col=db.collection("data/users/"+id);
+    /* After a reload the first copy can be this device's offline one, which may be old. It is shown, but
+       nothing is saved over the server until the server's copy arrives (or 8 s pass, e.g. when offline). */
+    const trustCache=()=>!navigator.onLine||S.cacheOk;
+    setTimeout(()=>{S.cacheOk=true},8000);
     col.doc("settings").onSnapshot(snap=>{
       if(!S.settingsLoaded&&snap.fromCache&&!snap.exists)return;
       if(!pending.settings&&!inflight.settings){const d=snap.exists?snap.data():null;
         S.settings={...(d||{}),habits:d?.habits||[],reminders:d?.reminders||[],todos:d?.todos||[],projects:d?.projects||[],ttMap:d?.ttMap||null,favs:d?.favs||[],pnotes:d?.pnotes||{},lastBackup:d?.lastBackup||null,claudeCredit:d?.claudeCredit??null,nudgeOn:d?.nudgeOn,nudgeTime:d?.nudgeTime||"07:22",timeZone:d?.timeZone||TZ,todayOrder:d?.todayOrder||[],todayHidden:d?.todayHidden||[],exKinds:d?.exKinds||[],weighOff:!!d?.weighOff,skills:d?.skills||{},highlights:d?.highlights||{}};
         if(ttOn())ttLoadListsMissing();}
-      if(!S.settingsLoaded){S.settingsLoaded=true;try{useStart()}catch(_){}if(S.setQ.length){const b=JSON.parse(JSON.stringify(S.settings));S.setQ.forEach(f=>{try{f(b)}catch(_){}});S.setQ=[];S.settings=b;queueWrite("settings",b)}}
+      if(!S.settingsLoaded&&(!snap.fromCache||trustCache())){S.settingsLoaded=true;try{useStart()}catch(_){}if(S.setQ.length){const b=JSON.parse(JSON.stringify(S.settings));S.setQ.forEach(f=>{try{f(b)}catch(_){}});S.setQ=[];S.settings=b;queueWrite("settings",b)}}
       S.settingsReady=true;render();
     },()=>{S.settingsReady=true;render()});
     col.doc("study").onSnapshot(snap=>{S.study=snap.exists?snap.data():{};render()},()=>{});
@@ -3822,7 +3826,7 @@ async function connectDb(){
       /* an empty answer from the local cache isn't trusted: it may just not have synced yet */
       if(!S.docReady[id]&&snap.fromCache&&!snap.exists)return;
       if(!pending[id]&&!inflight[id]&&!debounced[id]){const d=snap.exists?snap.data():null;S[id]={...(S.docReady[id]?S[id]:{}),...(d||{}),items:(d&&d.items)||[]};
-        if(!S.docReady[id]){S.docReady[id]=true;const q=S.docQ[id];delete S.docQ[id];if(q&&q.length){const b=JSON.parse(JSON.stringify(S[id]));q.forEach(f=>{try{f(b)}catch(_){}});S[id]=b;queueWrite(id,{...b,kind:id})}}}
+        if(!S.docReady[id]&&(!snap.fromCache||trustCache())){S.docReady[id]=true;const q=S.docQ[id];delete S.docQ[id];if(q&&q.length){const b=JSON.parse(JSON.stringify(S[id]));q.forEach(f=>{try{f(b)}catch(_){}});S[id]=b;queueWrite(id,{...b,kind:id})}}}
       render();
     },()=>{}));
     col.where("kind","==","day").orderBy("date","desc").limit(180).onSnapshot(snap=>{

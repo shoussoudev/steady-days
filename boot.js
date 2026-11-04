@@ -34,7 +34,8 @@ function makeDb(uid){
     get:async()=>docSnap(await getDoc(ref)),
     /* straight from the server (never a possibly-empty local cache), for safe first saves */
     getServer:async()=>docSnap(await getDocFromServer(ref)),
-    onSnapshot:(next,err)=>onSnapshot(ref,s=>next(docSnap(s)),e=>err&&err(e))});
+    /* metadata changes too, so "this came from the server" arrives even when the data is the same as the offline copy */
+    onSnapshot:(next,err)=>onSnapshot(ref,{includeMetadataChanges:true},s=>next(docSnap(s)),e=>err&&err(e))});
   /* where() runs on the server; orderBy/limit run here, so no composite indexes are needed */
   const makeQuery=(path,wh=[],ord=null,lim=null)=>{
     const ref=()=>wh.length?query(collection(fs,path),...wh.map(w=>where(...w))):collection(fs,path);

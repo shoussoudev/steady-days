@@ -1,7 +1,7 @@
 /* Steady Days' own task store, speaking the same small "TickTick" tool language the app already uses.
    Lists, tasks, kanban columns and progress notes live in one private Firestore doc: users/<uid>/docs/tt.
    This lets every existing screen (Top 3, rollover, tomorrow, lists, project board) work without TickTick. */
-import {doc,setDoc,onSnapshot} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {doc,setDoc,onSnapshot,runTransaction} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const pad=n=>String(n).padStart(2,"0");
 const localKey=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
@@ -29,9 +29,29 @@ export function makeTasks(fs,uid){
   let resolveLoaded;const loaded=new Promise(r=>{resolveLoaded=r});
   /* lets the photo review tell open, finished and deleted tasks apart */
   window.__sdTaskState=id=>{const t=data.tasks.find(x=>x.id===id);return !t?"gone":(t.status===0||t.status==null)?"open":"done"};
-  onSnapshot(ref,s=>{if(s.exists()){const d=s.data();data={projects:d.projects||[],tasks:d.tasks||[],columns:d.columns||{},comments:d.comments||[]}}resolveLoaded()},()=>resolveLoaded());
-  const save=()=>setDoc(ref,JSON.parse(JSON.stringify({...data,kind:"tt",updated:nowIso()})));
-  const task=id=>data.tasks.find(t=>t.id===id)||fail("That task wasn't found.");
+  const norm=d=>({projects:(d&&d.projects)||[],tasks:(d&&d.tasks)||[],columns:(d&&d.columns)||{},comments:(d&&d.comments)||[]});
+  const plain=d=>JSON.parse(JSON.stringify({...d,kind:"tt",updated:nowIso()}));
+  /* The device keeps an offline copy, so the first snapshot after a reload can be old.
+     Wait (briefly) for the server's copy before anything is allowed to write. */
+  onSnapshot(ref,{includeMetadataChanges:true},s=>{
+    if(s.exists())data=norm(s.data());
+    if(!s.metadata.fromCache)resolveLoaded()
+  },()=>resolveLoaded());
+  setTimeout(()=>resolveLoaded(),6000);
+  /* Every change is applied to the latest saved copy on the server (in a transaction), never to a
+     possibly stale copy in memory, so an old list can't be written back over newer changes. */
+  const offlineErr=e=>!navigator.onLine||["unavailable","deadline-exceeded"].includes(e&&e.code);
+  const mutate=async fn=>{
+    if(navigator.onLine){
+      try{return await runTransaction(fs,async tx=>{
+        const s=await tx.get(ref);const d=norm(s.exists()?s.data():null);
+        const r=fn(d);tx.set(ref,plain(d));data=d;return r})}
+      catch(e){if(!offlineErr(e))throw e}
+    }
+    /* offline: change the local copy; Firestore sends it when the connection is back */
+    const r=fn(data);setDoc(ref,plain(data)).catch(()=>{});return r;
+  };
+  const taskIn=(d,id)=>d.tasks.find(t=>t.id===id)||fail("That task wasn't found.");
   const open=t=>t.status===0||t.status==null;
   const merge=(t,patch)=>{const {id,...rest}=patch||{};
     /* undoing a repeating task's "done" puts its date back */
@@ -54,26 +74,26 @@ export function makeTasks(fs,uid){
     create_task:async({task:t})=>{
       if(!t||!String(t.title||"").trim())fail("A task needs a title.");
       const pid=t.projectId&&!isInbox(t.projectId)?t.projectId:"inbox";
-      const cols=data.columns[pid]||[];
-      const nt={content:"",priority:0,kind:"TEXT",timeZone:Intl.DateTimeFormat().resolvedOptions().timeZone,isAllDay:!!t.dueDate,...t,
-        id:newId(),projectId:pid,status:0,createdTime:nowIso(),modifiedTime:nowIso(),columnId:t.columnId||(cols[0]&&cols[0].id)||""};
-      data.tasks.push(nt);await save();return nt;
+      const id=newId(),made=nowIso();
+      return mutate(d=>{const cols=d.columns[pid]||[];
+        const nt={content:"",priority:0,kind:"TEXT",timeZone:Intl.DateTimeFormat().resolvedOptions().timeZone,isAllDay:!!t.dueDate,...t,
+          id,projectId:pid,status:0,createdTime:made,modifiedTime:made,columnId:t.columnId||(cols[0]&&cols[0].id)||""};
+        d.tasks.push(nt);return nt});
     },
-    complete_task:async({task_id})=>{
-      const t=task(task_id);const nd=nextDue(t);
+    complete_task:({task_id})=>mutate(d=>{
+      const t=taskIn(d,task_id);const nd=nextDue(t);
       if(nd){t.prevDue=t.dueDate;t.dueDate=nd;t.startDate=nd}else{t.status=2;t.completedTime=nowIso()}
-      t.modifiedTime=nowIso();await save();return t;
-    },
-    update_task:async({task_id,task:patch})=>{const t=merge(task(task_id||patch.id),patch);await save();return t},
-    batch_update_tasks:async({tasks})=>{(tasks||[]).forEach(p=>{const t=data.tasks.find(x=>x.id===p.id);if(t)merge(t,p)});await save();return {ok:true}},
-    add_comment:async({task_id,title})=>{data.comments.push({id:newId(),taskId:task_id,title,created:nowIso()});await save();return {ok:true}},
-    create_project:async({name,viewMode})=>{
+      t.modifiedTime=nowIso();return t}),
+    update_task:({task_id,task:patch})=>mutate(d=>merge(taskIn(d,task_id||patch.id),patch)),
+    batch_update_tasks:({tasks})=>mutate(d=>{(tasks||[]).forEach(p=>{const t=d.tasks.find(x=>x.id===p.id);if(t)merge(t,p)});return {ok:true}}),
+    add_comment:({task_id,title})=>{const c={id:newId(),taskId:task_id,title,created:nowIso()};return mutate(d=>{d.comments.push(c);return {ok:true}})},
+    create_project:({name,viewMode})=>{
       if(!String(name||"").trim())fail("A list needs a name.");
       const p={id:newId(),name:String(name).trim(),kind:"TASK",viewMode:viewMode||"list",closed:false,sortOrder:Date.now()};
-      data.projects.push(p);await save();return p;
+      return mutate(d=>{d.projects.push({...p});return p});
     },
-    update_project:async({project_id,name,closed})=>{const p=data.projects.find(x=>x.id===project_id)||fail("That list wasn't found.");
-      if(name!=null)p.name=String(name).trim()||p.name;if(closed!=null)p.closed=!!closed;await save();return p},
+    update_project:({project_id,name,closed})=>mutate(d=>{const p=d.projects.find(x=>x.id===project_id)||fail("That list wasn't found.");
+      if(name!=null)p.name=String(name).trim()||p.name;if(closed!=null)p.closed=!!closed;return p}),
     list_habits:()=>({result:[]}),
     get_habit_checkins:()=>({result:[]}),
     upsert_habit_checkins:()=>({ok:true})
