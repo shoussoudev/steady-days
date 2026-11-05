@@ -133,6 +133,9 @@ li.done .grow{color:var(--muted);text-decoration:line-through}
 .small{font-size:.85rem;margin:0}
 .pill.soft{background:var(--bg);border:1px solid var(--line);color:var(--muted)}
 .pill.late{background:var(--warm-soft);color:var(--warm)}
+.routines li.rtdone label{color:var(--muted)}.rtauto{font-size:.68rem;padding:1px 6px;border-radius:999px;background:var(--soft,rgba(127,127,127,.12));color:var(--muted);vertical-align:middle;margin-left:4px}
+.rtlater{margin:4px 0 0}.rtedit{flex-direction:column;align-items:stretch!important;gap:8px}.rtetop{display:flex;gap:8px;align-items:center}.rtetop input{flex:1;min-width:0}
+.rtdays{flex-wrap:wrap;gap:4px}.rtdays .chip{padding:4px 7px;font-size:.76rem;min-width:0}.rtedit select{max-width:100%}
 .prio{width:8px;height:8px;border-radius:50%;flex:none}
 .prio.p5{background:var(--danger)}.prio.p3{background:var(--warm)}.prio.p1{background:var(--m2)}
 .tt-err{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--warm-soft);border-radius:10px;padding:10px 12px;font-size:.9rem}
@@ -847,6 +850,7 @@ async function runUndo(uidv){
   S.undo=S.undo.filter(x=>x.uid!==uidv);saveUndo();tickUndo();
   try{
     if(u.kind==="vreset"){editDoc("vision",d=>{Object.assign(d,u.snap.vision)});editDoc("visionimg",d=>{d.img=u.snap.img});toast("Your board is back")}
+    else if(u.kind==="routine"){editSettings(st=>{const L=(st.routines||[]).filter(x=>x.id!==u.item.id);L.splice(Math.min(u.index??L.length,L.length),0,u.item);st.routines=L});toast("Routine restored")}
     else if(u.kind==="docall"){editDoc(u.doc,d=>{d.items=u.items});toast("Restored the earlier version")}
     else if(u.kind==="doc"){
       editDoc(u.doc,d=>{const i=d.items.findIndex(x=>x.id===u.item.id);if(i>=0)d.items[i]=u.item;else d.items.splice(Math.min(u.index??0,d.items.length),0,u.item)});
@@ -1351,7 +1355,7 @@ V.today=()=>{
   if(past)return `<div class="pastnote"><span>Filling in <b>${fmtDay(vd,{weekday:"long",day:"numeric",month:"long"})}</b></span><button type="button" class="btn ghost sm" data-act="viewday" data-d="${today()}">Back to today</button></div>
   <span class="grp">Notice</span>${moodCard(d,true)}${checkinCard()}${ateCard()}
   <span class="grp">Reflect</span>${reflectCard(d,true)}${footerExtras()}`;
-  const R={pointer:()=>pointerCard(pointerOfDay(),true),vision:visionToday,"g-do":()=>`<span class="grp">Do</span>`,tasks:todayTasks,workout:workoutCard,study:studyToday,jpread:jpReadCard,
+  const R={pointer:()=>pointerCard(pointerOfDay(),true),vision:visionToday,"g-do":()=>`<span class="grp">Do</span>`,tasks:todayTasks,routines:routinesCard,workout:workoutCard,study:studyToday,jpread:jpReadCard,
     "g-notice":()=>`<span class="grp">Notice</span>`,"g-feel":()=>`<span class="grp">Feel</span>`,mood:()=>moodCard(d,false),checkin:checkinCard,weigh:weighCard,ate:ateCard,wishcheck:wishCheckCard,
     "g-reflect":()=>`<span class="grp">Reflect</span>`,dream:dreamToday,trip:tripToday,groc:grocToday,dates:datesToday,apps:appsToday,media:mediaToday,reflect:()=>reflectCard(d,false),extras:footerExtras};
   const parts=todayOrder().filter(k=>!(S.settings.todayHidden||[]).includes(k)).map(k=>[k,R[k]()]);
@@ -1360,7 +1364,7 @@ V.today=()=>{
   return recapPromptCard()+shown.map(x=>x[1]).join("\n");
 };
 /* Today's blocks, in your order (Settings → Arrange Today). New blocks appear in their default place. */
-const TODAY_BLOCKS=[["pointer","Today's pointer"],["vision","Vision tile"],["trip","Trip countdown"],["g-do","“Do” heading"],["tasks","Top 3 and today's tasks"],["workout","Steady 10 workout"],["g-feel","“Feel” heading"],["dream","Morning dream note (until noon)"],["mood","Mood"],["g-notice","“Notice” heading"],["checkin","Check-in (exercise, water, fruit)"],["weigh","Weekly weigh-in"],["ate","What I ate"],["dates","Birthdays & dates"],["apps","Pinned apps"],["groc","Groceries"],["media","Monthly photo check"],["wishcheck","Wishlist “still want it?”"],["study","Japanese: WaniKani & Bunpro"],["jpread","Japanese reading"],["g-reflect","“Reflect” heading"],["reflect","Reflection and gratitude"],["extras","Links, project progress, past days"]];
+const TODAY_BLOCKS=[["pointer","Today's pointer"],["vision","Vision tile"],["trip","Trip countdown"],["g-do","“Do” heading"],["tasks","Top 3 and today's tasks"],["routines","Routines (Japanese, daily sport…)"],["workout","Steady 10 workout"],["g-feel","“Feel” heading"],["dream","Morning dream note (until noon)"],["mood","Mood"],["g-notice","“Notice” heading"],["checkin","Check-in (exercise, water, fruit)"],["weigh","Weekly weigh-in"],["ate","What I ate"],["dates","Birthdays & dates"],["apps","Pinned apps"],["groc","Groceries"],["media","Monthly photo check"],["wishcheck","Wishlist “still want it?”"],["study","Japanese: WaniKani & Bunpro"],["jpread","Japanese reading"],["g-reflect","“Reflect” heading"],["reflect","Reflection and gratitude"],["extras","Links, project progress, past days"]];
 function todayOrder(){
   const def=TODAY_BLOCKS.map(x=>x[0]);const mine=(S.settings.todayOrder||[]).filter(k=>def.includes(k));
   /* older saved orders: the Feel section (dream + mood) takes Notice's old spot, Notice moves below mood */
@@ -1435,6 +1439,48 @@ function todayTasks(){
 function habitRowTT(h){
   const done=hDone(h,today()),s=hStreak(h),real=h.type==="Real"&&(h.goal||1)>1;
   return `<li><button class="hbtn ${done?"on":""}" data-act="tthabit" data-id="${h.id}" aria-pressed="${done}" aria-label="${esc(h.name)}${real?`, ${hVal(h,today())} of ${h.goal}`:""}">${real?`<span class="mono">${hVal(h,today())}/${h.goal}</span>`:""}</button><span class="grow">${esc(h.name)}</span><span class="streak">${s?`<b>${s}</b> day${s>1?"s":""} in a row`:""}</span></li>`;
+}
+/* ---------- Routines: real tasks that come back on set days (Japanese, daily sport…). Habits stay the tiny checkboxes. ---------- */
+const RT_AUTO=[["","I tick it myself"],["workout","Ticks when I finish the workout"],["move","Ticks when I log any exercise"],["run","Ticks when I log a run"],["jp","Ticks when I study Japanese"]];
+const RT_DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const RT_SUGGEST=[["Japanese study","jp"],["Workout","workout"],["Move 20 minutes","move"]];
+const dowMon=k=>(new Date(k+"T12:00:00").getDay()+6)%7;
+const rtList=()=>S.settings.routines||[];
+const rtOn=(r,k)=>!r.days||!r.days.length||r.days.includes(dowMon(k));
+function rtAuto(r,k){const d=getDay(k);if(!r.auto)return false;
+  if(r.auto==="workout")return !!(d.workout&&d.workout.done);
+  const acts=actsOf(bodyOf(d));
+  if(r.auto==="move")return !!(d.workout&&d.workout.done)||acts.length>0;
+  if(r.auto==="run")return acts.some(a=>a.k==="run");
+  if(r.auto==="jp"){const st=d.study||{};return (st.wk||0)+(st.bp||0)>0||Object.values(S.settings.jpReadDone||{}).includes(k)}
+  return false}
+const rtDone=(r,k)=>!!((getDay(k).routines||{})[r.id])||rtAuto(r,k);
+/* days in a row, counting only the days it's planned for; today only counts once it's done */
+function rtStreak(r){let k=today(),n=0;if(!rtDone(r,k))k=addDays(k,-1);
+  for(let i=0;i<400;i++){if(rtOn(r,k)){if(!rtDone(r,k))break;n++}k=addDays(k,-1)}return n}
+const rtDaysLabel=r=>{const d=(r.days||[]).slice().sort();if(!d.length||d.length===7)return "Every day";if(d.join()==="0,1,2,3,4")return "Weekdays";if(d.join()==="5,6")return "Weekends";return d.map(i=>RT_DAYS[i]).join(" · ")};
+function routineEditRow(r){
+  return `<li class="rtedit"><div class="rtetop"><input type="text" value="${esc(r.title)}" data-act="rtfield" data-id="${r.id}" aria-label="Routine name" maxlength="80">
+    <button type="button" class="linkbtn subtle danger" data-act="rtdel" data-id="${r.id}">Remove</button></div>
+    <div class="chips rtdays" role="group" aria-label="Days">${RT_DAYS.map((n,i)=>`<button type="button" class="chip" data-act="rtday" data-id="${r.id}" data-d="${i}" aria-pressed="${!r.days||!r.days.length||r.days.includes(i)}">${n}</button>`).join("")}</div>
+    <select data-act="rtauto" data-id="${r.id}" aria-label="How it gets ticked">${RT_AUTO.map(([v,l])=>`<option value="${v}" ${(r.auto||"")===v?"selected":""}>${l}</option>`).join("")}</select></li>`}
+function routinesCard(){
+  if(isPastView())return "";const L=rtList(),k=today(),edit=S.rtEdit;
+  if(!L.length&&!edit)return `<section class="block card routines"><div class="head"><h2>Routines</h2></div>
+    <p class="muted small" style="margin:0">Things you do on set days that take real time, like Japanese or your workout. Tap one to start, or make your own.</p>
+    <div class="chips">${RT_SUGGEST.map(([t,a])=>`<button type="button" class="chip" data-act="rtsuggest" data-t="${esc(t)}" data-a="${a}">＋ ${esc(t)}</button>`).join("")}<button type="button" class="chip" data-act="rtedit">＋ My own…</button></div></section>`;
+  const on=L.filter(r=>rtOn(r,k)),n=on.filter(r=>rtDone(r,k)).length;
+  if(edit)return `<section class="block card routines"><div class="head"><h2>Routines</h2><button type="button" class="btn sm" data-act="rtedit">Done</button></div>
+    ${L.length?`<ul class="list">${L.map(routineEditRow).join("")}</ul>`:""}
+    <form class="addrow" data-form="routine"><input id="rt-new" type="text" placeholder="New routine, e.g. Japanese 20 min" maxlength="80" aria-label="New routine"><button class="btn" type="submit">Add</button></form>
+    <p class="muted small" style="margin:0">Pick the days it's for. Missed days don't pile up: it just comes back next time.</p></section>`;
+  const later=L.filter(r=>!rtOn(r,k));
+  return `<section class="block card routines"><div class="head"><h2>Routines</h2><span class="topmeta"><span class="mono muted">${n}/${on.length} today</span><button type="button" class="linkbtn subtle" data-act="rtedit">Edit</button></span></div>
+    ${on.length?`<ul class="list">${on.map(r=>{const auto=rtAuto(r,k),done=rtDone(r,k),st=rtStreak(r);
+      return `<li class="${done?"rtdone":""}"><input type="checkbox" class="check" id="rt-${r.id}" data-act="rtdone" data-id="${r.id}" ${done?"checked":""} ${auto?`disabled title="Ticked for you"`:""}>
+      <label class="grow" for="rt-${r.id}">${esc(r.title)}${r.auto?` <span class="rtauto" title="${esc((RT_AUTO.find(x=>x[0]===r.auto)||[])[1]||"")}">${auto?"✓ auto":"auto"}</span>`:""}</label>
+      <span class="streak">${st>1?`<b>${st}</b> in a row`:""}</span></li>`}).join("")}</ul>`:`<p class="muted small" style="margin:0">Nothing planned today.</p>`}
+    ${later.length?`<p class="muted small rtlater">Not today: ${later.map(r=>esc(r.title)).join(", ")}</p>`:""}</section>`;
 }
 function todayHabits(){
   if(ttOn()&&(S.tt.habits.length||S.tt.hErr)){
@@ -3299,6 +3345,12 @@ document.addEventListener("click",e=>{
     else{const i=o.indexOf(k),j=i+dd;if(j<0||j>=o.length)return;[o[i],o[j]]=[o[j],o[i]]}
     editSettings(st=>{st.todayOrder=o});
     requestAnimationFrame(()=>{const el=document.querySelector(`[data-act="arrmove"][data-k="${k}"][data-d="${dd}"]`);if(el&&!el.disabled)el.focus()})}
+  if(a==="rtedit"){S.rtEdit=!S.rtEdit;render(true);if(S.rtEdit)setTimeout(()=>{const i=document.getElementById("rt-new");if(i&&!rtList().length)i.focus()},0);return}
+  if(a==="rtsuggest"){const t=b.dataset.t,au=b.dataset.a;editSettings(st=>{st.routines=[...(st.routines||[]),{id:uid(),title:t,days:[],auto:au}]});toast(`Added “${t}”. Edit to pick its days.`);return}
+  if(a==="rtday"){const i=+b.dataset.d;editSettings(st=>{const x=(st.routines||[]).find(y=>y.id===id);if(!x)return;let d=x.days&&x.days.length?x.days.slice():[0,1,2,3,4,5,6];
+    d=d.includes(i)?d.filter(z=>z!==i):[...d,i].sort();if(!d.length){toast("Keep at least one day");return}x.days=d.length===7?[]:d});return}
+  if(a==="rtdel"){const r=rtList().find(x=>x.id===id);if(!r)return;if(S.rtDelAsk!==id){S.rtDelAsk=id;b.textContent="Tap again to remove";setTimeout(()=>{if(S.rtDelAsk===id){S.rtDelAsk=null;render(true)}},3000);return}
+    S.rtDelAsk=null;const idx=rtList().indexOf(r);editSettings(st=>{st.routines=st.routines.filter(x=>x.id!==id)});pushUndo({kind:"routine",item:r,index:idx,label:`Removed routine “${r.title}”`});toast("Routine removed");return}
   if(a==="arrhide"){const k=b.dataset.k;editSettings(st=>{const h=new Set(st.todayHidden||[]);h.has(k)?h.delete(k):h.add(k);st.todayHidden=[...h]})}
   if(a==="arrreset"){editSettings(st=>{st.todayOrder=[];st.todayHidden=[]});toast("Today is back to its usual order")}
   if(a==="vopen"){S.vOpen=id;S.vDoneForm=null;S.vDel=null;if(b.dataset.go2){go("vision");S.sub.vision="year"}render(true)}
@@ -3516,6 +3568,10 @@ document.addEventListener("change",e=>{
   {const c=e.target.closest('[data-act="prow"],[data-act="psplit"]');if(c&&S.pretty&&S.pretty.rows){const r=S.pretty.rows[+c.dataset.i];if(r){if(c.dataset.act==="prow")r.on=c.checked;else r.splitOn=c.checked;render(true)}return}}
   const b=e.target;if(!b.dataset||!b.dataset.act)return;const id=b.dataset.id;
   if(b.dataset.act==="habit")editDay(today(),d=>{if(b.checked)d.habits[id]=true;else delete d.habits[id]});
+  if(b.dataset.act==="rtdone"){editDay(today(),d=>{d.routines=d.routines||{};if(b.checked)d.routines[id]=true;else delete d.routines[id]});
+    if(b.checked){const r=rtList().find(x=>x.id===id);const st=r?rtStreak(r):0;toast(st>1?`✓ ${r.title} · ${st} in a row`:"✓ Done for today")}}
+  if(b.dataset.act==="rtfield"){const val=b.value.trim();const r=rtList().find(x=>x.id===id);if(!r)return;if(!val){b.value=r.title;toast("A routine needs a name");return}if(val!==r.title)editSettings(st=>{const x=st.routines.find(y=>y.id===id);if(x)x.title=val},{silent:true})}
+  if(b.dataset.act==="rtauto")editSettings(st=>{const x=st.routines.find(y=>y.id===id);if(x)x.auto=b.value||""});
   if(b.dataset.act==="todo")editSettings(s=>{const t=s.todos.find(t=>t.id===id);if(t)t.done=b.checked});
   if(b.dataset.act==="ttdone"&&b.dataset.from==="board")S.noAskOnce=true;
   if(b.dataset.act==="ttdone")completeTask(id,b.dataset.pid,b.dataset.msg);
@@ -3561,6 +3617,7 @@ document.addEventListener("submit",e=>{
   e.preventDefault();const form=e.target;const f=form.dataset.form;const v=id=>{const el=document.getElementById(id);return el?(el.value||"").trim():""};
   const clear=id=>{const el=document.getElementById(id);if(el)el.value=""};
   if(f==="todo"){const t=v("todo-new");if(!t)return;editSettings(s=>{s.todos.unshift({id:uid(),text:t,done:false})})}
+  if(f==="routine"){const t=v("rt-new");if(!t)return;editSettings(st=>{st.routines=[...(st.routines||[]),{id:uid(),title:t,days:[],auto:/japan|nihongo|kanji|wanikani|bunpro/i.test(t)?"jp":/\brun\b|running|jog/i.test(t)?"run":""}]});clear("rt-new");setTimeout(()=>{const i=document.getElementById("rt-new");if(i)i.focus()},0);return}
   if(f==="habit"){const t=v("habit-new");if(!t)return;editSettings(s=>{s.habits.push({id:uid(),name:t})})}
   if(f==="reminder"){const t=v("rem-new");if(!t)return;editSettings(s=>{s.reminders.push({id:uid(),text:t})})}
   if(f==="meal"){const t=v("meal-new"),dt=v("meal-date")||today();if(!t)return;const bk=!!(document.getElementById("meal-baked")||{}).checked;editDay(dt,d=>{d.meals.unshift({id:uid(),name:t,...(bk?{baked:true}:{})})});toast(bk?"Baked! Added to your kitchen log 🥐":"Added to your kitchen log")}

@@ -4,9 +4,11 @@
 - Your tree, quietly drawn (header) and Rings as the yearly story (tap the tree).
 - Longer Japanese readings with 3 questions in Japanese.
 - Dates: birthdays, anniversaries and days to remember.
+- Routines on Today: real tasks on set days (Japanese, workout…), separate from habits; some tick themselves.
 - Projects ↔ Today: Add to Today from the board, 📈 Update from the Today row, 🔗 link any task to a project and log an update when you tick it off.
 
 ## Ideas to build
+- **New workout plan (renaming Steady 10)** — 6-day week: 2 runs (30–45 min, ≈10 km), 2× Back & arms (no bar), Push & balance (handstand track), Core & burn (L-sit, soft burpees); Walk & move indoor cardio; mobility finisher; planned in the Sunday review by goals, rule-based.
 - **N4 Japanese** — grammar library, Go deeper lessons and readings for the next level.
 
 ## Small fixes
