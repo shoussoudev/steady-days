@@ -1498,12 +1498,14 @@ V.today=()=>{
   return recapPromptCard()+shown.map(x=>x[1]).join("\n");
 };
 /* Today's blocks, in your order (Settings → Arrange Today). New blocks appear in their default place. */
-const TODAY_BLOCKS=[["pointer","Today's pointer"],["vision","Vision tile"],["trip","Trip countdown"],["g-do","“Do” heading"],["tasks","Top 3 and today's tasks"],["routines","Routines (Japanese, daily sport…)"],["workout","Heartwood workout"],["g-feel","“Feel” heading"],["dream","Morning dream note (until noon)"],["mood","Mood"],["g-notice","“Notice” heading"],["checkin","Check-in (exercise, water, fruit)"],["weigh","Weekly weigh-in"],["ate","What I ate"],["dates","Birthdays & dates"],["apps","Pinned apps"],["groc","Groceries"],["media","Monthly photo check"],["wishcheck","Wishlist “still want it?”"],["study","Japanese: WaniKani & Bunpro"],["jpread","Japanese reading"],["g-reflect","“Reflect” heading"],["reflect","Reflection and gratitude"],["extras","Links, project progress, past days"]];
+const TODAY_BLOCKS=[["pointer","Today's pointer"],["vision","Vision tile"],["trip","Trip countdown"],["g-do","“Do” heading"],["routines","Routines (Japanese, daily sport…)"],["tasks","Top 3 and today's tasks"],["workout","Heartwood workout"],["g-feel","“Feel” heading"],["dream","Morning dream note (until noon)"],["mood","Mood"],["g-notice","“Notice” heading"],["checkin","Check-in (exercise, water, fruit)"],["weigh","Weekly weigh-in"],["ate","What I ate"],["dates","Birthdays & dates"],["apps","Pinned apps"],["groc","Groceries"],["media","Monthly photo check"],["wishcheck","Wishlist “still want it?”"],["study","Japanese: WaniKani & Bunpro"],["jpread","Japanese reading"],["g-reflect","“Reflect” heading"],["reflect","Reflection and gratitude"],["extras","Links, project progress, past days"]];
 function todayOrder(){
   const def=TODAY_BLOCKS.map(x=>x[0]);const mine=(S.settings.todayOrder||[]).filter(k=>def.includes(k));
   /* older saved orders: the Feel section (dream + mood) takes Notice's old spot, Notice moves below mood */
   if(mine.length&&!mine.includes("g-feel")&&mine.includes("g-notice")&&mine.includes("dream")&&mine.includes("mood")){
     const ni=mine.indexOf("g-notice");if(ni<mine.indexOf("dream")&&ni<mine.indexOf("mood")){mine[ni]="g-feel";const last=Math.max(mine.indexOf("dream"),mine.indexOf("mood"));mine.splice(last+1,0,"g-notice")}}
+  /* routines open the Do section (orders saved before that get it moved once) */
+  if(mine.length&&mine.includes("g-do")&&(!mine.includes("routines")||!S.settings.orderV2)){const r=mine.indexOf("routines");if(r>=0)mine.splice(r,1);mine.splice(mine.indexOf("g-do")+1,0,"routines")}
   def.forEach((k,i)=>{if(mine.includes(k))return;
     if(k.startsWith("g-")){const nxt=def[i+1];if(nxt&&mine.includes(nxt)){mine.splice(mine.indexOf(nxt),0,k);return}}
     const prev=def.slice(0,i).reverse().find(x=>mine.includes(x));mine.splice(prev?mine.indexOf(prev)+1:0,0,k)});
@@ -1533,7 +1535,7 @@ document.addEventListener("pointerdown",e=>{const g=e.target.closest&&e.target.c
     if(before!==pack[pack.length-1].nextElementSibling||!before&&ul.lastElementChild!==pack[pack.length-1])place(before);
     if(scroller){const r=scroller.getBoundingClientRect();if(lastY<r.top+50)scroller.scrollTop-=12;else if(lastY>r.bottom-50)scroller.scrollTop+=12}};
   const up=()=>{document.removeEventListener("pointermove",move);document.removeEventListener("pointerup",up);document.removeEventListener("pointercancel",up);pack.forEach(x=>x.classList.remove("dragging"));
-    const o=[...ul.children].map(x=>x.dataset.k);if(o.join()!==todayOrder().join())editSettings(st=>{st.todayOrder=o});};
+    const o=[...ul.children].map(x=>x.dataset.k);if(o.join()!==todayOrder().join())editSettings(st=>{st.todayOrder=o;st.orderV2=true});};
   document.addEventListener("pointermove",move);document.addEventListener("pointerup",up);document.addEventListener("pointercancel",up)});
 
 function todayTasks(){
@@ -3532,7 +3534,7 @@ document.addEventListener("click",e=>{
   if(a==="arrmove"){const k=b.dataset.k,dd=+b.dataset.d;let o=todayOrder();
     if(k.startsWith("g-")){const u=arrUnits(o);const i=u.findIndex(x=>x[0]===k),j=i+dd;if(j<0||j>=u.length)return;[u[i],u[j]]=[u[j],u[i]];o=u.flat()}
     else{const i=o.indexOf(k),j=i+dd;if(j<0||j>=o.length)return;[o[i],o[j]]=[o[j],o[i]]}
-    editSettings(st=>{st.todayOrder=o});
+    editSettings(st=>{st.todayOrder=o;st.orderV2=true});
     requestAnimationFrame(()=>{const el=document.querySelector(`[data-act="arrmove"][data-k="${k}"][data-d="${dd}"]`);if(el&&!el.disabled)el.focus()})}
   if(a==="rtedit"){S.rtEdit=!S.rtEdit;render(true);if(S.rtEdit)setTimeout(()=>{const i=document.getElementById("rt-new");if(i&&!rtList().length)i.focus()},0);return}
   if(a==="rtsuggest"){const t=b.dataset.t,au=b.dataset.a;editSettings(st=>{st.routines=[...(st.routines||[]),{id:uid(),title:t,days:[],auto:au}]});toast(`Added “${t}”. Edit to pick its days.`);return}
@@ -3541,7 +3543,7 @@ document.addEventListener("click",e=>{
   if(a==="rtdel"){const r=rtList().find(x=>x.id===id);if(!r)return;if(S.rtDelAsk!==id){S.rtDelAsk=id;b.textContent="Tap again to remove";setTimeout(()=>{if(S.rtDelAsk===id){S.rtDelAsk=null;render(true)}},3000);return}
     S.rtDelAsk=null;const idx=rtList().indexOf(r);editSettings(st=>{st.routines=st.routines.filter(x=>x.id!==id)});pushUndo({kind:"routine",item:r,index:idx,label:`Removed routine “${r.title}”`});toast("Routine removed");return}
   if(a==="arrhide"){const k=b.dataset.k;editSettings(st=>{const h=new Set(st.todayHidden||[]);h.has(k)?h.delete(k):h.add(k);st.todayHidden=[...h]})}
-  if(a==="arrreset"){editSettings(st=>{st.todayOrder=[];st.todayHidden=[]});toast("Today is back to its usual order")}
+  if(a==="arrreset"){editSettings(st=>{st.todayOrder=[];st.todayHidden=[];st.orderV2=true});toast("Today is back to its usual order")}
   if(a==="vopen"){S.vOpen=id;S.vDoneForm=null;S.vDel=null;if(b.dataset.go2){go("vision");S.sub.vision="year"}render(true)}
   if(a==="blimpgo"&&S.blImp){const I=S.blImp;const add=I.rows.filter(r=>I.pick[r.status]).map(r=>{const o={id:uid(),...r};Object.keys(o).forEach(k=>{if(o[k]===undefined||o[k]===null||o[k]==="")delete o[k]});return o});const before=JSON.parse(JSON.stringify(S.backlog.items));
     S.blImp=null;editDoc("backlog",d=>{d.items=[...(d.items||[]),...add]});pushUndo({kind:"docall",doc:"backlog",items:before,label:`Imported ${add.length} item${add.length===1?"":"s"} into your backlog`});toast(`Imported ${add.length}. Try ✨ Prettify to tidy titles.`)}
