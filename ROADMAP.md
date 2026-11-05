@@ -4,7 +4,7 @@
 - Your tree, quietly drawn (header) and Rings as the yearly story (tap the tree).
 - Longer Japanese readings with 3 questions in Japanese.
 - Dates: birthdays, anniversaries and days to remember.
-- Heartwood (was Steady 10): a planned 6-day week — Back & arms ×2, Push & balance, Core & burn with Walk & move, 2 runs (≈10 km) — with handstand, push-up, L-sit (and pull-up, with a bar) tracks; swap today; plan next week in the Week tab.
+- Heartwood (was Steady 10): a planned 6-day week — Back & arms ×2, Push & balance, Core & burn with Walk & move, 2 runs (≈10 km; one is a weekly ⚡ speed session with a beeping interval timer, pace logged) — with handstand, push-up, L-sit (and pull-up, with a bar) tracks; swap today; plan next week in the Week tab.
 - Routines on Today: real tasks on set days (Japanese, workout…), separate from habits; some tick themselves.
 - Projects ↔ Today: Add to Today from the board, 📈 Update from the Today row, 🔗 link any task to a project and log an update when you tick it off.
 

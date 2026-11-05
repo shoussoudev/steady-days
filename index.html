@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261105104059"></script>
-<script type="module" src="boot.js?v=20261105104059"></script>
+<script src="shim.js?v=20261105105816"></script>
+<script type="module" src="boot.js?v=20261105105816"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -167,7 +167,9 @@ li.done .grow{color:var(--muted);text-decoration:line-through}
 .hwd b{font-weight:600;color:var(--muted)}.hwd i{font-style:normal;font-size:.95rem}.hwd.now{border-color:var(--accent,currentColor);box-shadow:0 0 0 1px var(--accent,currentColor) inset}.hwd.done{background:var(--soft,rgba(127,127,127,.12))}.hwd.rest{opacity:.65}.hwd.miss i{opacity:.4}
 h3.wsec{font-size:.86rem;margin:12px 0 4px;font-weight:600}h3.wsec .muted{font-weight:400}.hwswap{margin-top:8px;display:flex;flex-direction:column;gap:6px}
 .hwkm{display:flex;align-items:center;gap:10px}.hwbar{flex:1;height:6px;border-radius:9px;background:var(--line);overflow:hidden}.hwbar i{display:block;height:100%;background:var(--accent,#3a6b4f)}
-.hwrunform input{width:80px}.hwnote{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border-radius:10px;background:var(--soft,rgba(127,127,127,.1));margin:6px 0}
+.hwrunform input{width:80px}.hwspeed{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border:1px solid var(--line);border-radius:12px}.hwsph{display:flex;justify-content:space-between}
+.hweff{margin:0;padding:0;list-style:none}.hwdot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}.e-easy{--c:#7fae8a}.e-walk{--c:#a9b4ad}.e-steady{--c:#d8a33a}.e-hard{--c:#d0623f}.e-fast{--c:#b8476a}.hwdot{background:var(--c)}
+.hwphase{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;padding:10px;border-radius:10px;background:var(--soft,rgba(127,127,127,.1))}.hwph{border-left:4px solid var(--c,transparent);padding-left:8px}.hwleft{font-size:1.5rem}.hwnote{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border-radius:10px;background:var(--soft,rgba(127,127,127,.1));margin:6px 0}
 .hwdays li{display:flex;align-items:center;gap:10px}.hwdl{display:flex;flex-direction:column;width:52px;flex:none}.hwdays select{flex:1;min-width:0}.hwdm{width:62px;flex:none;text-align:right;color:var(--muted)}.hwdm.ok{color:var(--accent,inherit)}.hwnotes{margin:4px 0 0}
 .prio{width:8px;height:8px;border-radius:50%;flex:none}
 .prio.p5{background:var(--danger)}.prio.p3{background:var(--warm)}.prio.p1{background:var(--m2)}
@@ -685,18 +687,19 @@ const SESS={
  walk:{id:"walk",name:"Walk & move",emoji:"🚶",mins:20,n:0,mob:2,skills:[],walk:8,
   intro:"March for 2 minutes to warm up. Then go through the moves, 1 minute each, twice. Keep moving, arms busy, breathing a bit harder but able to talk.",
   fixed:[],picks:[],pool:[]},
+ speed:{id:"speed",name:"Speed run",emoji:"⚡",mins:35,km:5,run:true,speed:true,intro:"One faster session a week makes you quicker over 5K and 10K. Everything else stays easy."},
  run:{id:"run",name:"Easy run",emoji:"🏃",mins:30,km:4.5,run:true,
-  intro:"Easy pace: you could chat in full sentences. Walk breaks are completely fine. Start with 3 minutes of brisk walking."},
+  intro:"Easy pace: you could chat in full sentences. Walk breaks are completely fine. Start with 3 minutes of brisk walking. Feeling good? Finish with 4 × 20 s strides: quick and smooth, walk back between."},
  long:{id:"long",name:"Longer run",emoji:"🏃",mins:45,km:5.5,run:true,
   intro:"40–45 minutes at an easy, steady pace. Slower than you think is right. If you're not done in 45 minutes, stop there anyway."},
  rest:{id:"rest",name:"Rest",emoji:"🌿",mins:0,rest:true,intro:"Your muscles grow on rest days. A walk outside or some stretching is plenty."}
 };
 /* days before Heartwood existed are never "missed" */
 const HW_START="2026-11-05";
-const HW_TYPES=["back","push","core","walk","run","long","rest"];
-const HW_DEFAULT=["back","run","push","core","back","long","rest"];
-const HW_EMPH=[["balanced","Arms & back",HW_DEFAULT],["skills","Skills",["push","run","back","core","push","long","rest"]],
- ["burn","Fat loss",["back","run","core","push","back","long","walk"]],["running","Running",["back","run","push","run","core","long","rest"]]];
+const HW_TYPES=["back","push","core","walk","speed","run","long","rest"];
+const HW_DEFAULT=["back","speed","push","core","back","long","rest"];
+const HW_EMPH=[["balanced","Arms & back",HW_DEFAULT],["skills","Skills",["push","speed","back","core","push","long","rest"]],
+ ["burn","Fat loss",["back","speed","core","push","back","long","walk"]],["running","Running",["back","speed","push","run","core","long","rest"]]];
 const hwSet=()=>S.settings.hw||{};
 const hwBar=()=>!!hwSet().bar;
 function planFor(ws){const P=hwSet().plans||{};if(P[ws])return P[ws].slice();
@@ -713,10 +716,44 @@ function hwNotes(plan){const N=[],nm=t=>SESS[t].name;const isRun=t=>SESS[t].run;
   for(let i=0;i<6;i++){const a=plan[i],b=plan[i+1];
     if(isRun(a)&&isRun(b))N.push(`Two runs in a row (${RT_DAYS[i]}–${RT_DAYS[i+1]}): keep the second one easy.`);
     else if(a===b&&!SESS[a].rest&&a!=="walk")N.push(`${nm(a)} two days running (${RT_DAYS[i]}–${RT_DAYS[i+1]}): muscles grow in the rest between.`)}
+  if(plan.filter(t=>t==="speed").length>1)N.push("Two speed runs: one a week is plenty while you build up. Make the other one easy.");
+  if(plan.some(t=>SESS[t].run)&&!plan.includes("speed"))N.push("No speed run this week: fine for an easy week, but one a week is what makes you faster.");
   if(!plan.some(t=>SESS[t].rest||t==="walk"))N.push("No easy day this week. One rest or Walk & move day helps you come back stronger.");
   const km=plan.reduce((n,t)=>n+(SESS[t].km||0),0);if(km<10)N.push(`Runs planned: about ${km} km, short of your 10 km.`);
   return N}
 function seeded(n){let x=(n*2654435761)>>>0;return ()=>{x^=x<<13;x>>>=0;x^=x>>17;x^=x<<5;x>>>=0;return x/4294967296}}
+/* speed runs for a faster 5K/10K: one quality session a week, the rest easy. Reps are timed, so no track is needed. */
+const EFFORT={easy:"Easy: you could chat in full sentences.",steady:"Comfortably hard: you can say a few words at a time. About your 10K effort.",
+ hard:"Strong: about your 5K effort. Controlled, not a sprint.",fast:"Fast but relaxed, quicker than 5K pace. Stay smooth.",walk:"Walk or very slow jog."};
+const SPEED=[
+ {id:"fartlek",name:"Fartlek 1-1",why:"Gets your legs used to changing pace.",segs:[["Warm-up jog",600,"easy"],{n:8,on:["Fast",60,"hard"],off:["Easy jog",60,"easy"]},["Cool-down jog",360,"easy"]]},
+ {id:"tempo15",name:"Tempo 15",why:"Teaches you to hold a strong pace: the key to a faster 10K.",segs:[["Warm-up jog",600,"easy"],["Tempo",900,"steady"],["Cool-down jog",420,"easy"]]},
+ {id:"i3",name:"3-minute intervals",why:"Raises your top-end fitness (VO₂max), the engine for 5K.",segs:[["Warm-up jog",600,"easy"],{n:5,on:["Hard",180,"hard"],off:["Jog",120,"easy"]},["Cool-down jog",300,"easy"]]},
+ {id:"hills",name:"Hill repeats",why:"Strength in your legs without a track. Find a gentle slope.",segs:[["Warm-up jog",600,"easy"],{n:7,on:["Uphill hard",45,"hard"],off:["Jog back down",90,"walk"]},["Cool-down jog",420,"easy"]]},
+ {id:"prog",name:"Progression run",why:"Finishing faster than you start: great for race days.",segs:[["Easy",600,"easy"],["A bit quicker",420,"steady"],["10K effort",420,"steady"],["Strong",300,"hard"],["Cool-down jog",300,"easy"]]},
+ {id:"s30",name:"30/90 short reps",why:"Quick turnover and better form at speed.",segs:[["Warm-up jog",600,"easy"],{n:10,on:["Fast",30,"fast"],off:["Walk or jog",90,"walk"]},["Cool-down jog",420,"easy"]]},
+ {id:"i6",name:"6-minute intervals",why:"Longer reps at 10K effort build speed you can hold.",segs:[["Warm-up jog",600,"easy"],{n:3,on:["10K effort",360,"steady"],off:["Jog",120,"easy"]},["Cool-down jog",300,"easy"]]},
+ {id:"cruise",name:"Cruise intervals 2×10",why:"More time at tempo, broken into two.",segs:[["Warm-up jog",600,"easy"],{n:2,on:["Tempo",600,"steady"],off:["Jog",120,"easy"]},["Cool-down jog",300,"easy"]]},
+ {id:"tt5",name:"5K check",why:"Every few weeks: see how far you've come. Note your time.",segs:[["Warm-up jog",600,"easy"],["5 km at your best steady effort",1800,"hard"],["Cool-down walk",300,"walk"]],open:true}
+];
+const segFlat=sp=>sp.segs.flatMap(x=>Array.isArray(x)?[{label:x[0],secs:x[1],e:x[2]}]:[...Array(x.n)].flatMap((_,i)=>[{label:x.on[0],secs:x.on[1],e:x.on[2],rep:i+1,reps:x.n},...(i<x.n-1||x.last?[{label:x.off[0],secs:x.off[1],e:x.off[2],rep:i+1,reps:x.n,rest:true}]:[])]));
+const segTot=sp=>segFlat(sp).reduce((n,s)=>n+s.secs,0);
+const minTxt=s=>s%60?mmss(s):Math.round(s/60)+" min";
+const segSummary=sp=>sp.segs.map(x=>Array.isArray(x)?`${minTxt(x[1])} ${x[0].toLowerCase()}`:`${x.n} × (${minTxt(x.on[1])} ${x.on[0].toLowerCase()} + ${minTxt(x.off[1])} ${x.off[0].toLowerCase()})`).join(" → ");
+function speedFor(k){const ws=weekStart(k),weeks=Math.max(0,Math.floor((dayNum(ws)-dayNum(weekStart(HW_START)))/7));
+  const before=[...Array(dowMon(k))].filter((_,i)=>hwType(addDays(ws,i))==="speed").length;const v=(getDay(k).workout||{}).var||0;
+  return SPEED[(((weeks+before+v)%SPEED.length)+SPEED.length)%SPEED.length]}
+/* where you are in today's speed run, from the session stopwatch */
+function speedPhase(sp,w){const F=segFlat(sp);let el=wElapsed(w);for(let i=0;i<F.length;i++){if(el<F[i].secs)return {i,F,seg:F[i],left:F[i].secs-el};el-=F[i].secs}return {i:F.length,F,seg:null,left:0}}
+function speedPhaseHtml(sp,w){const p=speedPhase(sp,w);if(!w.startedAt)return `<span class="muted small">Press Start when you set off. It beeps at every change.</span>`;
+  if(!p.seg)return `<b>Finished 🎉</b> <span class="muted small">Log your run below.</span>`;const nx=p.F[p.i+1];
+  return `<span class="hwph e-${p.seg.e}"><b>${esc(p.seg.label)}</b>${p.seg.reps&&!p.seg.rest?` <span class="muted small">rep ${p.seg.rep}/${p.seg.reps}</span>`:""}</span><span class="mono hwleft">${mmss(Math.ceil(p.left))}</span>${nx?`<span class="muted small">Next: ${esc(nx.label)} ${minTxt(nx.secs)}</span>`:`<span class="muted small">Last part</span>`}`}
+function hwBeep(long){try{const A=window.__hwAC;if(A){const o=A.createOscillator(),g=A.createGain();o.frequency.value=long?660:880;g.gain.value=.2;o.connect(g);g.connect(A.destination);o.start();o.stop(A.currentTime+(long?.7:.2))}}catch(_){}
+  try{navigator.vibrate&&navigator.vibrate(long?[300,120,300]:250)}catch(_){}}
+/* pace from "5.2 km · 32 min" */
+const runPace=note=>{const k=/(\d+(?:[.,]\d+)?)\s*km/i.exec(note||""),m=/(\d+)\s*min/i.exec(note||"");if(!k||!m)return null;const km=parseFloat(k[1].replace(",","."));return km>0?(+m[1]*60)/km:null};
+const paceTxt=s=>s?mmss(Math.round(s))+" /km":"";
+function recentPaces(){const out=[];Object.keys(S.days).sort().reverse().slice(0,90).forEach(k=>actsOf(bodyOf(getDay(k))).forEach(a=>{if(a.k==="run"){const p=runPace(a.note);if(p&&p>=150&&p<=900)out.push({k,p})}}));return out}
 function workoutFor(k,shift=0,raw=false){
   const type=hwType(k),f=SESS[type]||SESS.back;const n=dayNum(k);const rnd=seeded(n*7+HW_TYPES.indexOf(type));
   if(f.run||f.rest)return {focus:f,ex:[]};
@@ -1640,7 +1677,10 @@ const mmss=x=>{x=Math.floor(x);return Math.floor(x/60)+":"+pad(x%60)};
 const wRunning=w=>!!(w&&w.startedAt&&!w.pausedAt&&!w.done);
 let wakeLock=null;
 async function keepAwake(on){try{if(on&&navigator.wakeLock&&!wakeLock){wakeLock=await navigator.wakeLock.request("screen");wakeLock.addEventListener&&wakeLock.addEventListener("release",()=>{wakeLock=null})}else if(!on&&wakeLock){await wakeLock.release();wakeLock=null}}catch(_){wakeLock=null}}
-setInterval(()=>{const w=getDay(today()).workout;if(!wRunning(w))return;document.querySelectorAll("[data-wclock]").forEach(el=>el.textContent=mmss(wElapsed(w)))},1000);
+setInterval(()=>{const w=getDay(today()).workout;if(!wRunning(w))return;document.querySelectorAll("[data-wclock]").forEach(el=>el.textContent=mmss(wElapsed(w)));
+  if(hwType(today())==="speed"){const sp=speedFor(today()),ph=speedPhase(sp,w);
+    if(S.hwPh!=null&&ph.i!==S.hwPh)hwBeep(ph.i>=ph.F.length);S.hwPh=ph.i;
+    document.querySelectorAll("[data-hwphase]").forEach(el=>el.innerHTML=speedPhaseHtml(sp,w))}},1000);
 function timerRow(w){
   if(w.done)return w.secs?`<div class="wtimer"><span class="mono">${mmss(w.secs)}</span><span class="muted small">total time</span></div>`:"";
   const st=!w.startedAt?"idle":w.pausedAt?"paused":"running";
@@ -1652,7 +1692,7 @@ function timerRow(w){
 function hwStrip(){const ws=weekStart(today()),tk=today();
   return `<div class="hwstrip" aria-label="This week">${[...Array(7)].map((_,i)=>{const k=addDays(ws,i),t=hwType(k),f=SESS[t],dn=hwDoneOn(k);
     return `<span class="hwd ${k===tk?"now":""} ${dn?"done":""} ${f.rest?"rest":""} ${k<tk&&k>=HW_START&&!dn&&!f.rest?"miss":""}" title="${fmtDay(k,{weekday:"long"})}: ${esc(f.name)}${dn?" ✓":""}"><b>${RT_DAYS[i][0]}</b><i>${dn?"✓":f.emoji}</i></span>`}).join("")}</div>`}
-const hwMinsTxt=f=>f.run?(f.id==="long"?"40–45 min":"~30 min"):f.rest?"":`~${f.mins} min`;
+const hwMinsTxt=f=>f.run?(f.id==="long"?"40–45 min":f.speed?"30–40 min":"~30 min"):f.rest?"":`~${f.mins} min`;
 function hwSecTitle(sec,f){return sec==="skill"?`Skill practice · ~4 min<span class="muted small"> · quality holds, rest 30–60 s between</span>`:
   sec==="walk"?(f.id==="walk"?`Walk & move · 2 rounds`:`Walk & move · ~12 min<span class="muted small"> · 1 min each, twice through</span>`):
   sec==="mob"?`Finish · 3 min mobility`:`Strength · 3 rounds`}
@@ -1672,11 +1712,18 @@ function workoutCard(){
   const foot=extra=>`<div class="addrow">${extra}${done?"":`<button type="button" class="btn ghost" data-act="hwswapopen" aria-expanded="${!!S.hwSwapOpen}">⇄ Swap today</button>`}<button type="button" class="linkbtn" data-act="fold" data-k="workout">Close</button></div>${done?"":hwSwapRow(type)}`;
   if(f.rest)return `<section class="block card workout">${head}<p class="muted small" style="margin:0">${esc(f.intro)}</p>
     <div class="addrow"><button type="button" class="btn ghost" data-act="hwswap" data-t="walk">🚶 Do Walk & move instead</button><button type="button" class="linkbtn" data-act="fold" data-k="workout">Close</button></div></section>`;
-  if(f.run){const ran=actsOf(bodyOf(d)).filter(a=>a.k==="run");
+  if(f.run){const ran=actsOf(bodyOf(d)).filter(a=>a.k==="run");const sp=f.speed?speedFor(today()):null;
+    const P=recentPaces(),avg=P.length?P.slice(0,3).reduce((n,x)=>n+x.p,0)/Math.min(3,P.length):0,best=P.length?Math.min(...P.map(x=>x.p)):0;
+    const efforts=sp?[...new Set(segFlat(sp).map(x=>x.e))]:[];
     return `<section class="block card workout">${head}${hwRunMove()}
-    <p class="muted small" style="margin:0">${esc(f.intro)} Aim for about ${f.km} km.</p>
+    <p class="muted small" style="margin:0">${esc(f.intro)}${sp?"":` Aim for about ${f.km} km.`}</p>
+    ${sp?`<div class="hwspeed"><div class="hwsph"><b>⚡ ${esc(sp.name)}</b><span class="mono muted">${Math.round(segTot(sp)/60)} min</span></div>
+      <p class="small muted" style="margin:0">${esc(sp.why)}</p><p class="small" style="margin:0">${esc(segSummary(sp))}</p>
+      <ul class="plainlist hweff">${efforts.map(e=>`<li class="small"><span class="hwdot e-${e}"></span>${esc(EFFORT[e])}</li>`).join("")}</ul>
+      ${ran.length?"":`${timerRow(w)}<div class="hwphase" data-hwphase>${speedPhaseHtml(sp,w)}</div>${w.startedAt?"":`<div><button type="button" class="linkbtn subtle" data-act="hwvar">⇄ A different session</button></div>`}`}</div>`:""}
     <div class="hwkm"><span class="eyebrow">This week</span><span class="mono">${st.km} / 10 km</span><span class="hwbar"><i style="width:${Math.min(100,st.km*10)}%"></i></span></div>
-    ${ran.length?`<p class="small" style="margin:0">✓ Logged: ${ran.map(a=>esc(a.note||"run")).join(" · ")} <button type="button" class="linkbtn subtle" data-act="hwrunundo">Remove</button></p>`:
+    ${P.length?`<p class="small muted" style="margin:0">Pace lately: ${paceTxt(avg)}${P.length>1?` · best ${paceTxt(best)}`:""}</p>`:""}
+    ${ran.length?`<p class="small" style="margin:0">✓ Logged: ${ran.map(a=>esc(a.note||"run")+(runPace(a.note)?" · "+paceTxt(runPace(a.note)):"")).join(" · ")} <button type="button" class="linkbtn subtle" data-act="hwrunundo">Remove</button></p>`:
     `<form class="addrow hwrunform" data-form="hwrun"><input id="hw-km" type="number" step="0.1" min="0" inputmode="decimal" placeholder="km" aria-label="Distance in km"><input id="hw-min" type="number" min="0" step="1" inputmode="numeric" placeholder="min" aria-label="Minutes"><button class="btn" type="submit">Log run</button></form>`}
     ${foot("")}</section>`}
   const secs=[];ex.forEach((e,i)=>{const s=e.sec||"str";if(!secs.length||secs[secs.length-1].s!==s)secs.push({s,items:[]});secs[secs.length-1].items.push([e,i])});
@@ -3623,12 +3670,14 @@ document.addEventListener("click",e=>{
     editDay(today(),d=>{const w={...(d.workout||{})};if(t===hwPlanned(today()))delete w.type;else w.type=t;w.swaps={};w.startedAt=null;w.pausedAt=null;w.pausedMs=0;d.workout=w});toast(`Today: ${SESS[t].emoji} ${SESS[t].name}`);return}
   if(a==="hwmoverun"){const i=+b.dataset.i,t=b.dataset.t,ws=weekStart(today());editSettings(st=>{const hw=st.hw={...(st.hw||{})};hw.plans={...(hw.plans||{})};const pl=planFor(ws);pl[i]=t;hw.plans[ws]=pl});toast(`Run moved to ${RT_DAYS[i]}`);return}
   if(a==="hwrunundo"){setActs(today(),acts=>{for(let i=acts.length-1;i>=0;i--)if(acts[i].k==="run")acts.splice(i,1)});editDay(today(),d=>{const w={...(d.workout||{})};w.done=false;delete w.secs;d.workout=w});return}
+  if(a==="hwvar"){editDay(today(),d=>{const w={...(d.workout||{})};w.var=(w.var||0)+1;d.workout=w});toast(`Today: ${speedFor(today()).name}`);return}
   if(a==="hwplanwk"){S.hwPlanWk=b.dataset.w;render(true);return}
   if(a==="hwemph"){const e=b.dataset.e,ws=b.dataset.w;const E=HW_EMPH.find(x=>x[0]===e);if(!E)return;editSettings(st=>{const hw=st.hw={...(st.hw||{})};hw.plans={...(hw.plans||{}),[ws]:E[2].slice()};hw.emph={...(hw.emph||{}),[ws]:e}});toast(`Planned around ${E[1]}. Change any day below.`);return}
   if(a==="hwbar"){editSettings(st=>{st.hw={...(st.hw||{}),bar:!hwBar()}});return}
   if(a==="wswap"){const i=+b.dataset.i;const w0=getDay(today()).workout||{};const c=swapCycle(today(),w0.shift||0,i);if(c.length<2)return;
     const cur=workoutFor(today(),w0.shift||0).ex[i].name;const next=c[(c.indexOf(cur)+1)%c.length];editDay(today(),d=>{const w={...(d.workout||{})};w.swaps={...(w.swaps||{}),[i]:next};d.workout=w});toast(`Swapped for ${next}`)}
   if(a==="skilllv"){const k=b.dataset.k,dl=+b.dataset.d;const cur=(S.settings.skills||{})[k]||1;const nv=Math.min(4,Math.max(1,cur+dl));editSettings(st=>{st.skills={...(st.skills||{}),[k]:nv}});toast(dl>0?`${SKILLS[k].name}: level ${nv}. Nice progress!`:`${SKILLS[k].name}: level ${nv}`)}
+  if(a==="wtimer"&&b.dataset.do!=="pause"){try{const C=window.AudioContext||window.webkitAudioContext;if(C){window.__hwAC=window.__hwAC||new C();window.__hwAC.resume&&window.__hwAC.resume()}}catch(_){}S.hwPh=null}
   if(a==="wtimer"){const op=b.dataset.do;editDay(today(),d=>{const w={...(d.workout||{})};const now=Date.now();
       if(op==="start"){w.startedAt=now;w.pausedAt=null;w.pausedMs=0}
       if(op==="pause"&&w.startedAt&&!w.pausedAt)w.pausedAt=now;
@@ -3794,10 +3843,10 @@ document.addEventListener("submit",e=>{
   e.preventDefault();const form=e.target;const f=form.dataset.form;const v=id=>{const el=document.getElementById(id);return el?(el.value||"").trim():""};
   const clear=id=>{const el=document.getElementById(id);if(el)el.value=""};
   if(f==="todo"){const t=v("todo-new");if(!t)return;editSettings(s=>{s.todos.unshift({id:uid(),text:t,done:false})})}
-  if(f==="hwrun"){const km=parseFloat(v("hw-km").replace(",",".")),mn=parseInt(v("hw-min"),10);if(!(km>0)&&!(mn>0)){toast("Add the distance or the time");return}
+  if(f==="hwrun"){const km=parseFloat(v("hw-km").replace(",",".")),w0=getDay(today()).workout||{};let mn=parseInt(v("hw-min"),10);if(!(mn>0)&&w0.startedAt)mn=Math.round(wElapsed(w0)/60);if(!(km>0)&&!(mn>0)){toast("Add the distance or the time");return}
     const note=[km>0?`${Math.round(km*10)/10} km`:"",mn>0?`${mn} min`:""].filter(Boolean).join(" · ");const t=hwType(today());
-    setActs(today(),acts=>{acts.push({k:"run",note})});editDay(today(),d=>{d.workout={...(d.workout||{}),done:true,focus:t,...(mn>0?{secs:mn*60}:{})}});
-    const km2=hwWeekStats(weekStart(today())).km;toast(`Run logged: ${note}. ${km2} / 10 km this week`);return}
+    setActs(today(),acts=>{acts.push({k:"run",note:t==="speed"?note+" · "+speedFor(today()).name:note})});editDay(today(),d=>{d.workout={...(d.workout||{}),done:true,focus:t,...(t==="speed"?{speed:speedFor(today()).id}:{}),...(mn>0?{secs:mn*60}:{})}});
+    keepAwake(false);const km2=hwWeekStats(weekStart(today())).km,pc=runPace(note);toast(`Run logged: ${note}${pc?" · "+paceTxt(pc):""}. ${km2} / 10 km this week`);return}
   if(f==="routine"){const t=v("rt-new");if(!t)return;editSettings(st=>{st.routines=[...(st.routines||[]),{id:uid(),title:t,days:[],auto:/japan|nihongo|kanji|wanikani|bunpro/i.test(t)?"jp":/\brun\b|running|jog/i.test(t)?"run":""}]});clear("rt-new");setTimeout(()=>{const i=document.getElementById("rt-new");if(i)i.focus()},0);return}
   if(f==="habit"){const t=v("habit-new");if(!t)return;editSettings(s=>{s.habits.push({id:uid(),name:t})})}
   if(f==="reminder"){const t=v("rem-new");if(!t)return;editSettings(s=>{s.reminders.push({id:uid(),text:t})})}
