@@ -136,6 +136,12 @@ li.done .grow{color:var(--muted);text-decoration:line-through}
 .routines li.rtdone label{color:var(--muted)}.rtauto{font-size:.68rem;padding:1px 6px;border-radius:999px;background:var(--soft,rgba(127,127,127,.12));color:var(--muted);vertical-align:middle;margin-left:4px}
 .rtlater{margin:4px 0 0}.rtedit{flex-direction:column;align-items:stretch!important;gap:8px}.rtetop{display:flex;gap:8px;align-items:center}.rtetop input{flex:1;min-width:0}
 .rtdays{flex-wrap:wrap;gap:4px}.rtdays .chip{padding:4px 7px;font-size:.76rem;min-width:0}.rtedit select{max-width:100%}
+.hwstrip{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:6px 0}.hwd{display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 0;border-radius:10px;border:1px solid var(--line);font-size:.72rem}
+.hwd b{font-weight:600;color:var(--muted)}.hwd i{font-style:normal;font-size:.95rem}.hwd.now{border-color:var(--accent,currentColor);box-shadow:0 0 0 1px var(--accent,currentColor) inset}.hwd.done{background:var(--soft,rgba(127,127,127,.12))}.hwd.rest{opacity:.65}.hwd.miss i{opacity:.4}
+h3.wsec{font-size:.86rem;margin:12px 0 4px;font-weight:600}h3.wsec .muted{font-weight:400}.hwswap{margin-top:8px;display:flex;flex-direction:column;gap:6px}
+.hwkm{display:flex;align-items:center;gap:10px}.hwbar{flex:1;height:6px;border-radius:9px;background:var(--line);overflow:hidden}.hwbar i{display:block;height:100%;background:var(--accent,#3a6b4f)}
+.hwrunform input{width:80px}.hwnote{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border-radius:10px;background:var(--soft,rgba(127,127,127,.1));margin:6px 0}
+.hwdays li{display:flex;align-items:center;gap:10px}.hwdl{display:flex;flex-direction:column;width:52px;flex:none}.hwdays select{flex:1;min-width:0}.hwdm{width:62px;flex:none;text-align:right;color:var(--muted)}.hwdm.ok{color:var(--accent,inherit)}.hwnotes{margin:4px 0 0}
 .prio{width:8px;height:8px;border-radius:50%;flex:none}
 .prio.p5{background:var(--danger)}.prio.p3{background:var(--warm)}.prio.p1{background:var(--m2)}
 .tt-err{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--warm-soft);border-radius:10px;padding:10px 12px;font-size:.9rem}
@@ -561,7 +567,7 @@ const READING=[
 ["Focus","Digital Minimalism, Cal Newport","How to use your phone on purpose instead of by habit.",""],
 ["Waste less","Love Food Hate Waste","UK tips for storing, using up and planning food.","https://www.lovefoodhatewaste.com/"]];
 
-/* ---------- Steady 10: daily 10-minute workout (one 12 kg kettlebell, no bar, no handstands) ---------- */
+/* skill tracks: 4 levels each, moved up by hand when you hit the goal */
 const SKILLS={
  lsit:{name:"L-sit",levels:[
   ["Foot-supported L-sit","Hands on the floor or two sturdy chairs beside your hips. Lock your arms, push your shoulders down and lift your hips; heels stay on the floor.","3 × 20 s","3 × 30 s"],
@@ -574,53 +580,144 @@ const SKILLS={
   ["Pistol negatives","Lower on one leg as slowly as you can (3–4 s) all the way down, then stand up on both legs.","3 × 4 each leg","3 × 6 each leg"],
   ["Full pistol","Down and up on one leg. Hold the kettlebell out in front if you need balance.","3 × 3–5 each leg","3 × 6 each leg"]]}
 };
-const FOCI=[
- {id:"core",name:"Core & L-sit",skill:"lsit",fixed:[["Seated compression lifts","Sit with legs straight, hands beside your knees, and lift both heels off the floor using only your hip flexors. Builds the L-sit directly.","3 × 8"]],
-  pool:[["Hollow body hold","Lower back pressed into the floor, arms and legs long and just off the ground.","3 × 20–30 s"],["Kettlebell dead bug","Hold the kettlebell by the horns above your chest; lower the opposite arm and leg slowly while keeping your back flat.","3 × 8 each side"],["Lying leg raises","Legs straight, lower them slowly until just above the floor, then lift.","3 × 10"],["Plank kettlebell drag","In a high plank, reach under and drag the kettlebell from one side to the other without twisting your hips.","3 × 6 each side"],["Kettlebell halo","Hold the bell upside down by the horns and circle it slowly around your head, close to your neck. Switch direction each set. Shoulders and core.","3 × 5 each way"],["Russian twist with kettlebell","Lean back slightly, feet down, hold the bell by the horns and rotate side to side.","3 × 12"]]},
- {id:"legs",name:"Legs & pistol",skill:"pistol",fixed:[["Kettlebell swing","Hike the bell back between your legs, then snap your hips forward so it floats to chest height. The power comes from your hips; your arms just guide it.","3 × 15"]],
-  pool:[["Squat jumps","Squat down and jump as high as you can, land softly.","3 × 8"],["Goblet squat","Hold the kettlebell by the horns at your chest and squat deep, elbows inside the knees.","3 × 12"],["Reverse lunge with kettlebell","Hold the kettlebell by the horns at your chest, step back into a lunge, drive up through the front heel.","3 × 8 each leg"],["Single-leg Romanian deadlift","Kettlebell in the opposite hand, hinge forward on one leg with a flat back. Great for balance and the back of the legs.","3 × 8 each leg"],["Cossack squat","Wide stance, shift down onto one leg while the other stays straight. Builds the mobility a pistol needs.","3 × 6 each side"]]},
- {id:"back",name:"Back & pull-up prep",skill:null,
-  fixed:[["One-arm row, slow lowering","Hand and knee on a chair or bench. Pull the kettlebell to your hip, squeeze your shoulder blade back, then take 3 seconds to lower it. The slow lowering builds pull-up strength.","3 × 8 each arm"]],
-  picks:[
-   [["Kettlebell pullover","Lying on your back, hold the kettlebell by the horns over your chest, lower it behind your head with slightly bent arms, then pull it back over. Works the lats, your main pull-up muscle.","3 × 10"],
-    ["Floor lat pull-downs","Lie face down, arms overhead. Lift your arms slightly and pull your elbows down to your ribs, squeezing your shoulder blades down and together. Pause, reach back out.","3 × 10"]],
-   [["Kettlebell curls","Hold the handle with both hands, bell hanging, curl it up slowly and lower it slower. Strong arms keep a pull-up going.","3 × 10 each arm"],
-    ["One-arm suitcase hold","Stand tall holding the kettlebell at your side as long as you can without leaning. Builds the grip a pull-up needs.","3 × 30–45 s each hand"]]],
-  pool:[["Prone Y-T-W raises","Lying face down, lift your arms into a Y, then a T, then a W, squeezing your upper back each time.","3 × 6 of each letter"],["Kettlebell swing","Hike the bell back between your legs, then snap your hips forward so it floats to chest height. The power comes from your hips; your arms just guide it.","3 × 15"],["Kettlebell high pull","Explosively pull the kettlebell from your knees to chest height, elbows high. Builds pulling power without a bar.","3 × 8 each arm"],["Reverse snow angels","Face down, arms by your sides just off the floor, sweep them overhead and back.","3 × 10"],["Superman hold","Lying face down, lift arms, chest and legs off the floor and hold.","3 × 20 s"],["Rear-delt fly","Hinged forward with a flat back, raise the kettlebell out to the side.","3 × 10 each arm"]]},
- {id:"power",name:"Power & push",skill:null,fixed:[["Explosive push-ups","Lower under control, then push hard enough for your hands to leave the floor.","3 × 6–8"]],
-  picks:[[["Kettlebell clean","Swing the bell back between your legs, then pull it up close to your body and catch it softly at your shoulder, elbow tucked. An explosive pull.","3 × 6 each arm"],["Kettlebell high pull","Explosively pull the kettlebell from your knees to chest height, elbows high.","3 × 8 each arm"]]],
-  pool:[["Kettlebell swing","Hike the bell back between your legs, then snap your hips forward so it floats to chest height. The power comes from your hips; your arms just guide it.","3 × 15"],["Kettlebell push press","Hold the bell at your shoulder, dip your knees slightly and drive it overhead using your legs.","3 × 8 each arm"],["Kettlebell snatch","Swing the bell back, then pull it up close to your body and punch it overhead in one move, letting it roll softly onto your forearm. Learn the clean first if it feels new.","3 × 6 each arm"],["Pike push-ups","Hips high, lower your head toward the floor between your hands. Builds overhead strength without handstands.","3 × 8"],["Archer push-ups","Wide hands, lower toward one hand while the other arm stays straight.","3 × 5 each side"],["Kettlebell thrusters","Hold the bell by the horns at your chest, squat, then drive up and press it overhead with both hands.","3 × 10"],["Burpees","Down to a push-up, jump the feet in, jump up.","3 × 8"]]}
-];
+/* ---------- Heartwood: a 6-day week planned around your goals (one 12 kg kettlebell, a flat, no bar or table, plus runs outside) ---------- */
+Object.assign(SKILLS,{
+ handstand:{name:"Handstand",levels:[
+  ["Wall plank","Hands on the floor, walk your feet up the wall until your body makes an L, hips over shoulders, arms locked. Push the floor away. A cushion under your head helps you relax.","3 × 20–30 s","3 × 45 s"],
+  ["Chest-to-wall walk-up","From a plank with your feet at the wall, walk your hands in and your feet up until your chest is close to the wall. Hold, then walk down slowly.","3 × 15–20 s","3 × 30 s"],
+  ["Chest-to-wall handstand","Walk all the way up, belly to the wall, body in one straight line. Squeeze your bum, point your toes, nose a hand-width from the wall.","3 × 20–30 s","3 × 60 s"],
+  ["Kick-ups and toe pulls","Back to the wall, kick up softly so your heels just touch, then ease one foot at a time off the wall to find your balance. Come down with control, never crash.","8 × 10–20 s practice","10 × 5–10 s free holds"]]},
+ pushup:{name:"Push-up",levels:[
+  ["Incline push-up","Hands on a sofa arm or a sturdy chair seat, body straight from head to heels. Lower your chest to the edge and press away.","3 × 10","3 × 15"],
+  ["Full push-up","Hands under your shoulders, elbows about 45° from your body, chest down to a fist's height from the floor.","3 × 6–8","3 × 15"],
+  ["Assisted archer push-up","Wide hands. Shift and lower toward one hand while the other arm slides out straight on the floor, still taking some weight.","3 × 4 each side","3 × 6 each side"],
+  ["Archer push-up","As above, but the straight arm only steadies you. A big step toward one-arm push-ups.","3 × 5 each side","3 × 8 each side"]]},
+ pullup:{name:"Pull-up",levels:[
+  ["Dead hang","Hang from the bar with straight arms, shoulders gently pulled down. Builds grip and opens the shoulders.","3 × 20–30 s","3 × 45 s"],
+  ["Scapular pull-ups","Hanging with straight arms, pull your shoulder blades down and together so you rise a few centimetres, then relax.","3 × 8","3 × 12"],
+  ["Slow negatives","Jump or step up to the top, chin over the bar, then lower yourself as slowly as you can (5 s).","3 × 3","3 × 5"],
+  ["Pull-ups","From a dead hang, pull until your chin passes the bar. Clean reps beat many.","3 × 1–3","3 × 5"]]}
+});
+const WALK=[["March with arm swings","March on the spot, knees up to hip height if you can, arms swinging long.","1 min"],
+ ["Step-touch with punches","Step side to side, punching across your body on each step.","1 min"],
+ ["Knee lifts with overhead reach","Lift one knee and pull your arms down from overhead to meet it. Alternate.","1 min"],
+ ["Side steps with arm circles","Two steps to the right, two to the left, arms out making small circles.","1 min"],
+ ["Heel taps back with chest opener","Tap one heel back behind you as you pull your arms wide and open your chest.","1 min"],
+ ["Walking jacks","Step one foot out as both arms go up, step back in as they come down. A quiet jumping jack.","1 min"],
+ ["Walking butt kicks","Walk on the spot, heels lifting toward your bum, arms pumping.","1 min"],
+ ["Low front kicks","Alternate small controlled kicks in front, arms guarding your face.","1 min"],
+ ["Boxer shuffle with jabs","Light on your feet, shuffle side to side and throw quick jabs.","1 min"],
+ ["Marching torso twists","March while rotating your shoulders, elbows out, side to side.","1 min"],
+ ["Step-back lunges","Step back into a small lunge, return, swap legs at a steady pace.","1 min"],
+ ["Grapevine","Step to the side, cross the back foot behind, step out again, then go the other way.","1 min"]];
+const MOB=[["Wrist rocks","On hands and knees, fingers forward, rock gently forward and back; then turn your fingers to face your knees and repeat. Handstands need happy wrists.","45 s"],
+ ["Towel shoulder pass-throughs","Hold a towel wide with both hands and lift it over your head and behind you with straight arms, then back.","10 slow reps"],
+ ["Deep squat hold","Sink into a deep squat, heels down, elbows pushing your knees out. Hold on to something if needed.","45–60 s"],
+ ["Bridge","Lying on your back, hands by your ears, feet flat; press up into a bridge, or a glute bridge if that's too much. Builds toward capoeira and gymnastics.","3 × 10 s"],
+ ["Hip flexor lunge stretch","Low lunge with the back knee down, tuck your pelvis and lean gently forward.","45 s each side"],
+ ["Thread the needle","On hands and knees, slide one arm under the other and rest your shoulder down; reach up and open the other way.","5 each side"],
+ ["Forward fold","Stand, soften your knees and let your upper body hang, swaying gently.","45 s"],
+ ["Cat–cow","On hands and knees, round your back up, then let it sag as you look up, slowly.","8 slow reps"]];
+const SESS={
+ back:{id:"back",name:"Back & arms",emoji:"💪",mins:20,n:4,mob:3,skills:[],
+  intro:"Warm up 2 min: arm circles, cat–cow, 10 slow rows without weight. Then do the moves back to back, rest about 45 s, and repeat for 3 rounds.",
+  fixed:[["One-arm row, slow lowering","Hand and knee on a chair or the sofa. Pull the kettlebell to your hip, squeeze your shoulder blade back, then take 3 seconds to lower it.","3 × 8 each arm"]],
+  picks:[[["Kettlebell pullover","On your back, hold the bell by the horns over your chest, lower it behind your head with slightly bent arms, then pull it back over. Works your lats.","3 × 10"],
+    ["Towel floor pulls","Face down on a towel on a smooth floor, arms out in front. Press your forearms down and pull your body forward to your hands, like a pull-up lying down.","3 × 4 pulls"],
+    ["Floor lat pull-downs","Face down, arms overhead and just off the floor. Pull your elbows down to your ribs, squeezing your shoulder blades together, then reach back out.","3 × 10"]],
+   [["Kettlebell curls","Hold the handle with both hands, bell hanging. Curl up slowly and lower even slower.","3 × 10"],
+    ["Hammer curls","Hold the bell by the handle beside you, thumb up. Curl slowly, lower slower.","3 × 10 each arm"]],
+   [["Kettlebell high pull","Pull the bell explosively from your knees to chest height, elbows high.","3 × 8 each arm"],
+    ["Gorilla row","Wide stance, hinge forward with a flat back, bell between your feet, other hand on your thigh. Row it to your hip, lower slowly.","3 × 8 each arm"]]],
+  pool:[["Prone Y-T-W raises","Face down, lift your arms into a Y, then a T, then a W, squeezing your upper back each time.","3 × 6 of each letter"],
+   ["Reverse snow angels","Face down, arms by your sides just off the floor; sweep them overhead and back.","3 × 10"],
+   ["Superman hold","Face down, lift your arms, chest and legs off the floor and hold.","3 × 20 s"],
+   ["Rear-delt fly","Hinge forward with a flat back and raise the bell out to the side.","3 × 10 each arm"],
+   ["Two-hand bent-over row","Hinge forward, hold the bell by the horns and row it to your belly.","3 × 12"],
+   ["One-arm suitcase hold","Stand tall holding the bell at your side without leaning. Grip and core.","3 × 30–45 s each hand"]]},
+ push:{id:"push",name:"Push & balance",emoji:"🤸",mins:20,n:3,mob:3,skills:["handstand","pushup"],
+  intro:"Warm up 2 min: wrist rocks, arm circles, 5 slow push-ups on your knees. Skill work first while you're fresh, then 3 rounds of the moves with about 45 s rest.",
+  fixed:[["Pike push-ups","Hips high in an upside-down V, lower your head toward the floor between your hands and press back up. Builds handstand strength.","3 × 8"]],
+  picks:[[["Chair dips","Hands on the edge of a sturdy chair behind you, legs out. Lower until your elbows are at 90°, press up. Shoulders away from your ears.","3 × 10"],
+    ["Close-grip push-ups","Hands under your chest, elbows brushing your ribs. Your triceps do the work.","3 × 8"]],
+   [["Kettlebell floor press","On your back, knees bent, bell at your chest. Press it straight up; lower until your elbow touches the floor.","3 × 10 each arm"],
+    ["Kettlebell overhead press","Bell at your shoulder, squeeze your bum and press it straight overhead without leaning back.","3 × 8 each arm"]]],
+  pool:[["Plank shoulder taps","High plank, feet wide; tap each shoulder without your hips rocking.","3 × 10 each side"],
+   ["Kettlebell halo","Hold the bell upside down by the horns and circle it slowly around your head. Switch direction each set.","3 × 5 each way"],
+   ["Bear plank hold","On hands and knees, lift your knees a few centimetres and hold, back flat.","3 × 30 s"],
+   ["Kettlebell push press","Bell at your shoulder, dip your knees slightly and drive it overhead using your legs.","3 × 8 each arm"]]},
+ core:{id:"core",name:"Core & burn",emoji:"🔥",mins:25,n:2,mob:2,skills:["lsit"],walk:6,burpee:true,
+  intro:"L-sit work first, then 3 rounds of the core moves, then the Walk & move block to finish strong.",
+  fixed:[["Hollow body hold","Lower back pressed into the floor, arms and legs long and just off the ground.","3 × 20–30 s"]],
+  picks:[[["Kettlebell dead bug","Hold the bell by the horns above your chest; lower the opposite arm and leg slowly, back flat.","3 × 8 each side"],
+    ["Lying leg raises","Legs straight, lower them slowly until just above the floor, then lift.","3 × 10"],
+    ["Plank kettlebell drag","High plank; reach under and drag the bell from one side to the other without twisting your hips.","3 × 6 each side"]],
+   [["Russian twist with kettlebell","Lean back slightly, feet down, hold the bell by the horns and rotate side to side.","3 × 12"],
+    ["Seated compression lifts","Legs straight, hands beside your knees, lift both heels off the floor using only your hip flexors.","3 × 8"]]],
+  pool:[["Kettlebell halo","Hold the bell upside down by the horns and circle it slowly around your head.","3 × 5 each way"]]},
+ walk:{id:"walk",name:"Walk & move",emoji:"🚶",mins:20,n:0,mob:2,skills:[],walk:8,
+  intro:"March for 2 minutes to warm up. Then go through the moves, 1 minute each, twice. Keep moving, arms busy, breathing a bit harder but able to talk.",
+  fixed:[],picks:[],pool:[]},
+ run:{id:"run",name:"Easy run",emoji:"🏃",mins:30,km:4.5,run:true,
+  intro:"Easy pace: you could chat in full sentences. Walk breaks are completely fine. Start with 3 minutes of brisk walking."},
+ long:{id:"long",name:"Longer run",emoji:"🏃",mins:45,km:5.5,run:true,
+  intro:"40–45 minutes at an easy, steady pace. Slower than you think is right. If you're not done in 45 minutes, stop there anyway."},
+ rest:{id:"rest",name:"Rest",emoji:"🌿",mins:0,rest:true,intro:"Your muscles grow on rest days. A walk outside or some stretching is plenty."}
+};
+/* days before Heartwood existed are never "missed" */
+const HW_START="2026-11-05";
+const HW_TYPES=["back","push","core","walk","run","long","rest"];
+const HW_DEFAULT=["back","run","push","core","back","long","rest"];
+const HW_EMPH=[["balanced","Arms & back",HW_DEFAULT],["skills","Skills",["push","run","back","core","push","long","rest"]],
+ ["burn","Fat loss",["back","run","core","push","back","long","walk"]],["running","Running",["back","run","push","run","core","long","rest"]]];
+const hwSet=()=>S.settings.hw||{};
+const hwBar=()=>!!hwSet().bar;
+function planFor(ws){const P=hwSet().plans||{};if(P[ws])return P[ws].slice();
+  const prev=Object.keys(P).filter(k=>k<ws).sort().pop();return (prev?P[prev]:HW_DEFAULT).slice()}
+const hwPlanned=k=>planFor(weekStart(k))[dowMon(k)];
+const hwType=k=>{const w=getDay(k).workout||{};return SESS[w.type]?w.type:hwPlanned(k)};
+const hwRunKm=k=>actsOf(bodyOf(getDay(k))).filter(a=>a.k==="run").reduce((n,a)=>{const m=/(\d+(?:[.,]\d+)?)\s*km/i.exec(a.note||"");return n+(m?parseFloat(m[1].replace(",",".")):0)},0);
+const hwDoneOn=k=>{const d=getDay(k);if(d.workout&&d.workout.done)return true;return SESS[hwType(k)].run&&actsOf(bodyOf(d)).some(a=>a.k==="run")};
+function hwWeekStats(ws){const days=[...Array(7)].map((_,i)=>addDays(ws,i)),tk=today();const plan=planFor(ws);
+  let planned=0,done=0,km=0;const missed=[];
+  days.forEach((k,i)=>{km+=hwRunKm(k);const t=hwType(k);if(SESS[t].rest)return;planned++;if(hwDoneOn(k))done++;else if(k<tk&&k>=HW_START)missed.push(t)});
+  return {planned,done,km:Math.round(km*10)/10,missed,plan}}
+function hwNotes(plan){const N=[],nm=t=>SESS[t].name;const isRun=t=>SESS[t].run;
+  for(let i=0;i<6;i++){const a=plan[i],b=plan[i+1];
+    if(isRun(a)&&isRun(b))N.push(`Two runs in a row (${RT_DAYS[i]}–${RT_DAYS[i+1]}): keep the second one easy.`);
+    else if(a===b&&!SESS[a].rest&&a!=="walk")N.push(`${nm(a)} two days running (${RT_DAYS[i]}–${RT_DAYS[i+1]}): muscles grow in the rest between.`)}
+  if(!plan.some(t=>SESS[t].rest||t==="walk"))N.push("No easy day this week. One rest or Walk & move day helps you come back stronger.");
+  const km=plan.reduce((n,t)=>n+(SESS[t].km||0),0);if(km<10)N.push(`Runs planned: about ${km} km, short of your 10 km.`);
+  return N}
 function seeded(n){let x=(n*2654435761)>>>0;return ()=>{x^=x<<13;x>>>=0;x^=x>>17;x^=x<<5;x>>>=0;return x/4294967296}}
 function workoutFor(k,shift=0,raw=false){
-  const n=dayNum(k);const f=FOCI[(((n+shift)%4)+4)%4];const rnd=seeded(n*7+shift);
-  const pool=f.pool.slice();for(let i=pool.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}
+  const type=hwType(k),f=SESS[type]||SESS.back;const n=dayNum(k);const rnd=seeded(n*7+HW_TYPES.indexOf(type));
+  if(f.run||f.rest)return {focus:f,ex:[]};
+  const shuf=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
   const ex=[];
-  if(f.skill){const sk=SKILLS[f.skill];const lv=Math.min(sk.levels.length,Math.max(1,(S.settings.skills||{})[f.skill]||1));const L=sk.levels[lv-1];ex.push({name:L[0],how:L[1],dose:L[2],skill:f.skill,level:lv,goal:L[3]})}
-  f.fixed.forEach(x=>ex.push({name:x[0],how:x[1],dose:x[2]}));
-  (f.picks||[]).forEach(g=>{const x=g[Math.floor(rnd()*g.length)];if(!ex.some(e=>e.name===x[0]))ex.push({name:x[0],how:x[1],dose:x[2]})});
-  const used=new Set(ex.map(e=>e.name));for(let i=pool.length-1;i>=0;i--)if(used.has(pool[i][0]))pool.splice(i,1);
-  while(ex.length<4&&pool.length){const x=pool.shift();ex.push({name:x[0],how:x[1],dose:x[2]})}
+  const sk=(f.skills||[]).concat(type==="back"&&hwBar()?["pullup"]:[]);
+  sk.forEach(id=>{const S0=SKILLS[id];const lv=Math.min(S0.levels.length,Math.max(1,(S.settings.skills||{})[id]||1));const L=S0.levels[lv-1];ex.push({name:L[0],how:L[1],dose:L[2],skill:id,level:lv,goal:L[3],sec:"skill"})});
+  const st=[];f.fixed.forEach(x=>st.push(x));
+  (f.picks||[]).forEach(g=>{const x=g[Math.floor(rnd()*g.length)];if(!st.some(e=>e[0]===x[0]))st.push(x)});
+  const pool=shuf(f.pool).filter(x=>!st.some(e=>e[0]===x[0]));while(st.length<f.n&&pool.length)st.push(pool.shift());
+  st.slice(0,f.n).forEach(x=>ex.push({name:x[0],how:x[1],dose:x[2]}));
   /* exercises you swapped today */
-  const sw=(getDay(k).workout||{}).swaps||{};const shiftNow=(getDay(k).workout||{}).shift||0;
-  if(!raw&&shift===shiftNow)Object.entries(sw).forEach(([i,name])=>{const x=focusMoves(f).find(m=>m[0]===name);if(x&&ex[+i]&&!ex[+i].skill)ex[+i]={name:x[0],how:x[1],dose:x[2],swapped:true}});
+  const sw=(getDay(k).workout||{}).swaps||{};
+  if(!raw)Object.entries(sw).forEach(([i,name])=>{const x=focusMoves(f).find(m=>m[0]===name);if(x&&ex[+i]&&!ex[+i].skill&&!ex[+i].sec)ex[+i]={name:x[0],how:x[1],dose:x[2],swapped:true}});
+  if(f.walk){shuf(WALK).slice(0,f.walk).forEach(x=>ex.push({name:x[0],how:x[1],dose:x[2],sec:"walk"}));
+    if(f.burpee)ex.push({name:"Soft burpees",how:"Squat, hands down, step or hop your feet back softly, come back in and rise with a small hop or a reach. Land on the balls of your feet to keep it quiet for the neighbours.",dose:"30 s after each round",sec:"walk"})}
+  if(f.mob)shuf(MOB).slice(0,f.mob).forEach(x=>ex.push({name:x[0],how:x[1],dose:x[2],sec:"mob"}));
   return {focus:f,ex};
 }
 /* every move a focus knows, and the ones that could stand in for a given move */
 const focusMoves=f=>{const seen=new Set();return [...f.fixed,...(f.picks||[]).flat(),...f.pool].filter(m=>!seen.has(m[0])&&seen.add(m[0]))};
 /* a stable cycle per slot: similar moves first (same group), then the rest of the focus, then back to the original */
-function swapCycle(k,shift,i){const f=workoutFor(k,shift,true).focus,orig=workoutFor(k,shift,true).ex,cur=workoutFor(k,shift).ex;const o=orig[i];if(!o||o.skill)return [];
+function swapCycle(k,shift,i){const f=workoutFor(k,shift,true).focus,orig=workoutFor(k,shift,true).ex,cur=workoutFor(k,shift).ex;const o=orig[i];if(!o||o.skill||o.sec)return [];
   const others=new Set(cur.filter((_,j)=>j!==i).map(e=>e.name).concat(orig.filter((_,j)=>j!==i).map(e=>e.name)));
   const grp=(f.picks||[]).find(g=>g.some(m=>m[0]===o.name));
   const near=grp?grp.filter(m=>m[0]!==o.name&&!others.has(m[0])):[];const rest=focusMoves(f).filter(m=>m[0]!==o.name&&!others.has(m[0])&&!near.includes(m));
   return [...near,...rest].map(m=>m[0]).concat(o.name)}
 const swapCandidates=(f,ex,i)=>swapCycle(today(),(getDay(today()).workout||{}).shift||0,i).slice(0,-1);
-/* this week (Monday on): which focuses are done, and which haven't come up yet */
-function weekFoci(){const T=today(),dow=(new Date(T+"T12:00:00").getDay()+6)%7,mon=addDays(T,-dow);const done=[];
-  for(let i=0;i<=dow;i++){const k=addDays(mon,i);const w=getDay(k).workout;if(w&&w.done)done.push({k,id:w.focus||workoutFor(k,w.shift||0).focus.id})}
-  const left=FOCI.filter(f=>!done.some(d=>d.id===f.id));return {done,left}}
-function weekLine(){const {done,left}=weekFoci();const nm=id=>(FOCI.find(f=>f.id===id)||{name:id}).name;
-  return `<div class="wweek"><span class="eyebrow">This week</span>${done.length?done.map(d=>`<span class="pill soft">✓ ${esc(nm(d.id))} · ${fmtDay(d.k,{weekday:"short"})}</span>`).join(""):`<span class="muted small">Nothing yet</span>`}${left.length&&done.length?`<span class="muted small">Not yet: ${left.map(f=>esc(f.name)).join(", ")}</span>`:""}</div>`}
 const MOODS=[[1,"Low","--m1"],[2,"Heavy","--m2"],[3,"Okay","--m3"],[4,"Good","--m4"],[5,"Bright","--m5"]];
 const STARTER_HABITS=["Drink water first thing","10 minutes outside","Cook at home","No phone in bed","Stretch or move for 15 min"];
 const STARTER_REMINDERS=["Pause before buying: do I need it, or do I want it right now?","Three slow breaths before answering a hard message.","Done is better than perfect. Start with five minutes.","Use what's already in the fridge before shopping again.","Notice one good thing out loud today.","Rest is part of the work, not a reward for it.","Small and steady beats big and rare."];
@@ -1364,7 +1461,7 @@ V.today=()=>{
   return recapPromptCard()+shown.map(x=>x[1]).join("\n");
 };
 /* Today's blocks, in your order (Settings → Arrange Today). New blocks appear in their default place. */
-const TODAY_BLOCKS=[["pointer","Today's pointer"],["vision","Vision tile"],["trip","Trip countdown"],["g-do","“Do” heading"],["tasks","Top 3 and today's tasks"],["routines","Routines (Japanese, daily sport…)"],["workout","Steady 10 workout"],["g-feel","“Feel” heading"],["dream","Morning dream note (until noon)"],["mood","Mood"],["g-notice","“Notice” heading"],["checkin","Check-in (exercise, water, fruit)"],["weigh","Weekly weigh-in"],["ate","What I ate"],["dates","Birthdays & dates"],["apps","Pinned apps"],["groc","Groceries"],["media","Monthly photo check"],["wishcheck","Wishlist “still want it?”"],["study","Japanese: WaniKani & Bunpro"],["jpread","Japanese reading"],["g-reflect","“Reflect” heading"],["reflect","Reflection and gratitude"],["extras","Links, project progress, past days"]];
+const TODAY_BLOCKS=[["pointer","Today's pointer"],["vision","Vision tile"],["trip","Trip countdown"],["g-do","“Do” heading"],["tasks","Top 3 and today's tasks"],["routines","Routines (Japanese, daily sport…)"],["workout","Heartwood workout"],["g-feel","“Feel” heading"],["dream","Morning dream note (until noon)"],["mood","Mood"],["g-notice","“Notice” heading"],["checkin","Check-in (exercise, water, fruit)"],["weigh","Weekly weigh-in"],["ate","What I ate"],["dates","Birthdays & dates"],["apps","Pinned apps"],["groc","Groceries"],["media","Monthly photo check"],["wishcheck","Wishlist “still want it?”"],["study","Japanese: WaniKani & Bunpro"],["jpread","Japanese reading"],["g-reflect","“Reflect” heading"],["reflect","Reflection and gratitude"],["extras","Links, project progress, past days"]];
 function todayOrder(){
   const def=TODAY_BLOCKS.map(x=>x[0]);const mine=(S.settings.todayOrder||[]).filter(k=>def.includes(k));
   /* older saved orders: the Feel section (dream + mood) takes Notice's old spot, Notice moves below mood */
@@ -1446,7 +1543,7 @@ const RT_DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 const RT_SUGGEST=[["Japanese study","jp"],["Workout","workout"],["Move 20 minutes","move"]];
 const dowMon=k=>(new Date(k+"T12:00:00").getDay()+6)%7;
 const rtList=()=>S.settings.routines||[];
-const rtOn=(r,k)=>!r.days||!r.days.length||r.days.includes(dowMon(k));
+const rtOn=(r,k)=>(!r.days||!r.days.length||r.days.includes(dowMon(k)))&&!(r.auto==="workout"&&SESS[hwType(k)].rest&&!((getDay(k).workout||{}).done));
 function rtAuto(r,k){const d=getDay(k);if(!r.auto)return false;
   if(r.auto==="workout")return !!(d.workout&&d.workout.done);
   const acts=actsOf(bodyOf(d));
@@ -1501,8 +1598,8 @@ const YN=(field,val,label)=>`<div class="yn"><span>${label}</span><div class="se
 const bodyOf=d=>d.body||{ex:"",water:null,fruit:null};
 const isRest=ex=>!ex||!String(ex).trim()||/^rest( day)?$/i.test(String(ex).trim());
 const exLabel=ex=>isRest(ex)?"Rest day":String(ex).trim();
-const EX_KINDS=[["steady10","Steady 10"],["run","Run"],["gym","Gym"],["class","Class"],["walk","Walk"],["yoga","Yoga"]];
-const EX_HINT={steady10:"e.g. strength focus, 12 min",run:"e.g. 5 km, easy pace",gym:"e.g. legs, 45 min",class:"e.g. boxing at 7pm",walk:"e.g. 40 min in the park",yoga:"e.g. 20 min stretch"};
+const EX_KINDS=[["steady10","Heartwood"],["run","Run"],["gym","Gym"],["class","Class"],["walk","Walk"],["yoga","Yoga"]];
+const EX_HINT={steady10:"e.g. Back & arms, 20 min",run:"e.g. 5 km, easy pace",gym:"e.g. legs, 45 min",class:"e.g. boxing at 7pm",walk:"e.g. 40 min in the park",yoga:"e.g. 20 min stretch"};
 const exKinds=()=>[...EX_KINDS,...(S.settings.exKinds||[]).map(n=>["c:"+n,n])];
 const exName=k=>k==="other"?"Other":(exKinds().find(x=>x[0]===k)||[k,String(k).replace(/^c:/,"")])[1];
 const actsOf=b=>Array.isArray(b.acts)?b.acts:(isRest(b.ex)?[]:[{k:"other",note:String(b.ex).trim()}]);
@@ -1524,18 +1621,63 @@ function timerRow(w){
     ${st==="idle"?`<button type="button" class="btn ghost sm" data-act="wtimer" data-do="start">Start timer</button>`:st==="running"?`<button type="button" class="btn ghost sm" data-act="wtimer" data-do="pause">Pause</button>`:`<button type="button" class="btn ghost sm" data-act="wtimer" data-do="resume">Resume</button>`}
   </div>`;
 }
+/* this week at a glance: what's planned each day and what's done */
+function hwStrip(){const ws=weekStart(today()),tk=today();
+  return `<div class="hwstrip" aria-label="This week">${[...Array(7)].map((_,i)=>{const k=addDays(ws,i),t=hwType(k),f=SESS[t],dn=hwDoneOn(k);
+    return `<span class="hwd ${k===tk?"now":""} ${dn?"done":""} ${f.rest?"rest":""} ${k<tk&&k>=HW_START&&!dn&&!f.rest?"miss":""}" title="${fmtDay(k,{weekday:"long"})}: ${esc(f.name)}${dn?" ✓":""}"><b>${RT_DAYS[i][0]}</b><i>${dn?"✓":f.emoji}</i></span>`}).join("")}</div>`}
+const hwMinsTxt=f=>f.run?(f.id==="long"?"40–45 min":"~30 min"):f.rest?"":`~${f.mins} min`;
+function hwSecTitle(sec,f){return sec==="skill"?`Skill practice · ~4 min<span class="muted small"> · quality holds, rest 30–60 s between</span>`:
+  sec==="walk"?(f.id==="walk"?`Walk & move · 2 rounds`:`Walk & move · ~12 min<span class="muted small"> · 1 min each, twice through</span>`):
+  sec==="mob"?`Finish · 3 min mobility`:`Strength · 3 rounds`}
+function hwSwapRow(type){if(!S.hwSwapOpen)return "";
+  return `<div class="hwswap"><span class="muted small">Do instead:</span><div class="chips">${HW_TYPES.filter(t=>t!==type).map(t=>`<button type="button" class="chip" data-act="hwswap" data-t="${t}">${SESS[t].emoji} ${esc(SESS[t].name)}</button>`).join("")}</div></div>`}
+/* swapped a run away: offer to put it on a later easy day so the 10 km still happens */
+function hwRunMove(){const k=today(),w=getDay(k).workout||{};const was=hwPlanned(k);if(!SESS[was].run||!w.type||SESS[w.type].run)return "";
+  const ws=weekStart(k),plan=planFor(ws),i0=dowMon(k);const j=plan.findIndex((t,i)=>i>i0&&(SESS[t].rest||t==="walk"));if(j<0)return "";
+  return `<div class="hwnote"><span class="small">Swapped your run. Put it on ${RT_DAYS[j]} instead?</span><button type="button" class="btn ghost sm" data-act="hwmoverun" data-i="${j}" data-t="${was}">Move it to ${RT_DAYS[j]}</button></div>`}
 function workoutCard(){
   if(isPastView())return "";
-  const d=getDay(today());const w=d.workout||{};const {focus,ex}=workoutFor(today(),w.shift||0);
-  const wk=weekFoci();
-  if(!isOpen("workout"))return foldRow("workout",w.done?"✓ Steady 10":"Steady 10",esc(focus.name)+(wk.done.length?` <span class="muted small">· ${wk.done.length} this week</span>`:""),w.done?(w.secs?"done in "+mmss(w.secs):"done"):w.startedAt?`<span data-wclock>${mmss(wElapsed(w))}</span>${w.pausedAt?" · paused":""}`:"4 moves · ~10 min",w.done?"View":w.startedAt?"Open":"Start");
-  return `<section class="block card workout">
-    <div class="head"><h2>Steady 10</h2><span class="muted small">${esc(focus.name)} · ~10 min</span></div>
-    ${weekLine()}
+  const d=getDay(today());const w=d.workout||{};const type=hwType(today());const {focus:f,ex}=workoutFor(today(),w.shift||0);
+  const ws=weekStart(today()),st=hwWeekStats(ws);const done=hwDoneOn(today());
+  if(!isOpen("workout"))return foldRow("workout",done?"✓ Heartwood":"Heartwood",`${f.emoji} ${esc(f.name)}`+(st.done?` <span class="muted small">· ${st.done} this week</span>`:""),
+    done?(w.secs?"done in "+mmss(w.secs):"done"):w.startedAt&&!f.run?`<span data-wclock>${mmss(wElapsed(w))}</span>${w.pausedAt?" · paused":""}`:hwMinsTxt(f)||"rest day",done?"View":f.rest?"Open":w.startedAt?"Open":"Start");
+  const head=`<div class="head"><h2>Heartwood</h2><span class="muted small">${f.emoji} ${esc(f.name)}${hwMinsTxt(f)?" · "+hwMinsTxt(f):""}</span></div>${hwStrip()}`;
+  const foot=extra=>`<div class="addrow">${extra}${done?"":`<button type="button" class="btn ghost" data-act="hwswapopen" aria-expanded="${!!S.hwSwapOpen}">⇄ Swap today</button>`}<button type="button" class="linkbtn" data-act="fold" data-k="workout">Close</button></div>${done?"":hwSwapRow(type)}`;
+  if(f.rest)return `<section class="block card workout">${head}<p class="muted small" style="margin:0">${esc(f.intro)}</p>
+    <div class="addrow"><button type="button" class="btn ghost" data-act="hwswap" data-t="walk">🚶 Do Walk & move instead</button><button type="button" class="linkbtn" data-act="fold" data-k="workout">Close</button></div></section>`;
+  if(f.run){const ran=actsOf(bodyOf(d)).filter(a=>a.k==="run");
+    return `<section class="block card workout">${head}${hwRunMove()}
+    <p class="muted small" style="margin:0">${esc(f.intro)} Aim for about ${f.km} km.</p>
+    <div class="hwkm"><span class="eyebrow">This week</span><span class="mono">${st.km} / 10 km</span><span class="hwbar"><i style="width:${Math.min(100,st.km*10)}%"></i></span></div>
+    ${ran.length?`<p class="small" style="margin:0">✓ Logged: ${ran.map(a=>esc(a.note||"run")).join(" · ")} <button type="button" class="linkbtn subtle" data-act="hwrunundo">Remove</button></p>`:
+    `<form class="addrow hwrunform" data-form="hwrun"><input id="hw-km" type="number" step="0.1" min="0" inputmode="decimal" placeholder="km" aria-label="Distance in km"><input id="hw-min" type="number" min="0" step="1" inputmode="numeric" placeholder="min" aria-label="Minutes"><button class="btn" type="submit">Log run</button></form>`}
+    ${foot("")}</section>`}
+  const secs=[];ex.forEach((e,i)=>{const s=e.sec||"str";if(!secs.length||secs[secs.length-1].s!==s)secs.push({s,items:[]});secs[secs.length-1].items.push([e,i])});
+  const li=([e,i])=>`<li><div class="whead"><b>${esc(e.name)}</b><span class="mono">${esc(e.dose)}</span>${!e.skill&&!e.sec&&!w.done&&swapCandidates(f,ex,i).length?`<button type="button" class="linkbtn subtle tiny" data-act="wswap" data-i="${i}" title="Swap for a similar move">⇄ Swap</button>`:""}</div><div class="muted small">${esc(e.how)} ${e.sec==="walk"?"":`<a class="howto" href="https://www.youtube.com/results?search_query=${encodeURIComponent(e.name.replace(/\(.*?\)/g,"").replace(/,.*$/,"").trim()+" exercise form tutorial")}" target="_blank" rel="noopener">Watch how ↗</a>`}</div>${e.skill?`<div class="wlevel"><span class="pill soft">${esc(SKILLS[e.skill].name)} level ${e.level}/4</span><span class="muted small">Move up at ${esc(e.goal)}</span><span class="lvbtns"><button type="button" class="btn ghost sm" data-act="skilllv" data-k="${e.skill}" data-d="-1" ${e.level<=1?"disabled":""} aria-label="Easier level">Easier</button><button type="button" class="btn ghost sm" data-act="skilllv" data-k="${e.skill}" data-d="1" ${e.level>=4?"disabled":""} aria-label="Harder level">Level up</button></span></div>`:""}</li>`;
+  return `<section class="block card workout">${head}${hwRunMove()}
     ${timerRow(w)}
-    <p class="muted small">Warm up for a minute: arm and hip circles, 10 easy squats. Then do the 4 moves back to back, rest about 45 s, and repeat for 3 rounds.</p>
-    <ol class="wlist">${ex.map((e,i)=>`<li><div class="whead"><b>${esc(e.name)}</b><span class="mono">${esc(e.dose)}</span>${!e.skill&&!w.done&&swapCandidates(focus,ex,i).length?`<button type="button" class="linkbtn subtle tiny" data-act="wswap" data-i="${i}" title="Swap for a similar move">⇄ Swap</button>`:""}</div><div class="muted small">${esc(e.how)} <a class="howto" href="https://www.youtube.com/results?search_query=${encodeURIComponent(e.name.replace(/\(.*?\)/g,"").replace(/,.*$/,"").trim()+" exercise form tutorial")}" target="_blank" rel="noopener">Watch how ↗</a></div>${e.skill?`<div class="wlevel"><span class="pill soft">${esc(SKILLS[e.skill].name)} level ${e.level}/4</span><span class="muted small">Move up at ${esc(e.goal)}</span><span class="lvbtns"><button type="button" class="btn ghost sm" data-act="skilllv" data-k="${e.skill}" data-d="-1" ${e.level<=1?"disabled":""} aria-label="Easier level">Easier</button><button type="button" class="btn ghost sm" data-act="skilllv" data-k="${e.skill}" data-d="1" ${e.level>=4?"disabled":""} aria-label="Harder level">Level up</button></span></div>`:""}</li>`).join("")}</ol>
-    <div class="addrow">${w.done?`<button type="button" class="btn" data-act="wdone" aria-pressed="true">✓ Done today</button>`:`<button type="button" class="btn" data-act="wdone">Done</button>`}${w.done?"":`<button type="button" class="btn ghost" data-act="wshift">Different focus</button>`}<button type="button" class="linkbtn" data-act="fold" data-k="workout">Close</button></div>
+    <p class="muted small">${esc(f.intro)}</p>
+    ${secs.map(g=>`<h3 class="wsec">${hwSecTitle(g.s,f)}</h3><ol class="wlist">${g.items.map(li).join("")}</ol>`).join("")}
+    ${foot(w.done?`<button type="button" class="btn" data-act="wdone" aria-pressed="true">✓ Done today</button>`:`<button type="button" class="btn" data-act="wdone">Done</button>`)}
+  </section>`;
+}
+/* the week planner, in the Week tab: next week starts from this week's plan */
+function hwPlanCard(){
+  const tw=weekStart(today()),nw=addDays(tw,7);const dflt=dowOf(today())===0||dowOf(today())===6?nw:tw;
+  const ws=S.hwPlanWk===tw||S.hwPlanWk===nw?S.hwPlanWk:dflt;const plan=planFor(ws),isNext=ws===nw,tk=today();
+  const em=(hwSet().emph||{})[ws];const prev=hwWeekStats(isNext?tw:addDays(tw,-7));
+  const notes=hwNotes(plan);const km=plan.reduce((n,t)=>n+(SESS[t].km||0),0);
+  return `<section class="block card hwplan" id="hwplan"><div class="head"><h2>Heartwood plan</h2>
+      <div class="seg" role="group" aria-label="Which week"><button type="button" data-act="hwplanwk" data-w="${tw}" aria-pressed="${!isNext}">This week</button><button type="button" data-act="hwplanwk" data-w="${nw}" aria-pressed="${isNext}">Next week</button></div></div>
+    ${prev.done||prev.missed.length?`<p class="muted small" style="margin:0">${isNext?"This week":"Last week"}: ${prev.done}/${prev.planned} sessions · ${prev.km} km run${prev.missed.length?` · missed ${[...new Set(prev.missed)].map(t=>esc(SESS[t].name)).join(", ")}`:""}</p>`:""}
+    <div class="rgroup"><span class="eyebrow">Focus for ${isNext?"next":"this"} week</span><div class="chips">${HW_EMPH.map(([id,l])=>`<button type="button" class="chip" data-act="hwemph" data-e="${id}" data-w="${ws}" aria-pressed="${em===id}">${esc(l)}</button>`).join("")}</div></div>
+    <ul class="list hwdays">${plan.map((t,i)=>{const k=addDays(ws,i),dn=k<=tk&&hwDoneOn(k);
+      return `<li><span class="hwdl"><b>${RT_DAYS[i]}</b><span class="muted small">${fmtDay(k,{day:"numeric",month:"short"})}</span></span>
+      <select data-act="hwday" data-w="${ws}" data-i="${i}" aria-label="${RT_DAYS[i]}">${HW_TYPES.map(x=>`<option value="${x}" ${x===t?"selected":""}>${SESS[x].emoji} ${esc(SESS[x].name)}</option>`).join("")}</select>
+      <span class="hwdm small ${dn?"ok":""}">${dn?"✓ done":k<tk&&k>=HW_START&&!SESS[t].rest?"missed":k<tk?"":hwMinsTxt(SESS[t])}</span></li>`}).join("")}</ul>
+    <p class="small muted" style="margin:0">Runs planned: about ${km} km.</p>
+    ${notes.length?`<ul class="plainlist hwnotes">${notes.map(n=>`<li class="small">${esc(n)}</li>`).join("")}</ul>`:""}
+    <div class="setrow"><div><b>I have a pull-up bar</b><div class="muted small">Adds the pull-up track to Back & arms days, e.g. when you're near a park or a gym.</div></div><button type="button" class="switch" role="switch" aria-checked="${hwBar()}" aria-label="I have a pull-up bar" data-act="hwbar"><span></span></button></div>
   </section>`;
 }
 function starterBox(){
@@ -2833,7 +2975,7 @@ function recapSheet(){if(!S.recapYear)return "";const D=recapData(S.recapYear),Y
     <div class="rbig"><div><span class="rnum">${D.shown}</span><span class="muted small">days you showed up</span></div><div><span class="rnum">${D.span}</span><span class="muted small">days in the forest${now?" so far":""}</span></div></div>
     ${sec("Moods through the year",D.moodCount.some(Boolean)?`<div class="rmonths">${D.months.map((m,i)=>`<span class="rm" style="background:${m?`var(--m${m})`:"var(--line)"}" title="${MN[i]}"><i>${MN[i]}</i></span>`).join("")}</div>
       <p class="muted small" style="margin:4px 0 0">${MOODS.map(([v,n])=>D.moodCount[v-1]?`${n} ${D.moodCount[v-1]}`:"").filter(Boolean).join(" · ")}</p>`:"")}
-    ${sec("Body",[D.moved?`moved on ${D.moved} days`:"",D.workouts?`${D.workouts} Steady 10 workout${D.workouts===1?"":"s"}`:"",D.water?`water on ${D.water} days`:"",D.fruit?`fruit on ${D.fruit} days`:"",D.ws.length>1?`weight ${D.ws[0]} → ${D.ws[D.ws.length-1]} kg`:"",...D.habits.map(h=>`${esc(h.name)} on ${h.n} days`)].filter(Boolean).map(x=>`<p style="margin:2px 0">${x}</p>`).join(""))}
+    ${sec("Body",[D.moved?`moved on ${D.moved} days`:"",D.workouts?`${D.workouts} Heartwood session${D.workouts===1?"":"s"}`:"",D.water?`water on ${D.water} days`:"",D.fruit?`fruit on ${D.fruit} days`:"",D.ws.length>1?`weight ${D.ws[0]} → ${D.ws[D.ws.length-1]} kg`:"",...D.habits.map(h=>`${esc(h.name)} on ${h.n} days`)].filter(Boolean).map(x=>`<p style="margin:2px 0">${x}</p>`).join(""))}
     ${sec("Finished",finBy.map(([e,n,L])=>`<p style="margin:4px 0"><b>${e} ${n} · ${L.length}</b><br><span class="small">${L.slice(0,10).map(x=>esc(x.title)+(x.rating?` ${"★".repeat(x.rating)}`:"")).join(" · ")}${L.length>10?` · and ${L.length-10} more`:""}</span></p>`).join(""))}
     ${sec("Trips",D.trips.map(t=>`<p style="margin:2px 0">${esc(t.emoji||"🧳")} ${esc(t.title)}${t.memory?` <span class="muted small">· “${esc(t.memory)}”</span>`:""}</p>`).join(""))}
     ${sec("Lived",[...D.vis.map(x=>`<p style="margin:2px 0">✓ ${esc(x.title)}${x.memory?` <span class="muted small">· “${esc(x.memory)}”</span>`:""}</p>`),...D.lived.map(x=>`<p style="margin:2px 0">🌟 ${esc(x.title)}${x.memory?` <span class="muted small">· “${esc(x.memory)}”</span>`:""}</p>`)].join(""))}
@@ -3154,7 +3296,7 @@ function recapPromptCard(){
   const show=(dow===0&&h>=17)||(dow===1&&!(S.settings.highlights||{})[ws]&&weekMoments([...Array(7)].map((_,i)=>addDays(ws,i))).length);
   if(!show||isPastView())return "";
   return `<section class="block card recapcta"><div class="head"><h2>${dow===0?"Your week in review":"Last week in review"}</h2></div>
-    <p class="muted small" style="margin:0">Look back at your week and pick the moment that meant the most.</p>
+    <p class="muted small" style="margin:0">Look back at your week, pick the moment that meant the most, and plan next week's Heartwood.</p>
     <div><button type="button" class="btn" data-act="openrecap" data-w="${ws}">Open weekly recap</button></div>${backupNudge()}</section>`;
 }
 
@@ -3178,7 +3320,7 @@ V.journal=()=>{
 S.sub={};
 function go(id){const r=ROUTE[id]||["today"];S.tab=r[0];if(r[1])S.sub[r[0]]=r[1];try{localStorage.setItem("sd-tab",r[1]?r[1]:r[0])}catch(_){}}
 const curSub=t=>{const subs=SUBS[t];if(!subs)return null;const v=S.sub[t];return subs.some(x=>x[0]===v)?v:subs[0][0]};
-const PAGES={"lists:notes":()=>V.notes(),"lists:trips":()=>V.trips(),"lists:dates":()=>V.dates(),"lists:apps":()=>V.apps(),"vision:year":()=>V.vision(),"vision:long":()=>V.longterm(),"vision:bucket":()=>V.bucket(),"journal:dreams":()=>V.dreams(),"tasks:todo":()=>V.todo(),"tasks:projects":()=>V.projects(),"journal:days":()=>V.journal(),"journal:week":()=>recapCard()+(backupNudge()?`<section class="block card">${backupNudge()}</section>`:"")+highlightsCard(),"journal:checkins":()=>V.habits(),"journal:cooking":()=>V.cooked(),"lists:lists":()=>V.lists(),"lists:wishlist":()=>V.wishlist(),"lists:backlog":()=>V.backlog(),"lists:spending":()=>V.purchases(),"learn:pointers":()=>V.learn(),"learn:japanese":()=>V.japanese(),"learn:reminders":()=>V.reminders()};
+const PAGES={"lists:notes":()=>V.notes(),"lists:trips":()=>V.trips(),"lists:dates":()=>V.dates(),"lists:apps":()=>V.apps(),"vision:year":()=>V.vision(),"vision:long":()=>V.longterm(),"vision:bucket":()=>V.bucket(),"journal:dreams":()=>V.dreams(),"tasks:todo":()=>V.todo(),"tasks:projects":()=>V.projects(),"journal:days":()=>V.journal(),"journal:week":()=>recapCard()+hwPlanCard()+(backupNudge()?`<section class="block card">${backupNudge()}</section>`:"")+highlightsCard(),"journal:checkins":()=>V.habits(),"journal:cooking":()=>V.cooked(),"lists:lists":()=>V.lists(),"lists:wishlist":()=>V.wishlist(),"lists:backlog":()=>V.backlog(),"lists:spending":()=>V.purchases(),"learn:pointers":()=>V.learn(),"learn:japanese":()=>V.japanese(),"learn:reminders":()=>V.reminders()};
 /* ---------- settings: the morning reminder lives in Claude as a scheduled task; Steady Days pauses/resumes it ---------- */
 const NUDGE_TASK="trig_01WNVxsADqavGjR9DpeSyvho";const CCR="Claude Code Remote";
 S.nudge={state:"idle",enabled:null,err:null};
@@ -3449,7 +3591,14 @@ document.addEventListener("click",e=>{
     const same=cur&&cur.text===pick.text&&cur.k===pick.k;
     editSettings(st=>{st.highlights={...(st.highlights||{})};if(same)delete st.highlights[ws];else st.highlights[ws]=pick});
     toast(same?"Highlight removed":"Saved as this week's highlight ★")}
-  if(a==="wshift")editDay(today(),d=>{d.workout={...(d.workout||{}),shift:((d.workout||{}).shift||0)+1,swaps:{}}});
+  if(a==="hwswapopen"){S.hwSwapOpen=!S.hwSwapOpen;render(true);return}
+  if(a==="hwswap"){const t=b.dataset.t;if(!SESS[t])return;S.hwSwapOpen=false;S.open=S.open||{};S.open.workout=true;
+    editDay(today(),d=>{const w={...(d.workout||{})};if(t===hwPlanned(today()))delete w.type;else w.type=t;w.swaps={};w.startedAt=null;w.pausedAt=null;w.pausedMs=0;d.workout=w});toast(`Today: ${SESS[t].emoji} ${SESS[t].name}`);return}
+  if(a==="hwmoverun"){const i=+b.dataset.i,t=b.dataset.t,ws=weekStart(today());editSettings(st=>{const hw=st.hw={...(st.hw||{})};hw.plans={...(hw.plans||{})};const pl=planFor(ws);pl[i]=t;hw.plans[ws]=pl});toast(`Run moved to ${RT_DAYS[i]}`);return}
+  if(a==="hwrunundo"){setActs(today(),acts=>{for(let i=acts.length-1;i>=0;i--)if(acts[i].k==="run")acts.splice(i,1)});editDay(today(),d=>{const w={...(d.workout||{})};w.done=false;delete w.secs;d.workout=w});return}
+  if(a==="hwplanwk"){S.hwPlanWk=b.dataset.w;render(true);return}
+  if(a==="hwemph"){const e=b.dataset.e,ws=b.dataset.w;const E=HW_EMPH.find(x=>x[0]===e);if(!E)return;editSettings(st=>{const hw=st.hw={...(st.hw||{})};hw.plans={...(hw.plans||{}),[ws]:E[2].slice()};hw.emph={...(hw.emph||{}),[ws]:e}});toast(`Planned around ${E[1]}. Change any day below.`);return}
+  if(a==="hwbar"){editSettings(st=>{st.hw={...(st.hw||{}),bar:!hwBar()}});return}
   if(a==="wswap"){const i=+b.dataset.i;const w0=getDay(today()).workout||{};const c=swapCycle(today(),w0.shift||0,i);if(c.length<2)return;
     const cur=workoutFor(today(),w0.shift||0).ex[i].name;const next=c[(c.indexOf(cur)+1)%c.length];editDay(today(),d=>{const w={...(d.workout||{})};w.swaps={...(w.swaps||{}),[i]:next};d.workout=w});toast(`Swapped for ${next}`)}
   if(a==="skilllv"){const k=b.dataset.k,dl=+b.dataset.d;const cur=(S.settings.skills||{})[k]||1;const nv=Math.min(4,Math.max(1,cur+dl));editSettings(st=>{st.skills={...(st.skills||{}),[k]:nv}});toast(dl>0?`${SKILLS[k].name}: level ${nv}. Nice progress!`:`${SKILLS[k].name}: level ${nv}`)}
@@ -3459,14 +3608,14 @@ document.addEventListener("click",e=>{
       if(op==="resume"&&w.pausedAt){w.pausedMs=(w.pausedMs||0)+(now-w.pausedAt);w.pausedAt=null}
       d.workout=w});keepAwake(op!=="pause")}
   if(a==="wdone"){const w0=getDay(today()).workout||{};const secs=!w0.done&&w0.startedAt?Math.round(wElapsed(w0)):w0.secs;
-    const label="Steady 10 · "+workoutFor(today(),w0.shift||0).focus.name+(secs?` · ${Math.max(1,Math.round(secs/60))} min`:"");
+    const label="Heartwood · "+workoutFor(today(),w0.shift||0).focus.name+(secs?` · ${Math.max(1,Math.round(secs/60))} min`:"");
     keepAwake(false);
-    const fid=workoutFor(today(),w0.shift||0).focus.id;
+    const fid=hwType(today());
     editDay(today(),d=>{const w={...(d.workout||{})};const b0=bodyOf(d);w.done=!w.done;if(w.done&&secs)w.secs=secs;if(w.done)w.focus=fid;d.workout=w;
-      const acts=actsOf(b0).filter(x=>x.k!=="steady10"&&!(x.k==="other"&&/^Steady 10 · /.test(x.note||"")));
-      if(w.done)acts.unshift({k:"steady10",note:label.replace(/^Steady 10 · /,"")});
+      const acts=actsOf(b0).filter(x=>x.k!=="steady10"&&!(x.k==="other"&&/^(Steady 10|Heartwood) · /.test(x.note||"")));
+      if(w.done)acts.unshift({k:"steady10",note:label.replace(/^Heartwood · /,"")});
       d.body={...b0,acts,ex:exText(acts)};});
-    if(!getDay(today()).workout?.done)return;toast(secs?`Workout logged: ${mmss(secs)}. Well done!`:"Workout logged. Well done!")}
+    if(!getDay(today()).workout?.done)return;S.hwSwapOpen=false;toast(secs?`Heartwood logged: ${mmss(secs)}. Well done!`:"Heartwood logged. Well done!")}
   if(a==="planopen"){S.planOpen=!S.planOpen;if(S.planOpen){S.tt.tomorrow=null;ttLoadTomorrow()}render(true)}
   if(a==="top3tm")toggleTomorrowTop(id);
   if(a==="moretoday"){S.showMoreToday=!S.showMoreToday;render(true)}
@@ -3571,6 +3720,7 @@ document.addEventListener("change",e=>{
   if(b.dataset.act==="rtdone"){editDay(today(),d=>{d.routines=d.routines||{};if(b.checked)d.routines[id]=true;else delete d.routines[id]});
     if(b.checked){const r=rtList().find(x=>x.id===id);const st=r?rtStreak(r):0;toast(st>1?`✓ ${r.title} · ${st} in a row`:"✓ Done for today")}}
   if(b.dataset.act==="rtfield"){const val=b.value.trim();const r=rtList().find(x=>x.id===id);if(!r)return;if(!val){b.value=r.title;toast("A routine needs a name");return}if(val!==r.title)editSettings(st=>{const x=st.routines.find(y=>y.id===id);if(x)x.title=val},{silent:true})}
+  if(b.dataset.act==="hwday"){const ws=b.dataset.w,i=+b.dataset.i,t=b.value;if(!SESS[t])return;editSettings(st=>{const hw=st.hw={...(st.hw||{})};hw.plans={...(hw.plans||{})};const pl=planFor(ws);pl[i]=t;hw.plans[ws]=pl;if(hw.emph&&hw.emph[ws]){hw.emph={...hw.emph};delete hw.emph[ws]}})}
   if(b.dataset.act==="rtauto")editSettings(st=>{const x=st.routines.find(y=>y.id===id);if(x)x.auto=b.value||""});
   if(b.dataset.act==="todo")editSettings(s=>{const t=s.todos.find(t=>t.id===id);if(t)t.done=b.checked});
   if(b.dataset.act==="ttdone"&&b.dataset.from==="board")S.noAskOnce=true;
@@ -3617,6 +3767,10 @@ document.addEventListener("submit",e=>{
   e.preventDefault();const form=e.target;const f=form.dataset.form;const v=id=>{const el=document.getElementById(id);return el?(el.value||"").trim():""};
   const clear=id=>{const el=document.getElementById(id);if(el)el.value=""};
   if(f==="todo"){const t=v("todo-new");if(!t)return;editSettings(s=>{s.todos.unshift({id:uid(),text:t,done:false})})}
+  if(f==="hwrun"){const km=parseFloat(v("hw-km").replace(",",".")),mn=parseInt(v("hw-min"),10);if(!(km>0)&&!(mn>0)){toast("Add the distance or the time");return}
+    const note=[km>0?`${Math.round(km*10)/10} km`:"",mn>0?`${mn} min`:""].filter(Boolean).join(" · ");const t=hwType(today());
+    setActs(today(),acts=>{acts.push({k:"run",note})});editDay(today(),d=>{d.workout={...(d.workout||{}),done:true,focus:t,...(mn>0?{secs:mn*60}:{})}});
+    const km2=hwWeekStats(weekStart(today())).km;toast(`Run logged: ${note}. ${km2} / 10 km this week`);return}
   if(f==="routine"){const t=v("rt-new");if(!t)return;editSettings(st=>{st.routines=[...(st.routines||[]),{id:uid(),title:t,days:[],auto:/japan|nihongo|kanji|wanikani|bunpro/i.test(t)?"jp":/\brun\b|running|jog/i.test(t)?"run":""}]});clear("rt-new");setTimeout(()=>{const i=document.getElementById("rt-new");if(i)i.focus()},0);return}
   if(f==="habit"){const t=v("habit-new");if(!t)return;editSettings(s=>{s.habits.push({id:uid(),name:t})})}
   if(f==="reminder"){const t=v("rem-new");if(!t)return;editSettings(s=>{s.reminders.push({id:uid(),text:t})})}
