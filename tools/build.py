@@ -6,7 +6,7 @@ src=(root/"src/steady-days.html").read_text()
 # In the app, tasks live in Steady Days itself, so drop "TickTick" from user-facing wording.
 WORDING=[("Progress logged and added to TickTick","Progress logged"),("Added to TickTick","Added"),("Moved in TickTick","Moved"),
   ("” in TickTick`","”`"),('<span class="eyebrow">From TickTick</span>','<span class="eyebrow">Your tasks</span>'),
-  ("Nothing due today in TickTick.","Nothing due today."),("moves it to tomorrow in TickTick.","moves it to tomorrow."),
+  ("moves it to tomorrow in TickTick.","moves it to tomorrow."),
   ("Loading your TickTick lists…","Loading your lists…"),("Pick which TickTick lists count","Pick which lists count"),
   ("Which TickTick lists to use","Which lists to use"),('<optgroup label="TickTick">','<optgroup label="Lists">'),
   ("Couldn't reach TickTick","Couldn't load your tasks"),("Choose your TickTick","Choose your"),
