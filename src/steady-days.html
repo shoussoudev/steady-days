@@ -1053,12 +1053,22 @@ async function rollover(){
   else for(const id of (ttMap().todo||[])){const L=S.tt.lists[id];if(!L)return;if(L.err)continue;
     L.tasks.forEach(t=>{if(seen.has(t.id))return;seen.add(t.id);
       if(t.due&&key(new Date(t.due))<today()&&!t.repeat&&t.kind!=="NOTE"&&!L.tasks.some(x=>x.parentId===t.id))over.push(t)})}
+  /* Only what you flagged (★ Top 3, ◆ maybe) or what really has to happen comes to today.
+     Everything else goes back to "Ready when you are", without a date. Wait briefly for the day notes that hold the flags. */
+  const yk=addDays(today(),-1);for(let i=0;i<16&&!dayReady(yk);i++)await new Promise(r=>setTimeout(r,500));
+  const flagsKnown=dayReady(yk);
+  const flagged=id=>[yk,...over.filter(t=>t.id===id).map(t=>key(new Date(t.due)))].some(k=>{const d=S.days[k];return d&&[...(d.top3||[]),...(d.maybe||[])].some(x=>x.id===id)});
+  const tripIds=new Set(trItems().flatMap(t=>(t.todos||[]).map(x=>x.taskId).filter(Boolean)));
+  const keep=t=>!flagsKnown||flagged(t.id)||t.priority>=5||t.parentId||tripIds.has(t.id)||!!t.remindAt;
+  const roll=over.filter(keep),back=over.filter(t=>!keep(t));
   if(over.length){
     const due=dueTodayISO();
-    try{await call("batch_update_tasks",{tasks:over.map(t=>({id:t.id,projectId:t.pid,dueDate:due,startDate:due,isAllDay:true,timeZone:TZ}))})}
+    try{await call("batch_update_tasks",{tasks:[...roll.map(t=>({id:t.id,projectId:t.pid,dueDate:due,startDate:due,isAllDay:true,timeZone:TZ})),
+      ...back.map(t=>({id:t.id,projectId:t.pid,dueDate:null,startDate:null}))]})}
     catch(e){return}
-    S.rolled.ids=[...new Set([...S.rolled.ids,...over.map(t=>t.id)])];
-    toast(over.length===1?"1 unfinished task moved to today":over.length+" unfinished tasks moved to today");
+    S.rolled.ids=[...new Set([...S.rolled.ids,...roll.map(t=>t.id)])];
+    const parts=[roll.length?`${roll.length} moved to today`:"",back.length?`${back.length} back to Ready when you are`:""].filter(Boolean);
+    toast("Unfinished tasks: "+parts.join(" · "));
   }
   S.rolled.done=true;saveRolled();
   if(over.length){await ttLoadToday();ttLoadLists()}
@@ -1126,7 +1136,7 @@ async function ttLoadTomorrow(){
 }
 const tmKey=()=>addDays(today(),1);
 async function setDue(t,k){await call("update_task",{task_id:t.id,task:{id:t.id,projectId:t.pid,dueDate:dueISO(k),startDate:dueISO(k),isAllDay:true,timeZone:TZ},client_timezone:TZ})}
-/* On deck: undated to-dos you'll do some day soon. Star ★ or mark ◆ one and it becomes today's. */
+/* Ready when you are: undated to-dos you'll do some day soon. Star ★ or mark ◆ one and it becomes today's. */
 const deckLists=()=>{const m=ttMap();return m.todo&&m.todo.length?m.todo:["inbox"]};
 function deckItems(){const onToday=new Set((S.tt.today||[]).map(t=>t.id));const out=[];
   deckLists().forEach(id=>{const L=S.tt.lists[id];if(!L||!L.tasks)return;L.tasks.forEach(t=>{if(!t.due&&!t.parentId&&!t.repeat&&t.kind!=="NOTE"&&!onToday.has(t.id)&&!out.some(x=>x.id===t.id))out.push(t)})});
@@ -1582,10 +1592,10 @@ function todayTasks(){
         !rest.length?"":showRest?`${!picking?`<div class="head"><span class="eyebrow">Also due today</span>${choosing?"":`<button class="btn ghost sm" data-act="moretoday">Hide</button>`}</div>`:""}<ul class="list">${rest.map(row).join("")}</ul>`:
         `<button class="btn ghost" data-act="moretoday">+ ${rest.length} more due today</button>`}
       ${(()=>{const dk=deckItems();if(!dk.length)return "";const open=S.deckOpen;
-        const drow=t=>{const age=deckAgeDays(t);return ttTaskLi(t,`${age>=30?`<span class="pill soft deckold" title="On deck for ${age} days">${age>=60?Math.floor(age/30)+" months":"a month"} · still want it?</span>`:""}${maybeBtn(t.id,false,"maybe")}<button class="starbtn" data-act="top3" data-id="${t.id}" aria-pressed="false" aria-label="Do it today: add to Top 3" title="Today's the day: add to Top 3">☆</button><button class="btn ghost sm tdiscard" data-act="discard" data-id="${t.id}" data-pid="${esc(t.pid)}" title="Mark as won't do">Discard</button>`)};
-        return `<div class="deckgrp">${open?`<div class="head"><span class="eyebrow">On deck · ${dk.length}</span><button class="btn ghost sm" data-act="deckopen">Hide</button></div>
+        const drow=t=>{const age=deckAgeDays(t);return ttTaskLi(t,`${age>=30?`<span class="pill soft deckold" title="Waiting for ${age} days">${age>=60?Math.floor(age/30)+" months":"a month"} · still want it?</span>`:""}${maybeBtn(t.id,false,"maybe")}<button class="starbtn" data-act="top3" data-id="${t.id}" aria-pressed="false" aria-label="Do it today: add to Top 3" title="Today's the day: add to Top 3">☆</button><button class="btn ghost sm tdiscard" data-act="discard" data-id="${t.id}" data-pid="${esc(t.pid)}" title="Mark as won't do">Discard</button>`)};
+        return `<div class="deckgrp">${open?`<div class="head"><span class="eyebrow">Ready when you are · ${dk.length}</span><button class="btn ghost sm" data-act="deckopen">Hide</button></div>
           <p class="muted small" style="margin:0 0 4px">Some day soon, no date. Star ★ or mark ◆ the one you'll do today.</p><ul class="list">${dk.map(drow).join("")}</ul>`:
-          `<button class="btn ghost" data-act="deckopen">On deck · ${dk.length}${dk.some(t=>deckAgeDays(t)>=30)?` <span class="muted small">· some waiting a while</span>`:""}</button>`}</div>`})()}
+          `<button class="btn ghost" data-act="deckopen">Ready when you are · ${dk.length}${dk.some(t=>deckAgeDays(t)>=30)?` <span class="muted small">· some waiting a while</span>`:""}</button>`}</div>`})()}
       <form class="addrow" data-form="tttoday"><input type="text" id="tttoday-new" placeholder="Add a task for today" autocomplete="off">${(()=>{const tr=trackable();return tr.length?`<select id="tttoday-proj" class="projpick" aria-label="Part of a project?"><option value="">No project</option>${tr.map(x=>`<option value="${esc(x.id)}">↳ ${esc(x.name)}</option>`).join("")}</select>`:""})()}<button class="btn">Add</button></form>
       ${S.planOpen?planPanel():(()=>{const tt3=getDay(tmKey()).top3||[];{const hh=new Date().getHours();if(!tt3.length&&hh<17&&hh>=DAY_START_HOUR)return ""}return `<div class="plansum">${tt3.length?`<span class="muted small">Tomorrow: ${tt3.map(x=>"★ "+esc(x.title)).join(" · ")}</span>`:""}<button class="btn ghost sm" data-act="planopen">${tt3.length?"Edit tomorrow's "+topLabel(tmKey()):"Plan tomorrow's Top 3"}</button></div>`})()}
     </section>`;
