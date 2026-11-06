@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261105214909"></script>
-<script type="module" src="boot.js?v=20261105214909"></script>
+<script src="shim.js?v=20261106073644"></script>
+<script type="module" src="boot.js?v=20261106073644"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -1597,8 +1597,8 @@ function todayTasks(){
         <ul class="list">${openMaybe.map(row).join("")}${doneMaybe.map(x=>`<li class="trow donerow"><span class="check donechk" aria-hidden="true"></span><div class="tmain"><span>${esc(plainTitle(x.title))}</span></div></li>`).join("")}</ul></div>`:""}
       ${S.tt.state==="error"?ttErrBox(S.tt.err):S.tt.todayErr?ttErrBox(S.tt.todayErr):S.tt.state==="loading"&&!ts.length?`<p class="empty">Loading today's tasks…</p>`:
         !ts.length&&!top.length?`<p class="empty">Nothing due today. Enjoy the space, or pick one thing that matters.</p>`:
-        !rest.length?"":showRest?`${!picking?`<div class="head"><span class="eyebrow">Everything else today</span>${choosing?"":`<button class="btn ghost sm" data-act="moretoday">Hide</button>`}</div>`:""}<ul class="list">${rest.map(row).join("")}</ul>`:
-        `<button class="btn ghost" data-act="moretoday">+ ${rest.length} more today</button>`}
+        !rest.length?"":showRest?`${!picking?`<div class="head"><span class="eyebrow">Up next</span>${choosing?"":`<button class="btn ghost sm" data-act="moretoday">Hide</button>`}</div>`:""}<ul class="list">${rest.map(row).join("")}</ul>`:
+        `<button class="btn ghost" data-act="moretoday">+ ${rest.length} up next</button>`}
       <form class="addrow" data-form="tttoday"><input type="text" id="tttoday-new" placeholder="Add a task for today" autocomplete="off">${(()=>{const tr=trackable();return tr.length?`<select id="tttoday-proj" class="projpick" aria-label="Part of a project?"><option value="">No project</option>${tr.map(x=>`<option value="${esc(x.id)}">↳ ${esc(x.name)}</option>`).join("")}</select>`:""})()}<button class="btn">Add</button></form>
       ${S.planOpen?planPanel():(()=>{const tt3=getDay(tmKey()).top3||[];{const hh=new Date().getHours();if(!tt3.length&&hh<17&&hh>=DAY_START_HOUR)return ""}return `<div class="plansum">${tt3.length?`<span class="muted small">Tomorrow: ${tt3.map(x=>"★ "+esc(x.title)).join(" · ")}</span>`:""}<button class="btn ghost sm" data-act="planopen">${tt3.length?"Edit tomorrow's "+topLabel(tmKey()):"Plan tomorrow's Top 3"}</button></div>`})()}
     </section>`;
