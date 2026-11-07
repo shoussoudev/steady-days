@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261106152137"></script>
-<script type="module" src="boot.js?v=20261106152137"></script>
+<script src="shim.js?v=20261107124145"></script>
+<script type="module" src="boot.js?v=20261107124145"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -2926,7 +2926,7 @@ function studyToday(){if(isPastView())return "";studyAsk();if(!studyOn())return 
     ${wk?`<div class="strow"><span class="fl">WaniKani</span><span class="fv">${wkTxt}${tick(wkDone)}</span></div><div class="chips stlinks">${[["dashboard","Home"],["subjects/extra_study?queue_type=recent_lessons","Recent lessons"],wk.mistakes?["subjects/extra_study?queue_type=recent_mistakes",`Recent mistakes · ${wk.mistakes}`]:null,["subjects/review",`Reviews${wk.reviews?` · ${wk.reviews}`:""}`]].filter(Boolean).map(([u,n])=>`<a class="chip" href="https://www.wanikani.com/${u}" target="_blank" rel="noopener">${n}</a>`).join("")}</div>`:""}
     ${bp?`<div class="strow"><span class="fl">Bunpro</span><span class="fv">${bpTxt}${tick(bpDone)}</span></div><div class="chips stlinks">${[["dashboard","Home"],["reviews?only_review=grammar",`Grammar review${bp.grammar?` · ${bp.grammar}`:""}`],["reviews?only_review=vocab",`Vocabulary review${bp.vocab?` · ${bp.vocab}`:""}`]].map(([u,n])=>`<a class="chip" href="https://bunpro.jp/${u}" target="_blank" rel="noopener">${n}</a>`).join("")}</div>`:""}${jpToday()}</section>`}
 const STUDY_ERR={"no-token":"not connected","bad-token":"token not accepted — add a fresh one","unavailable":"didn't answer last time"};
-function studyRow(){if(!window.__sdStudy)return "";const E=(S.study&&S.study.errors)||{};const one=(n,k,ok)=>`${n}: ${E[k]?STUDY_ERR[E[k]]||E[k]:ok?"connected":"not connected"}`;
+function studyRow(){if(!window.__sdStudy)return "";const E=(S.study&&S.study.errors)||{};const one=(n,k,ok)=>`${n}: ${E[k]?(STUDY_ERR[E[k]]||E[k])+(E[k+"Msg"]&&E[k]!=="no-token"?` (${esc(E[k+"Msg"])})`:""):ok?"connected":"not connected"}`;
   return `<div class="setrow"><div><b>Japanese study</b><div class="muted small">${one("WaniKani","wk",S.study.wk)} · ${one("Bunpro","bp",S.study.bp)}${S.study.at?` · updated ${new Date(S.study.at).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})}`:""}</div>
     <div class="muted small">Counts refresh every 30 minutes and show on Today. Tokens live in GitHub secrets (WANIKANI_TOKEN, BUNPRO_TOKEN).</div></div><button type="button" class="btn ghost sm" data-act="studyrefresh" ${S.studyBusy?"disabled":""}>${S.studyBusy?"Checking…":"Refresh"}</button></div>`}
 /* ---------- Photos on tasks and notes: shrunk in the browser, stored privately, tracked so the cost stays visible ---------- */

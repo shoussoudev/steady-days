@@ -263,13 +263,17 @@ async function refreshStudy(uid, minAge) {
     try { out.known = await fetchKnownKanji(WANIKANI_TOKEN.value(), out.wk.level); out.knownAt = out.at; }
     catch (e) { out.errors.known = e.code || "unavailable"; }
   }
-  if (has(BUNPRO_TOKEN)) { try { out.bp = await fetchBunpro(BUNPRO_TOKEN.value()); } catch (e) { out.errors.bp = e.code || "unavailable"; out.bp = cur.bp || null; } }
-  /* Bunpro has no history to ask, so notice the queue going down: each drop since the last check counts as reviews done today */
-  if (out.bp && !out.errors.bp) {
-    const prev = cur.bp && cur.day === day ? cur.bp : null;
-    const drop = prev && typeof prev.reviews === "number" ? Math.max(0, prev.reviews - out.bp.reviews) : 0;
-    out.bp.doneToday = (prev && prev.doneToday || 0) + drop;
+  if (has(BUNPRO_TOKEN)) {
+    try { out.bp = await fetchBunpro(BUNPRO_TOKEN.value()); }
+    catch (e) { out.errors.bp = e.code || "unavailable"; out.errors.bpMsg = String(e.message || e).slice(0, 120); out.bp = cur.bp || null; }
+    /* Bunpro has no history to ask, so notice the queue going down: each drop since the last check counts as reviews done today */
+    if (out.bp && !out.errors.bp) {
+      const prev = cur.bp && cur.day === day ? cur.bp : null;
+      const drop = prev && typeof prev.reviews === "number" ? Math.max(0, prev.reviews - out.bp.reviews) : 0;
+      out.bp.doneToday = (prev && prev.doneToday || 0) + drop;
+    }
   }
+  /* only say "not connected" when there really is no token (a failed check used to be reported that way) */
   else out.errors.bp = "no-token";
   await ref.set(JSON.parse(JSON.stringify(out)));
   await logServer(uid, {study_refresh: 1, study_error: (out.errors.wk && out.errors.wk !== "no-token" ? 1 : 0) + (out.errors.bp && out.errors.bp !== "no-token" ? 1 : 0), known_kanji: out.knownAt === out.at ? 1 : 0});
