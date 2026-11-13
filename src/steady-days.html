@@ -1000,6 +1000,11 @@ async function runUndo(uidv){
       editDoc(u.doc,d=>{const i=d.items.findIndex(x=>x.id===u.item.id);if(i>=0)d.items[i]=u.item;else d.items.splice(Math.min(u.index??0,d.items.length),0,u.item)});
       if(u.buy)editDay(u.buy.date,d=>{d.purchases=d.purchases.filter(p=>p.id!==u.buy.id)});
       toast("Restored");
+    }else if(u.kind==="tmr"){
+      await call("update_task",{task_id:u.tid,task:{id:u.tid,projectId:u.pid,dueDate:u.due||null,startDate:u.due||null,isAllDay:true,timeZone:TZ},client_timezone:TZ});
+      if(u.top||u.may){editDay(today(),d=>{if(u.top)d.top3=[...(d.top3||[]),u.top];if(u.may)d.maybe=[...(d.maybe||[]),u.may]},{silent:true});
+        editDay(addDays(today(),1),d=>{d.top3=(d.top3||[]).filter(x=>x.id!==u.tid);d.maybe=(d.maybe||[]).filter(x=>x.id!==u.tid)},{silent:true})}
+      await ttLoadToday();ttLoadLists();toast("Back on today");
     }else if(u.kind==="tt"){
       await call("update_task",{task_id:u.tid,task:{id:u.tid,projectId:u.pid,status:0},client_timezone:TZ});
       for(const x of (u.also||[]))await call("update_task",{task_id:x,task:{id:x,projectId:u.pid,status:0},client_timezone:TZ});
@@ -1102,6 +1107,21 @@ async function discardProject(id){
   try{for(const x of [id,...steps])await call("update_task",{task_id:x,task:{id:x,projectId:L,status:-1},client_timezone:TZ});
     pushUndo({kind:"tt",tid:id,pid:L,title:t.title,also:steps,label:`Discarded project “${t.title}”`});toast("Project discarded")}
   catch(e){S.tt.lists[L].tasks=JSON.parse(snap);render(true);toast(ttErrToast(e))}
+}
+/* push a task to tomorrow: new date, out of today's Top 3 / maybe (undo puts it all back) */
+async function pushTomorrow(tid,pid){
+  const t0=findTask(tid);if(!t0)return;const title=t0.title,realPid=t0.pid||pid,prevDue=t0.due||null;const tm=dueISO(addDays(today(),1));
+  const d0=getDay(today());const top=(d0.top3||[]).find(x=>x.id===tid&&!x.done)||null,may=(d0.maybe||[]).find(x=>x.id===tid&&!x.done)||null;
+  const snap=JSON.stringify({l:S.tt.lists,t:S.tt.today});
+  S.tt.today=S.tt.today.filter(t=>t.id!==tid);t0.due=tm;if(S.tNoteOpen===tid)S.tNoteOpen=null;
+  if(top||may){editDay(today(),d=>{d.top3=(d.top3||[]).filter(x=>x.id!==tid);d.maybe=(d.maybe||[]).filter(x=>x.id!==tid)},{silent:true});
+    /* starred or maybe today: it keeps that place tomorrow (if there's room in tomorrow's Top 3) */
+    const tk=addDays(today(),1);editDay(tk,d=>{const T=d.top3||[],M=d.maybe||[];if(T.some(x=>x.id===tid)||M.some(x=>x.id===tid))return;
+      if(top&&T.length<topMax(tk))d.top3=[...T,{...top,done:false}];else d.maybe=[...M,{...(top||may),done:false}]},{silent:true})}
+  render(true);
+  try{await call("update_task",{task_id:tid,task:{id:tid,projectId:realPid,dueDate:tm,startDate:tm,isAllDay:true,timeZone:TZ},client_timezone:TZ});
+    pushUndo({kind:"tmr",tid,pid:realPid,due:prevDue,top,may,label:`Moved “${plainTitle(title)}” to tomorrow`});toast(top?"Moved to tomorrow's Top 3":may?"Moved to tomorrow, still a maybe":"Moved to tomorrow")}
+  catch(e){const o=JSON.parse(snap);S.tt.lists=o.l;S.tt.today=o.t;render(true);toast(ttErrToast(e))}
 }
 async function discardTask(tid,pid){
   const t0=findTask(tid);const title=t0?t0.title:"task";const realPid=(t0&&t0.pid)||pid;
@@ -1324,7 +1344,7 @@ const ttTaskLi=(t,extra="",hideToday=false)=>{
   if(S.tNoteOpen===t.id)return `<li class="trow editing"><form class="eform" data-form="tnote" data-id="${t.id}" data-pid="${esc(t.pid)}">
       <input type="text" id="tn-title" value="${esc((S.tNoteKeep&&S.tNoteKeep.title)??t.title)}" aria-label="Task title" autocomplete="off">
       <textarea id="tn-body" rows="${Math.min(14,Math.max(5,String((S.tNoteKeep&&S.tNoteKeep.content)||t.content||"").split("\n").length+1))}" placeholder="Notes, links, details…" aria-label="Notes" data-act="tnlen">${esc((S.tNoteKeep&&S.tNoteKeep.content)??t.content??"")}</textarea><span class="muted small tnlen" id="tn-len"></span>${STANDALONE?mStrip("task",t.id,true,plainTitle(t.title)):""}
-      ${STANDALONE||(!isProj&&trackable().length)?`<div class="tnextra">${STANDALONE?`<button type="button" class="linkbtn subtle" data-act="remopen" data-id="${t.id}" data-from="note">⏰ ${t.remindAt&&Date.parse(t.remindAt)>Date.now()?"Change reminder":"Remind me"}</button>`:""}${!isProj&&trackable().length?`<button type="button" class="linkbtn subtle" data-act="tlink" data-id="${t.id}" data-from="note">🔗 ${lpr?"Project: "+esc(lpr.name):"Link to a project"}</button>`:""}</div>`:""}
+      ${STANDALONE||(!isProj&&trackable().length)||!t.repeat?`<div class="tnextra">${!t.repeat&&!isProj?`<button type="button" class="linkbtn subtle" data-act="tomorrow" data-id="${t.id}" data-pid="${esc(t.pid||"")}">→ Tomorrow</button>`:""}${STANDALONE?`<button type="button" class="linkbtn subtle" data-act="remopen" data-id="${t.id}" data-from="note">⏰ ${t.remindAt&&Date.parse(t.remindAt)>Date.now()?"Change reminder":"Remind me"}</button>`:""}${!isProj&&trackable().length?`<button type="button" class="linkbtn subtle" data-act="tlink" data-id="${t.id}" data-from="note">🔗 ${lpr?"Project: "+esc(lpr.name):"Link to a project"}</button>`:""}</div>`:""}
       <div class="btnrow"><button class="btn sm">Save</button><button type="button" class="btn ghost sm" data-act="tnote" data-id="">Cancel</button></div></form></li>`;
   const note=String(t.content||"").replace(/!\[[^\]]*\]\([^)]*\)/g,"").replace(/\[([^\]]*)\]\([^)]*\)/g,"$1").trim();
   if(S.remOpen===t.id){const dflt=t.remindAt?new Date(t.remindAt):(()=>{const d=t.due?new Date(t.due):new Date();d.setHours(new Date().getHours()+1,0,0,0);return d})();const v=new Date(dflt-dflt.getTimezoneOffset()*6e4).toISOString().slice(0,16);
@@ -3803,6 +3823,7 @@ document.addEventListener("click",e=>{
   if(a==="blfinish"){S.blDrop=null;S.blFinish=S.blFinish===id?null:id;render(true);const el=document.getElementById("bl-thought");if(el&&S.blFinish)el.focus()}
   if(a==="bldel"){const i=S.backlog.items.findIndex(x=>x.id===id);if(i<0)return;const it=S.backlog.items[i];editDoc("backlog",d=>{d.items.splice(i,1)});pushUndo({kind:"doc",doc:"backlog",item:it,index:i,label:`Removed “${it.title}”`})}
   if(a==="discard")discardTask(id,b.dataset.pid);
+  if(a==="tomorrow")pushTomorrow(id,b.dataset.pid);
   if(a==="progtoggle"){S.progOpen=!S.progOpen;render(true);const el=document.getElementById("tp-text");if(el)el.focus()}
   if(a==="body"){S.open.checkin=true;const f=b.dataset.f,v=b.dataset.v==="yes";editDay(vday(),d=>{d.body={...bodyOf(d)};d.body[f]=d.body[f]===v?null:v})}
   /* TickTick */
