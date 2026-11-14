@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261114055142"></script>
-<script type="module" src="boot.js?v=20261114055142"></script>
+<script src="shim.js?v=20261114055817"></script>
+<script type="module" src="boot.js?v=20261114055817"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -663,7 +663,7 @@ const MOB=[["Wrist rocks","On hands and knees, fingers forward, rock gently forw
 const SESS={
  back:{id:"back",name:"Back & arms",emoji:"💪",mins:20,n:4,mob:3,skills:[],
   intro:"Warm up 2 min: arm circles, cat–cow, 10 slow rows without weight. Then do the moves back to back, rest about 45 s, and repeat for 3 rounds.",
-  fixed:[["One-arm row, slow lowering","Hand and knee on a chair or the sofa. Pull the kettlebell to your hip, squeeze your shoulder blade back, then take 3 seconds to lower it.","3 × 8 each arm"]],
+  fixed:[["Staggered-stance row, slow lowering","No bench needed. Step one foot forward, rest your free forearm on that thigh and hinge until your back is flat. Row the kettlebell to your hip, squeeze your shoulder blade back, then take 3 seconds to lower it.","3 × 8 each arm"]],
   picks:[[["Kettlebell pullover","On your back, hold the bell by the horns over your chest, lower it behind your head with slightly bent arms, then pull it back over. Works your lats.","3 × 10"],
     ["Towel floor pulls","Face down on a towel on a smooth floor, arms out in front. Press your forearms down and pull your body forward to your hands, like a pull-up lying down.","3 × 4 pulls"],
     ["Floor lat pull-downs","Face down, arms overhead and just off the floor. Pull your elbows down to your ribs, squeezing your shoulder blades together, then reach back out.","3 × 10"]],
@@ -710,7 +710,7 @@ const SESS={
 /* days before Heartwood existed are never "missed" */
 const HW_START="2026-11-05";
 /* away from home: every kettlebell move has a bodyweight (or backpack) stand-in */
-const NOKB={"One-arm row, slow lowering":["Backpack row, slow lowering","Fill a backpack with books or water bottles. Hinge forward, one hand on a chair or your knee, row the bag to your hip and lower it over 3 seconds.","3 × 10 each arm"],
+const NOKB={"Staggered-stance row, slow lowering":["Backpack row, slow lowering","Fill a backpack with books or water bottles. Step one foot forward, free forearm on that thigh, hinge, row the bag to your hip and lower it over 3 seconds.","3 × 10 each arm"],
  "Kettlebell pullover":["Towel floor slides","Kneel with your hands on a towel on a smooth floor. Slide your arms forward as far as you can control, then pull the towel back to your knees with straight arms. Works your lats.","3 × 8"],
  "Kettlebell curls":["Towel curls","Stand on the middle of a towel, hold both ends and curl hard against it, holding 3 seconds at the bottom, middle and top.","3 × 6"],
  "Hammer curls":["Backpack hammer curls","Hold a loaded backpack by its top handle, thumb up, and curl slowly.","3 × 12 each arm"],
