@@ -165,7 +165,7 @@ input.inlin{padding:4px 8px;font:inherit;min-width:0}span:not(.grow)>input.inlin
 .tc-up{--c:#8fc3a0}.tc-visit{--c:#b9a7e0}:root[data-theme="dark"] .tc-visit{--c:#5d4f8a}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .tc-visit{--c:#5d4f8a}}.tc-idea{--c:#f0cf86}.tc-past{--c:#c9cfcb}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .tc-up{--c:#3f7a56}:root:not([data-theme="light"]) .tc-idea{--c:#8a6d2a}:root:not([data-theme="light"]) .tc-past{--c:#4a524d}}
 :root[data-theme="dark"] .tc-up{--c:#3f7a56}:root[data-theme="dark"] .tc-idea{--c:#8a6d2a}:root[data-theme="dark"] .tc-past{--c:#4a524d}
 .trdot{display:inline-block;width:9px;height:9px;border-radius:3px;background:var(--c);margin-right:5px;vertical-align:middle}.trleg{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-.deckgrp{margin-top:8px}.deckold{color:var(--muted)}
+.deckgrp{margin-top:8px}.deckhead{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:0;border-top:1px solid var(--line);padding:12px 0 8px;font:inherit;color:inherit;cursor:pointer;text-align:left;min-height:44px}.deckold{color:var(--muted)}
 .prio{width:8px;height:8px;border-radius:50%;flex:none}
 .prio.p5{background:var(--danger)}.prio.p3{background:var(--warm)}.prio.p1{background:var(--m2)}
 .tt-err{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--warm-soft);border-radius:10px;padding:10px 12px;font-size:.9rem}
@@ -265,7 +265,7 @@ body.modal-open{overflow:hidden}
 .sunbtn{border:1px solid var(--line);background:var(--bg);color:var(--muted);border-radius:999px;width:34px;height:34px;flex:none;cursor:pointer;font-size:1rem}
 .sunbtn[aria-pressed=true]{background:var(--warm-soft);border-color:var(--warm);color:var(--warm)}
 .pactions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0 18px}.pweek{margin-bottom:4px}
-form[data-form="tttoday"]{flex-wrap:nowrap}form[data-form="tttoday"] input{min-width:0;flex:1}.addproj{margin:-4px 0 6px}
+form[data-form="tttoday"]{flex-wrap:nowrap}form[data-form="tttoday"] input{min-width:0;flex:1}.addproj{margin:-4px 0 6px;display:flex;gap:14px;flex-wrap:wrap;align-items:center}.rtpill{color:var(--accent)}
 .pkind{color:var(--muted);margin-right:6px;font-weight:600}
 .pbar{display:inline-block;vertical-align:middle;width:46px;height:5px;border-radius:3px;background:var(--line);margin-left:8px;overflow:hidden}.pbar i{display:block;height:100%;background:var(--accent,#3d6b4f)}
 .pbar.big{width:120px;height:7px;margin:0}
@@ -1069,6 +1069,10 @@ async function runUndo(uidv){
       editDoc(u.doc,d=>{const i=d.items.findIndex(x=>x.id===u.item.id);if(i>=0)d.items[i]=u.item;else d.items.splice(Math.min(u.index??0,d.items.length),0,u.item)});
       if(u.buy)editDay(u.buy.date,d=>{d.purchases=d.purchases.filter(p=>p.id!==u.buy.id)});
       toast("Restored");
+    }else if(u.kind==="rtskip"||u.kind==="rtdone"){
+      editDay(today(),d=>{if(u.kind==="rtskip"){d.rtSkip={...(d.rtSkip||{})};delete d.rtSkip[u.rid];if(u.top)d.top3=[...(d.top3||[]),u.top];if(u.may)d.maybe=[...(d.maybe||[]),u.may]}
+        else{d.routines={...(d.routines||{})};delete d.routines[u.rid];const rid="rt:"+u.rid;d.top3=(d.top3||[]).map(x=>x.id===rid?{...x,done:false}:x);d.maybe=(d.maybe||[]).map(x=>x.id===rid?{...x,done:false}:x)}});
+      toast("Back on today");
     }else if(u.kind==="tmr"){
       await call("update_task",{task_id:u.tid,task:{id:u.tid,projectId:u.pid,dueDate:u.due||null,startDate:u.due||null,isAllDay:true,timeZone:TZ},client_timezone:TZ});
       if(u.top||u.may){editDay(today(),d=>{if(u.top)d.top3=[...(d.top3||[]),u.top];if(u.may)d.maybe=[...(d.maybe||[]),u.may]},{silent:true});
@@ -1617,7 +1621,7 @@ V.today=()=>{
   if(past)return `<div class="pastnote"><span>Filling in <b>${fmtDay(vd,{weekday:"long",day:"numeric",month:"long"})}</b></span><button type="button" class="btn ghost sm" data-act="viewday" data-d="${today()}">Back to today</button></div>
   <span class="grp">Notice</span>${moodCard(d,true)}${checkinCard()}${ateCard()}
   <span class="grp">Reflect</span>${reflectCard(d,true)}${footerExtras()}`;
-  const R={pointer:()=>pointerCard(pointerOfDay(),true),vision:visionToday,"g-do":()=>`<span class="grp">Do</span>`,tasks:todayTasks,routines:routinesCard,workout:workoutCard,study:studyToday,jpread:jpReadCard,
+  const R={pointer:()=>pointerCard(pointerOfDay(),true),vision:visionToday,"g-do":()=>`<span class="grp">Do</span>`,tasks:todayTasks,routines:()=>"",workout:workoutCard,study:studyToday,jpread:jpReadCard,
     "g-notice":()=>`<span class="grp">Notice</span>`,"g-feel":()=>`<span class="grp">Feel</span>`,mood:()=>moodCard(d,false),checkin:checkinCard,weigh:weighCard,ate:ateCard,wishcheck:wishCheckCard,
     "g-reflect":()=>`<span class="grp">Reflect</span>`,dream:dreamToday,trip:tripToday,groc:grocToday,dates:datesToday,apps:appsToday,media:mediaToday,reflect:()=>reflectCard(d,false),extras:footerExtras};
   const parts=todayOrder().filter(k=>!(S.settings.todayHidden||[]).includes(k)).map(k=>[k,R[k]()]);
@@ -1668,16 +1672,17 @@ document.addEventListener("pointerdown",e=>{const g=e.target.closest&&e.target.c
 
 function todayTasks(){
   if(MCP&&S.tt.state!=="off"){
-    const ts=S.tt.today;
+    const ts=todayTs();
     const top=getDay(today()).top3||[];const topIds=top.map(x=>x.id);
     const openTop=topIds.map(id=>ts.find(t=>t.id===id)).filter(Boolean);
     const doneTop=top.filter(x=>!ts.some(t=>t.id===x.id));
     const core=top.filter(x=>!x.bonus),coreDone=core.filter(x=>!ts.some(t=>t.id===x.id));
     const bonusDone=top.filter(x=>x.bonus&&!ts.some(t=>t.id===x.id)).length;const allDone=top.length>0&&doneTop.length===top.length;
     const maybe=getDay(today()).maybe||[];const maybeIds=maybe.map(x=>x.id).filter(id=>!topIds.includes(id));
-    const openMaybe=maybeIds.map(id=>ts.find(t=>t.id===id)).filter(Boolean),doneMaybe=maybe.filter(x=>x.done&&!topIds.includes(x.id));
+    const openMaybe=maybeIds.map(id=>ts.find(t=>t.id===id)).filter(Boolean),doneMaybe=maybe.filter(x=>(x.done||isRt(x.id)&&!ts.some(t=>t.id===x.id))&&!topIds.includes(x.id));
     const rest=ts.filter(t=>!topIds.includes(t.id)&&!maybeIds.includes(t.id));
-    const row=t=>ttTaskLi(t,`${maybeBtn(t.id,maybeIds.includes(t.id),"maybe")}<button class="starbtn" data-act="top3" data-id="${t.id}" aria-pressed="${topIds.includes(t.id)}" aria-label="${topIds.includes(t.id)?"Remove from Top 3":S.bonusPick?"Add as a bonus":"Add to Top 3"}" title="${topIds.includes(t.id)?"In your Top 3":"Add to Top 3"}">${topIds.includes(t.id)?"★":"☆"}</button><button class="btn ghost sm tdiscard" data-act="discard" data-id="${t.id}" data-pid="${esc(t.pid)}" title="Mark as won't do">Discard</button>`,true,`${top.some(x=>x.id===t.id&&x.bonus)?`<span class="pill soft">bonus</span>`:""}${S.rolled.ids.includes(t.id)||top.some(x=>x.id===t.id&&x.carried)||maybe.some(x=>x.id===t.id&&x.carried)?`<span class="pill soft">from yesterday</span>`:""}`);
+    const rtActs=t=>`${maybeBtn(t.id,maybeIds.includes(t.id),"maybe")}<button class="starbtn" data-act="top3" data-id="${t.id}" aria-pressed="${topIds.includes(t.id)}" aria-label="${topIds.includes(t.id)?"Remove from Top 3":"Add to Top 3"}">${topIds.includes(t.id)?"★":"☆"}</button><button class="btn ghost sm tdiscard" data-act="rtskip" data-id="${t.routine.id}" title="Not today">Skip</button>`;
+    const row=t=>t.routine?rtTaskLi(t,rtActs(t)):ttTaskLi(t,`${maybeBtn(t.id,maybeIds.includes(t.id),"maybe")}<button class="starbtn" data-act="top3" data-id="${t.id}" aria-pressed="${topIds.includes(t.id)}" aria-label="${topIds.includes(t.id)?"Remove from Top 3":S.bonusPick?"Add as a bonus":"Add to Top 3"}" title="${topIds.includes(t.id)?"In your Top 3":"Add to Top 3"}">${topIds.includes(t.id)?"★":"☆"}</button><button class="btn ghost sm tdiscard" data-act="discard" data-id="${t.id}" data-pid="${esc(t.pid)}" title="Mark as won't do">Discard</button>`,true,`${top.some(x=>x.id===t.id&&x.bonus)?`<span class="pill soft">bonus</span>`:""}${S.rolled.ids.includes(t.id)||top.some(x=>x.id===t.id&&x.carried)||maybe.some(x=>x.id===t.id&&x.carried)?`<span class="pill soft">from yesterday</span>`:""}`);
     const dayD=getDay(today());const picking=!top.length;const mx=topMax(today());const choosing=top.length>0&&top.length<mx&&!dayD.topDone;const showRest=picking||choosing||S.showMoreToday||(allDone&&S.bonusPick);
     return `<section class="block card">
       <div class="head"><h2>${picking?"Today":topLabel(today())}</h2>${picking?`<button class="btn ghost" data-go="todo">All to-dos</button>`:`<span class="topmeta"><span class="mono muted">${coreDone.length}/${core.length} done${bonusDone?` · +${bonusDone} bonus`:""}</span>${top.some(x=>x.bonus)?"":sizeBtn(today())}</span>`}</div>${projAskCard()}
@@ -1688,17 +1693,21 @@ function todayTasks(){
       ${openMaybe.length||doneMaybe.length?`<div class="maybegrp"><div class="head"><span class="eyebrow maybe-eb">◆ Maybe today${allDone&&S.bonusPick?" · star one to make it a bonus":""}</span><span class="mono muted small">${doneMaybe.length}/${openMaybe.length+doneMaybe.length}</span></div>
         <ul class="list">${openMaybe.map(row).join("")}${doneMaybe.map(x=>`<li class="trow donerow"><span class="check donechk" aria-hidden="true"></span><div class="tmain"><span>${esc(plainTitle(x.title))}</span></div></li>`).join("")}</ul></div>`:""}
       ${S.tt.state==="error"?ttErrBox(S.tt.err):S.tt.todayErr?ttErrBox(S.tt.todayErr):S.tt.state==="loading"&&!ts.length?`<p class="empty">Loading today's tasks…</p>`:
-        !ts.length&&!top.length&&!deckItems().length?`<p class="empty">Nothing on today. Enjoy the space, or pick one thing that matters.</p>`:""}
+        !ts.length&&!top.length&&!deckItems().length&&!rtList().length?`<p class="empty">Nothing on today. Enjoy the space, or pick one thing that matters.</p>`:""}
       <form class="addrow" data-form="tttoday"><input type="text" id="tttoday-new" placeholder="Add a task for today" autocomplete="off"><button class="btn">Add</button></form>
-      ${(()=>{const tr=trackable();if(!tr.length)return "";const cur=tr.find(x=>x.id===S.addProj);
+      ${(()=>{const tr=trackable();if(!tr.length)return `<div class="addproj"><button type="button" class="linkbtn subtle tiny" data-go="todo" title="Add or change routines">↻ Routines</button></div>`;const cur=tr.find(x=>x.id===S.addProj);
         /* the project picker stays out of the way: one small link under the box */
         if(S.addProjOpen)return `<div class="chips addproj">${tr.map(x=>`<button type="button" class="chip" data-act="addproj" data-p="${esc(x.id)}" aria-pressed="${x.id===S.addProj}">↳ ${esc(x.name)}</button>`).join("")}<button type="button" class="chip" data-act="addproj" data-p="">No project</button></div>`;
-        return `<div class="addproj">${cur?`<button type="button" class="pill soft plink" data-act="addprojopen" title="Change project">↳ ${esc(cur.name)} · change</button>`:`<button type="button" class="linkbtn subtle tiny" data-act="addprojopen">↳ Part of a project?</button>`}</div>`})()}
-      ${(()=>{const dk=deckItems();const n=rest.length+dk.length;if(!n)return "";const open=S.deckOpen||picking||choosing||(allDone&&S.bonusPick);
+        return `<div class="addproj">${cur?`<button type="button" class="pill soft plink" data-act="addprojopen" title="Change project">↳ ${esc(cur.name)} · change</button>`:`<button type="button" class="linkbtn subtle tiny" data-act="addprojopen">↳ Part of a project?</button>`}<button type="button" class="linkbtn subtle tiny" data-go="todo" title="Add or change routines">↻ Routines</button></div>`})()}
+      ${(()=>{const dk=deckItems();const n=rest.length+dk.length;if(!n)return "";
+        /* folds with one tap on its header, and remembers; before you've chosen, it starts open while you pick */
+        let pref=null;try{pref=localStorage.getItem("sd-deck")}catch(_){}const open=S.deckOpen!=null?S.deckOpen:pref?pref==="open":!!(picking||choosing||(allDone&&S.bonusPick));
         const drow=t=>{const age=deckAgeDays(t);return ttTaskLi(t,`${maybeBtn(t.id,false,"maybe")}<button class="starbtn" data-act="top3" data-id="${t.id}" aria-pressed="false" aria-label="${S.bonusPick?"Add as a bonus":"Add to Top 3"}" title="Today's the day: add to Top 3">☆</button><button class="btn ghost sm tdiscard" data-act="discard" data-id="${t.id}" data-pid="${esc(t.pid)}" title="Mark as won't do">Discard</button>`,false,age>=30?`<span class="pill soft deckold" title="Waiting for ${age} days">${age>=60?Math.floor(age/30)+" months":"a month"} · still want it?</span>`:"")};
-        return `<div class="deckgrp">${open?`<div class="head"><span class="eyebrow">Ready when you are · ${n}</span>${picking||choosing?"":`<button class="btn ghost sm" data-act="deckopen">Hide</button>`}</div>
+        const nRt=rest.filter(t=>t.routine).length,old=dk.some(t=>deckAgeDays(t)>=30);
+        const headBtn=`<button type="button" class="deckhead" data-act="deckopen" aria-expanded="${open}"><span class="eyebrow">Ready when you are · ${n}</span><span class="muted small">${!open&&nRt?`↻ ${nRt} routine${nRt>1?"s":""} · `:""}${!open&&old?"some waiting a while · ":""}${open?"Fold ▴":"Show ▾"}</span></button>`;
+        return `<div class="deckgrp">${open?`${headBtn}
           ${picking||choosing?"":`<p class="muted small" style="margin:0 0 4px">Star ★ or mark ◆ the ones you'll do today.</p>`}<ul class="list">${rest.map(row).join("")}${dk.map(drow).join("")}</ul>`:
-          `<button class="btn ghost" data-act="deckopen">Ready when you are · ${n}${dk.some(t=>deckAgeDays(t)>=30)?` <span class="muted small">· some waiting a while</span>`:""}</button>`}</div>`})()}
+          headBtn}</div>`})()}
       ${S.planOpen?planPanel():(()=>{const tt3=getDay(tmKey()).top3||[];{const hh=new Date().getHours();if(!tt3.length&&hh<17&&hh>=DAY_START_HOUR)return ""}return `<div class="plansum">${tt3.length?`<span class="muted small">Tomorrow: ${tt3.map(x=>"★ "+esc(x.title)).join(" · ")}</span>`:""}<button class="btn ghost sm" data-act="planopen">${tt3.length?"Edit tomorrow's "+topLabel(tmKey()):"Plan tomorrow's Top 3"}</button></div>`})()}
     </section>`;
   }
@@ -1735,6 +1744,16 @@ function routineEditRow(r){
     <button type="button" class="linkbtn subtle danger" data-act="rtdel" data-id="${r.id}">Remove</button></div>
     <div class="chips rtdays" role="group" aria-label="Days">${RT_DAYS.map((n,i)=>`<button type="button" class="chip" data-act="rtday" data-id="${r.id}" data-d="${i}" aria-pressed="${!r.days||!r.days.length||r.days.includes(i)}">${n}</button>`).join("")}</div>
     <select data-act="rtauto" data-id="${r.id}" aria-label="How it gets ticked">${RT_AUTO.map(([v,l])=>`<option value="${v}" ${(r.auto||"")===v?"selected":""}>${l}</option>`).join("")}</select></li>`}
+/* routines live in Today's task lists as their own kind of task (↻): they can be starred, marked maybe, ticked or skipped */
+const isRt=id=>String(id||"").startsWith("rt:");
+const rtSkipped=(r,k)=>!!((getDay(k).rtSkip||{})[r.id]);
+function rtTasks(){if(isPastView())return [];const k=today();return rtList().filter(r=>rtOn(r,k)&&!rtDone(r,k)&&!rtSkipped(r,k)).map(r=>({id:"rt:"+r.id,title:r.title,pid:"",routine:r,due:null}))}
+const todayTs=()=>[...rtTasks(),...(S.tt.today||[])];
+function rtTaskLi(t,actions){const r=t.routine,st=rtStreak(r);
+  return `<li class="trow rtrow"><input type="checkbox" class="check" id="rtc-${r.id}" data-act="rtdone" data-id="${r.id}" aria-label="Done: ${esc(r.title)}"><div class="tmain"><label class="ttitle" for="rtc-${r.id}">${esc(r.title)}</label>
+    <div class="tmeta"><span class="pill soft rtpill" title="Routine: comes back on its days">↻ ${esc(rtDaysLabel(r))}${st>1?` · ${st} in a row`:""}</span>${r.auto?`<span class="rtauto" title="${esc((RT_AUTO.find(x=>x[0]===r.auto)||[])[1]||"")}">ticks itself</span>`:""}</div></div><div class="tacts">${actions}</div></li>`}
+function routinesManage(){const was=S.rtEdit;S.rtEdit=S.rtEdit||rtList().length>0;let h=routinesCard();S.rtEdit=was;
+  return h.replace('<button type="button" class="btn sm" data-act="rtedit">Done</button>','<span class="mono muted">↻ '+rtList().length+'</span>')}
 function routinesCard(){
   if(isPastView())return "";const L=rtList(),k=today(),edit=S.rtEdit;
   if(!L.length&&!edit)return `<section class="block card routines"><div class="head"><h2>Routines</h2></div>
@@ -1930,7 +1949,7 @@ V.todo=()=>{
     if(S.tt.state==="loading"&&!S.tt.projects.length)return `<section class="block card"><h2>To-do</h2><p class="empty">Loading your TickTick lists…</p></section>`;
     const ids=ttMap().todo||[];
     if(!ids.length)return `<section class="block card"><h2>To-do</h2><p class="empty">Pick which TickTick lists count as your to-do in Lists → Choose lists.</p></section>`;
-    return recentBox()+(S.projAsk?`<div class="block">${projAskCard()}</div>`:"")+`<div class="head"><span class="eyebrow">From TickTick</span><button class="btn ghost" data-act="ttreload">Refresh</button></div>`+ids.map(id=>{
+    return recentBox()+(S.projAsk?`<div class="block">${projAskCard()}</div>`:"")+routinesManage()+`<div class="head"><span class="eyebrow">From TickTick</span><button class="btn ghost" data-act="ttreload">Refresh</button></div>`+ids.map(id=>{
       const L=S.tt.lists[id];const all=L?L.tasks.filter(t=>t.kind!=="NOTE"&&!L.tasks.some(x=>x.parentId===t.id)).sort(byDue):[];
       const more=!S.showAll[id]&&all.length>15;const ts=more?all.slice(0,15):all;
       return `<section class="block card"><div class="head"><h2>${esc(projName(id))}</h2><span class="mono muted">${all.length} open</span></div>
@@ -3743,8 +3762,11 @@ document.addEventListener("click",e=>{
   if(a==="trkind"){S.trKind=b.dataset.k;render(true);setTimeout(()=>{const i=document.getElementById("tradd");if(i)i.focus()},0);return}
   if(a==="trkindset"){const k=b.dataset.k;editTrip(id,t=>{if(k==="visit"){t.kind="visit";if(!t.emoji||t.emoji==="🧳")t.emoji="🏡"}else{delete t.kind;if(t.emoji==="🏡")t.emoji="🧳"}});return}
   if(a==="trcal"){const d=+b.dataset.d;if(!d){S.trCal=null}else{const [y,m]=(S.trCal||today().slice(0,7)).split("-").map(Number);const n=new Date(y,m-1+d,1);S.trCal=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}`}render(true);return}
-  if(a==="deckopen"){S.deckOpen=!S.deckOpen;render(true);return}
+  if(a==="deckopen"){const now=b.getAttribute("aria-expanded")==="true";S.deckOpen=!now;try{localStorage.setItem("sd-deck",now?"closed":"open")}catch(_){}render(true);return}
   if(a==="inl"){S.inl={k:b.dataset.k,id:b.dataset.id,orig:b.dataset.t};render(true);setTimeout(()=>{const i=document.querySelector(".inlin");if(i){i.focus();const n=i.value.length;try{i.setSelectionRange(n,n)}catch(_){}}},0);return}
+  if(a==="rtskip"){const rid="rt:"+id,d0=getDay(today());const top=(d0.top3||[]).find(x=>x.id===rid),may=(d0.maybe||[]).find(x=>x.id===rid);
+    editDay(today(),d=>{d.rtSkip={...(d.rtSkip||{}),[id]:true};d.top3=(d.top3||[]).filter(x=>x.id!==rid);d.maybe=(d.maybe||[]).filter(x=>x.id!==rid)});
+    const r=rtList().find(x=>x.id===id);pushUndo({kind:"rtskip",rid:id,top,may,label:`Skipped “${r?r.title:"routine"}” today`});toast("Skipped for today. It's back on its next day");return}
   if(a==="rtedit"){S.rtEdit=!S.rtEdit;render(true);if(S.rtEdit)setTimeout(()=>{const i=document.getElementById("rt-new");if(i&&!rtList().length)i.focus()},0);return}
   if(a==="rtsuggest"){const t=b.dataset.t,au=b.dataset.a;editSettings(st=>{st.routines=[...(st.routines||[]),{id:uid(),title:t,days:[],auto:au}]});toast(`Added “${t}”. Edit to pick its days.`);return}
   if(a==="rtday"){const i=+b.dataset.d;editSettings(st=>{const x=(st.routines||[]).find(y=>y.id===id);if(!x)return;let d=x.days&&x.days.length?x.days.slice():[0,1,2,3,4,5,6];
@@ -3898,13 +3920,13 @@ document.addEventListener("click",e=>{
   if(a==="topsize"){const k=b.dataset.d,n=+b.dataset.n;editDay(k,d=>{d.topMax=n;if(n===5)d.topDone=false});if(k===today()&&n===5)S.showMoreToday=false}
   if(a==="bonuspick"){S.bonusPick=!S.bonusPick;render(true)}
   if(a==="topdone"){S.showMoreToday=false;editDay(today(),d=>{d.topDone=true})}
-  if((a==="top3"||a==="maybe")&&!S.tt.today.some(x=>x.id===id)){const dk=deckItems().find(x=>x.id===id);if(dk)deckPromote(dk)}
-  if(a==="top3"){const t=S.tt.today.find(x=>x.id===id);const cur=getDay(today()).top3||[];
+  if((a==="top3"||a==="maybe")&&!isRt(id)&&!S.tt.today.some(x=>x.id===id)){const dk=deckItems().find(x=>x.id===id);if(dk)deckPromote(dk)}
+  if(a==="top3"){const t=todayTs().find(x=>x.id===id);const cur=getDay(today()).top3||[];
     if(cur.some(x=>x.id===id))editDay(today(),d=>{d.top3=(d.top3||[]).filter(x=>x.id!==id);if(!d.top3.length)d.topDone=false});
     else if(S.bonusPick&&t){S.bonusPick=false;S.showMoreToday=false;editDay(today(),d=>{d.top3=[...(d.top3||[]),{id:t.id,title:plainTitle(t.title),bonus:true}];d.maybe=(d.maybe||[]).filter(x=>x.id!==t.id)})}
     else if(cur.length>=topMax(today()))toast(topMax(today())===3?"Your Top 3 is full. Unstar one, or tap +2 for room for 5.":"Your Top 5 is full. Unstar one first.");
     else if(t)editDay(today(),d=>{d.top3=[...(d.top3||[]),{id:t.id,title:plainTitle(t.title)}];d.maybe=(d.maybe||[]).filter(x=>x.id!==t.id)});}
-  if(a==="maybe"){const t=S.tt.today.find(x=>x.id===id);const on=(getDay(today()).maybe||[]).some(x=>x.id===id&&!x.done);
+  if(a==="maybe"){const t=todayTs().find(x=>x.id===id);const on=(getDay(today()).maybe||[]).some(x=>x.id===id&&!x.done);
     editDay(today(),d=>{d.maybe=(d.maybe||[]).filter(x=>x.id!==id);if(!on&&t){d.maybe.push({id:t.id,title:plainTitle(t.title)});d.top3=(d.top3||[]).filter(x=>x.id!==id)}})}
   if(a==="maybetm")toggleTomorrowMaybe(id);
   if(a==="viewday"){const dd=b.dataset.d;S.viewDay=dd===today()?null:dd;S.open={};S.gratShow=1;S.ateSlot=null;S.progOpen=false;render(true);window.scrollTo({top:0})}
@@ -3994,7 +4016,9 @@ document.addEventListener("change",e=>{
   {const c=e.target.closest('[data-act="prow"],[data-act="psplit"]');if(c&&S.pretty&&S.pretty.rows){const r=S.pretty.rows[+c.dataset.i];if(r){if(c.dataset.act==="prow")r.on=c.checked;else r.splitOn=c.checked;render(true)}return}}
   const b=e.target;if(!b.dataset||!b.dataset.act)return;const id=b.dataset.id;
   if(b.dataset.act==="habit")editDay(today(),d=>{if(b.checked)d.habits[id]=true;else delete d.habits[id]});
-  if(b.dataset.act==="rtdone"){editDay(today(),d=>{d.routines=d.routines||{};if(b.checked)d.routines[id]=true;else delete d.routines[id]});
+  if(b.dataset.act==="rtdone"){const rid="rt:"+id;editDay(today(),d=>{d.routines=d.routines||{};if(b.checked)d.routines[id]=true;else delete d.routines[id];
+      d.top3=(d.top3||[]).map(x=>x.id===rid?{...x,done:b.checked}:x);d.maybe=(d.maybe||[]).map(x=>x.id===rid?{...x,done:b.checked}:x)});
+    if(b.checked)pushUndo({kind:"rtdone",rid:id,label:"Ticked a routine"});
     if(b.checked){const r=rtList().find(x=>x.id===id);const st=r?rtStreak(r):0;toast(st>1?`✓ ${r.title} · ${st} in a row`:"✓ Done for today")}}
   if(b.dataset.act==="rtfield"){const val=b.value.trim();const r=rtList().find(x=>x.id===id);if(!r)return;if(!val){b.value=r.title;toast("A routine needs a name");return}if(val!==r.title)editSettings(st=>{const x=st.routines.find(y=>y.id===id);if(x)x.title=val},{silent:true})}
   if(b.dataset.act==="hwday"){const ws=b.dataset.w,i=+b.dataset.i,t=b.value;if(!SESS[t])return;editSettings(st=>{const hw=st.hw={...(st.hw||{})};hw.plans={...(hw.plans||{})};const pl=planFor(ws);pl[i]=t;hw.plans[ws]=pl;if(hw.emph&&hw.emph[ws]){hw.emph={...hw.emph};delete hw.emph[ws]}})}
