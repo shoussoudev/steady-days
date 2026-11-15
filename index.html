@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261115103534"></script>
-<script type="module" src="boot.js?v=20261115103534"></script>
+<script src="shim.js?v=20261115104003"></script>
+<script type="module" src="boot.js?v=20261115104003"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -166,6 +166,7 @@ li.done .grow{color:var(--muted);text-decoration:line-through}
 .hwnav{display:flex;align-items:center;gap:4px;margin:6px 0}.hwnav .hwstrip{flex:1;margin:0}.hwarr{border:0;background:none;font:inherit;font-size:1.1rem;color:var(--muted);padding:6px 4px;cursor:pointer}.hwarr:disabled{opacity:.3;cursor:default}
 button.hwd{font:inherit;font-size:.72rem;color:inherit;background:none;cursor:pointer}.hwd.sel{border-color:var(--accent,currentColor);box-shadow:0 0 0 2px var(--accent,currentColor) inset}
 .hwaway{border:1px solid var(--line);background:none;border-radius:8px;padding:3px 6px;opacity:.45;cursor:pointer;font-size:.9rem}.hwaway[aria-pressed="true"]{opacity:1;background:var(--soft,rgba(127,127,127,.12))}
+.wease{display:flex;gap:8px;align-items:center;margin-top:2px}
 .hwstrip{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:6px 0}.hwd{display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 0;border-radius:10px;border:1px solid var(--line);font-size:.72rem}
 .hwd b{font-weight:600;color:var(--muted)}.hwd i{font-style:normal;font-size:.95rem}.hwd.now{border-color:var(--accent,currentColor);box-shadow:0 0 0 1px var(--accent,currentColor) inset}.hwd.done{background:var(--soft,rgba(127,127,127,.12))}.hwd.rest{opacity:.65}.hwd.miss i{opacity:.4}
 h3.wsec{font-size:.86rem;margin:12px 0 4px;font-weight:600}h3.wsec .muted{font-weight:400}.hwswap{margin-top:8px;display:flex;flex-direction:column;gap:6px}
@@ -730,6 +731,25 @@ const NOKB={"Staggered-stance row, slow lowering":["Backpack row, slow lowering"
 function hwAway(k){const w=getDay(k).workout||{};if(w.nokb!=null)return !!w.nokb;
   try{return trItems().some(t=>!isVisit(t)&&t.start&&t.status!=="idea"&&k>=t.start&&k<=(t.end||t.start))}catch(_){return false}}
 const hwAwayAuto=k=>{const w=getDay(k).workout||{};return w.nokb==null&&hwAway(k)};
+/* "Too hard?": an easier version where there's a natural one, otherwise fewer sets and reps. Remembered per move. */
+const EASIER={"Pike push-ups":["Incline pike push-ups","Hands on a sofa seat or a sturdy chair, hips high in an upside-down V. Lower your head toward the edge and press back up.","3 × 6"],
+ "Close-grip push-ups":["Close-grip push-ups on your knees","Knees down, hands under your chest, elbows brushing your ribs.","3 × 8"],
+ "Slow push-ups":["Slow push-ups on your knees","Knees down, 3 seconds down, a short pause, then press up.","3 × 8"],
+ "Chair dips":["Bent-knee chair dips","As chair dips, but with your knees bent and feet close to the chair so your legs help.","3 × 8"],
+ "Hollow body hold":["Tuck hollow hold","Lower back pressed into the floor, knees bent toward your chest, arms by your sides, shoulders just off the floor.","3 × 20 s"],
+ "Lying leg raises":["Bent-knee leg raises","Knees bent at 90°, lower your feet to tap the floor and lift them back, lower back flat.","3 × 10"],
+ "Plank kettlebell drag":["Plank shoulder taps on your knees","Plank on your knees, tap each shoulder without rocking.","3 × 8 each side"],
+ "Plank shoulder taps":["Plank shoulder taps on your knees","Plank on your knees, tap each shoulder without rocking.","3 × 8 each side"],
+ "Superman hold":["Alternating superman","Face down, lift your right arm and left leg, hold 2 s, swap.","3 × 8 each side"],
+ "Seated compression lifts":["One-leg compression lifts","Seated, legs straight, lift one heel at a time using only your hip flexors.","3 × 6 each leg"],
+ "Kettlebell push press":["Kettlebell floor press","On your back, knees bent, bell at your chest. Press it straight up; lower until your elbow touches the floor.","3 × 8 each arm"],
+ "Kettlebell overhead press":["Half-kneeling kettlebell press","Kneel on one knee (same side as the bell), squeeze your bum and press straight up. Fewer reps, perfect form.","2 × 6 each arm"],
+ "Pike push-up hold":["Pike hold","Hold the top of a pike, hips high, pushing the floor away.","3 × 20 s"],
+ "Soft burpees":["Step-back burpees","Squat, hands down, step your feet back one at a time, step in and stand. No jump, no push-up.","30 s after each round"],
+ "Side plank":["Side plank on your knees","On one forearm with your knees bent and down, hips lifted in line.","3 × 30 s each side"],
+ "Towel floor pulls":["Towel floor pulls, short range","As before, but pull yourself only half the distance and rest a moment between pulls.","3 × 3 pulls"]};
+function easeDose(d){return String(d).replace(/^(\d+)\s*×\s*(\d+)(?:–(\d+))?/,(m,a,b,c)=>{const sets=Math.max(2,+a-1),r=x=>Math.max(1,Math.round(+x*0.7));return `${sets} × ${r(b)}${c?"–"+r(c):""}`})}
+const hwEased=n=>!!(S.settings.hwEase||{})[n];
 const HW_TYPES=["back","push","core","walk","speed","run","long","rest"];
 const HW_DEFAULT=["back","speed","push","core","back","long","rest"];
 const HW_EMPH=[["balanced","Arms & back",HW_DEFAULT],["skills","Skills",["push","speed","back","core","push","long","rest"]],
@@ -806,6 +826,7 @@ function workoutFor(k,shift=0,raw=false){
     if(f.burpee)ex.push({name:"Soft burpees",how:"Squat, hands down, step or hop your feet back softly, come back in and rise with a small hop or a reach. Land on the balls of your feet to keep it quiet for the neighbours.",dose:"30 s after each round",sec:"walk"})}
   if(f.mob)shuf(MOB).slice(0,f.mob).forEach(x=>ex.push({name:x[0],how:x[1],dose:x[2],sec:"mob"}));
   if(hwAway(k))ex.forEach((e,i)=>{const r=NOKB[e.name];if(r)ex[i]={...e,name:r[0],how:r[1],dose:r[2],nokb:true}});
+  ex.forEach((e,i)=>{if(e.skill||!hwEased(e.name))return;const r=EASIER[e.name];ex[i]=r?{...e,name:r[0],how:r[1],dose:r[2],eased:e.name}:{...e,dose:easeDose(e.dose),eased:e.name}});
   return {focus:f,ex};
 }
 /* every move a focus knows, and the ones that could stand in for a given move */
@@ -1826,7 +1847,7 @@ function workoutCard(){
     `<form class="addrow hwrunform" data-form="hwrun"><input id="hw-km" type="number" step="0.1" min="0" inputmode="decimal" placeholder="km" aria-label="Distance in km"><input id="hw-min" type="number" min="0" step="1" inputmode="numeric" placeholder="min" aria-label="Minutes"><button class="btn" type="submit">Log run</button></form>`}
     ${foot("")}</section>`}
   const secs=[];ex.forEach((e,i)=>{const s=e.sec||"str";if(!secs.length||secs[secs.length-1].s!==s)secs.push({s,items:[]});secs[secs.length-1].items.push([e,i])});
-  const li=([e,i])=>`<li><div class="whead"><b>${esc(e.name)}</b><span class="mono">${esc(e.dose)}</span>${!e.skill&&!e.sec&&!w.done&&swapCandidates(f,ex,i).length?`<button type="button" class="linkbtn subtle tiny" data-act="wswap" data-i="${i}" title="Swap for a similar move">⇄ Swap</button>`:""}</div><div class="muted small">${esc(e.how)} ${howLink(e)}</div>${e.skill?`<div class="wlevel"><span class="pill soft">${esc(SKILLS[e.skill].name)} level ${e.level}/4</span><span class="muted small">Move up at ${esc(e.goal)}</span><span class="lvbtns"><button type="button" class="btn ghost sm" data-act="skilllv" data-k="${e.skill}" data-d="-1" ${e.level<=1?"disabled":""} aria-label="Easier level">Easier</button><button type="button" class="btn ghost sm" data-act="skilllv" data-k="${e.skill}" data-d="1" ${e.level>=4?"disabled":""} aria-label="Harder level">Level up</button></span></div>`:""}</li>`;
+  const li=([e,i])=>`<li><div class="whead"><b>${esc(e.name)}</b><span class="mono">${esc(e.dose)}</span>${!e.skill&&!e.sec&&!w.done&&swapCandidates(f,ex,i).length?`<button type="button" class="linkbtn subtle tiny" data-act="wswap" data-i="${i}" title="Swap for a similar move">⇄ Swap</button>`:""}</div><div class="muted small">${esc(e.how)} ${howLink(e)}</div>${e.skill||e.sec==="mob"?"":e.eased?`<div class="wease"><span class="pill soft">Easier version</span><button type="button" class="linkbtn subtle tiny" data-act="hwease" data-n="${esc(e.eased)}">Back to normal</button></div>`:`<div class="wease"><button type="button" class="linkbtn subtle tiny" data-act="hwease" data-n="${esc(e.name)}">Too hard?</button></div>`}${e.skill?`<div class="wlevel"><span class="pill soft">${esc(SKILLS[e.skill].name)} level ${e.level}/4</span><span class="muted small">Move up at ${esc(e.goal)}</span><span class="lvbtns"><button type="button" class="btn ghost sm" data-act="skilllv" data-k="${e.skill}" data-d="-1" ${e.level<=1?"disabled":""} aria-label="Easier level">Easier</button><button type="button" class="btn ghost sm" data-act="skilllv" data-k="${e.skill}" data-d="1" ${e.level>=4?"disabled":""} aria-label="Harder level">Level up</button></span></div>`:""}</li>`;
   return `<section class="block card workout">${head}${hwRunMove()}
     ${timerRow(w)}
     <p class="muted small">${esc(f.intro)}</p>
@@ -3821,6 +3842,8 @@ document.addEventListener("click",e=>{
   if(a==="hwmoverun"){const i=+b.dataset.i,t=b.dataset.t,ws=weekStart(today());editSettings(st=>{const hw=st.hw={...(st.hw||{})};hw.plans={...(hw.plans||{})};const pl=planFor(ws);pl[i]=t;hw.plans[ws]=pl});toast(`Run moved to ${RT_DAYS[i]}`);return}
   if(a==="hwrunundo"){setActs(today(),acts=>{for(let i=acts.length-1;i>=0;i--)if(acts[i].k==="run")acts.splice(i,1)});editDay(today(),d=>{const w={...(d.workout||{})};w.done=false;delete w.secs;d.workout=w});return}
   if(a==="hwvar"){editDay(today(),d=>{const w={...(d.workout||{})};w.var=(w.var||0)+1;d.workout=w});toast(`Today: ${speedFor(today()).name}`);return}
+  if(a==="hwease"){const n=b.dataset.n,on=hwEased(n);editSettings(st=>{const E={...(st.hwEase||{})};if(on)delete E[n];else E[n]=1;st.hwEase=E});
+    toast(on?`${n}: back to the normal version`:EASIER[n]?`Easier: ${EASIER[n][0]}. Tap “Back to normal” when it feels OK`:`Fewer sets and reps for ${n}. Tap “Back to normal” when it feels OK`);return}
   if(a==="hwview"){const k=b.dataset.k;S.hwView=k===today()?null:k;S.open=S.open||{};S.open.workout=true;render(true);return}
   if(a==="hwwk"){const d=+b.dataset.d;let k=addDays(S.hwView||today(),d);if(k>today()&&weekStart(k)>weekStart(today()))return;if(weekStart(k)===weekStart(today())&&d>0)k=today();S.hwView=k===today()?null:k;render(true);return}
   if(a==="hwnokb"){const k=b.dataset.k;const now=hwAway(k);editDay(k,d=>{d.workout={...(d.workout||{}),nokb:!now,swaps:{}}});toast(now?"Kettlebell's back":"Away: bodyweight swaps for the kettlebell moves");return}
