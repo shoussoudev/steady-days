@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261115114526"></script>
-<script type="module" src="boot.js?v=20261115114526"></script>
+<script src="shim.js?v=20261115131212"></script>
+<script type="module" src="boot.js?v=20261115131212"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -292,7 +292,7 @@ body.modal-open{overflow:hidden}
 .sunbtn{border:1px solid var(--line);background:var(--bg);color:var(--muted);border-radius:999px;width:34px;height:34px;flex:none;cursor:pointer;font-size:1rem}
 .sunbtn[aria-pressed=true]{background:var(--warm-soft);border-color:var(--warm);color:var(--warm)}
 .pactions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0 18px}.pweek{margin-bottom:4px}
-form[data-form="tttoday"]{flex-wrap:nowrap}form[data-form="tttoday"] input{min-width:0;flex:1}.addproj{margin:-4px 0 6px;display:flex;gap:14px;flex-wrap:wrap;align-items:center}.rtpill{color:var(--accent)}
+form[data-form="tttoday"]{flex-wrap:nowrap}form[data-form="tttoday"] input{min-width:0;flex:1}.addproj{margin:-4px 0 6px;display:flex;gap:14px;flex-wrap:wrap;align-items:center}.rtpill{color:var(--accent)}.rtgrp{margin-top:10px}
 .pkind{color:var(--muted);margin-right:6px;font-weight:600}
 .pbar{display:inline-block;vertical-align:middle;width:46px;height:5px;border-radius:3px;background:var(--line);margin-left:8px;overflow:hidden}.pbar i{display:block;height:100%;background:var(--accent,#3d6b4f)}
 .pbar.big{width:120px;height:7px;margin:0}
@@ -1707,7 +1707,9 @@ function todayTasks(){
     const bonusDone=top.filter(x=>x.bonus&&!ts.some(t=>t.id===x.id)).length;const allDone=top.length>0&&doneTop.length===top.length;
     const maybe=getDay(today()).maybe||[];const maybeIds=maybe.map(x=>x.id).filter(id=>!topIds.includes(id));
     const openMaybe=maybeIds.map(id=>ts.find(t=>t.id===id)).filter(Boolean),doneMaybe=maybe.filter(x=>(x.done||isRt(x.id)&&!ts.some(t=>t.id===x.id))&&!topIds.includes(x.id));
-    const rest=ts.filter(t=>!topIds.includes(t.id)&&!maybeIds.includes(t.id));
+    /* routines that aren't starred or maybe get their own group, just under Top 3 */
+    const rtOpen=ts.filter(t=>t.routine&&!topIds.includes(t.id)&&!maybeIds.includes(t.id));
+    const rest=ts.filter(t=>!t.routine&&!topIds.includes(t.id)&&!maybeIds.includes(t.id));
     const rtActs=t=>`${maybeBtn(t.id,maybeIds.includes(t.id),"maybe")}<button class="starbtn" data-act="top3" data-id="${t.id}" aria-pressed="${topIds.includes(t.id)}" aria-label="${topIds.includes(t.id)?"Remove from Top 3":"Add to Top 3"}">${topIds.includes(t.id)?"★":"☆"}</button><button class="btn ghost sm tdiscard" data-act="rtskip" data-id="${t.routine.id}" title="Not today">Skip</button>`;
     const row=t=>t.routine?rtTaskLi(t,rtActs(t)):ttTaskLi(t,`${maybeBtn(t.id,maybeIds.includes(t.id),"maybe")}<button class="starbtn" data-act="top3" data-id="${t.id}" aria-pressed="${topIds.includes(t.id)}" aria-label="${topIds.includes(t.id)?"Remove from Top 3":S.bonusPick?"Add as a bonus":"Add to Top 3"}" title="${topIds.includes(t.id)?"In your Top 3":"Add to Top 3"}">${topIds.includes(t.id)?"★":"☆"}</button><button class="btn ghost sm tdiscard" data-act="discard" data-id="${t.id}" data-pid="${esc(t.pid)}" title="Mark as won't do">Discard</button>`,true,`${top.some(x=>x.id===t.id&&x.bonus)?`<span class="pill soft">bonus</span>`:""}${S.rolled.ids.includes(t.id)||top.some(x=>x.id===t.id&&x.carried)||maybe.some(x=>x.id===t.id&&x.carried)?`<span class="pill soft">from yesterday</span>`:""}`);
     const dayD=getDay(today());const picking=!top.length;const mx=topMax(today());const choosing=top.length>0&&top.length<mx&&!dayD.topDone;const showRest=picking||choosing||S.showMoreToday||(allDone&&S.bonusPick);
@@ -1717,6 +1719,8 @@ function todayTasks(){
       ${choosing&&(rest.length||deckItems().length)?`<div class="pickbar"><span class="muted small">Pick ${mx-top.length} more, or stop here.</span><button class="btn ghost sm" data-act="topdone">That's enough</button></div>`:""}
       ${!picking?`<ul class="list">${openTop.map(row).join("")}${doneTop.map(x=>`<li class="trow donerow"><span class="check donechk" aria-hidden="true"></span><div class="tmain"><span>${esc(plainTitle(x.title))}${x.bonus?` <span class="pill soft">bonus</span>`:""}</span></div></li>`).join("")}</ul>
       ${allDone?`<div class="gentle"><p class="small" style="margin:0">${doneLine(bonusDone)}</p>${rest.length||openMaybe.length||deckItems().length?(S.bonusPick?`<div class="pickbar"><span class="muted small">Star one task below.</span><button type="button" class="linkbtn subtle" data-act="bonuspick">Never mind</button></div>`:`<button type="button" class="linkbtn" data-act="bonuspick">Add one more</button>`):""}</div>`:""}`:""}
+      ${(()=>{const k=today(),on=rtList().filter(r=>rtOn(r,k)&&!rtSkipped(r,k));if(!rtOpen.length)return "";const dn=on.filter(r=>rtDone(r,k)).length;
+        return `<div class="rtgrp"><div class="head"><span class="eyebrow">↻ Routines</span><span class="mono muted small">${dn}/${on.length}</span></div><ul class="list">${rtOpen.map(row).join("")}</ul></div>`})()}
       ${openMaybe.length||doneMaybe.length?`<div class="maybegrp"><div class="head"><span class="eyebrow maybe-eb">◆ Maybe today${allDone&&S.bonusPick?" · star one to make it a bonus":""}</span><span class="mono muted small">${doneMaybe.length}/${openMaybe.length+doneMaybe.length}</span></div>
         <ul class="list">${openMaybe.map(row).join("")}${doneMaybe.map(x=>`<li class="trow donerow"><span class="check donechk" aria-hidden="true"></span><div class="tmain"><span>${esc(plainTitle(x.title))}</span></div></li>`).join("")}</ul></div>`:""}
       ${S.tt.state==="error"?ttErrBox(S.tt.err):S.tt.todayErr?ttErrBox(S.tt.todayErr):S.tt.state==="loading"&&!ts.length?`<p class="empty">Loading today's tasks…</p>`:
@@ -1730,7 +1734,7 @@ function todayTasks(){
         /* folds with one tap on its header, and remembers; before you've chosen, it starts open while you pick */
         let pref=null;try{pref=localStorage.getItem("sd-deck")}catch(_){}const open=S.deckOpen!=null?S.deckOpen:pref?pref==="open":!!(picking||choosing||(allDone&&S.bonusPick));
         const drow=t=>{const age=deckAgeDays(t);return ttTaskLi(t,`${maybeBtn(t.id,false,"maybe")}<button class="starbtn" data-act="top3" data-id="${t.id}" aria-pressed="false" aria-label="${S.bonusPick?"Add as a bonus":"Add to Top 3"}" title="Today's the day: add to Top 3">☆</button><button class="btn ghost sm tdiscard" data-act="discard" data-id="${t.id}" data-pid="${esc(t.pid)}" title="Mark as won't do">Discard</button>`,false,age>=30?`<span class="pill soft deckold" title="Waiting for ${age} days">${age>=60?Math.floor(age/30)+" months":"a month"} · still want it?</span>`:"")};
-        const nRt=rest.filter(t=>t.routine).length,old=dk.some(t=>deckAgeDays(t)>=30);
+        const nRt=0,old=dk.some(t=>deckAgeDays(t)>=30);
         const headBtn=`<button type="button" class="deckhead" data-act="deckopen" aria-expanded="${open}"><span class="eyebrow">Ready when you are · ${n}</span><span class="muted small">${!open&&nRt?`↻ ${nRt} routine${nRt>1?"s":""} · `:""}${!open&&old?"some waiting a while · ":""}${open?"Fold ▴":"Show ▾"}</span></button>`;
         return `<div class="deckgrp">${open?`${headBtn}
           ${picking||choosing?"":`<p class="muted small" style="margin:0 0 4px">Star ★ or mark ◆ the ones you'll do today.</p>`}<ul class="list">${rest.map(row).join("")}${dk.map(drow).join("")}</ul>`:
