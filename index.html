@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261115103150"></script>
-<script type="module" src="boot.js?v=20261115103150"></script>
+<script src="shim.js?v=20261115103534"></script>
+<script type="module" src="boot.js?v=20261115103534"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -1771,8 +1771,10 @@ function hwStrip(sel){const tk=today();sel=sel||tk;const ws=weekStart(sel);const
   return `<div class="hwnav"><button type="button" class="hwarr" data-act="hwwk" data-d="-7" aria-label="Previous week">‹</button><div class="hwstrip" aria-label="Week of ${fmtDay(ws,{day:"numeric",month:"short"})}">${[...Array(7)].map((_,i)=>{const k=addDays(ws,i),t=hwType(k),f=SESS[t],dn=hwDoneOn(k);
     return `<button type="button" class="hwd ${k===tk?"now":""} ${k===sel&&sel!==tk?"sel":""} ${dn?"done":""} ${f.rest?"rest":""} ${k<tk&&k>=HW_START&&!dn&&!f.rest?"miss":""}" data-act="hwview" data-k="${k}" aria-pressed="${k===sel}" title="${fmtDay(k,{weekday:"long",day:"numeric",month:"short"})}: ${esc(f.name)}${dn?" ✓":""}"><b>${RT_DAYS[i][0]}</b><i>${dn?"✓":hwAway(k)&&!f.run&&!f.rest?"🧳":f.emoji}</i></button>`}).join("")}</div><button type="button" class="hwarr" data-act="hwwk" data-d="7" aria-label="Next week" ${canNext?"":"disabled"}>›</button></div>`}
 /* a past (or coming) day, to look back at or tick off late */
+/* illustrated guides on RepCount, only for moves with a matching page */
+const RC_GUIDE={"Staggered-stance row, slow lowering": "kettlebell-row", "Two-hand bent-over row": "kettlebell-row", "Kettlebell pullover": "dumbbell-pullover", "Hammer curls": "hammer-curl", "Kettlebell high pull": "kettlebell-high-pull", "Superman hold": "superman", "Rear-delt fly": "rear-delt-fly", "Chair dips": "triceps-dip", "Close-grip push-ups": "diamond-push-up", "Kettlebell floor press": "kettlebell-floor-press", "Kettlebell overhead press": "kettlebell-press", "Plank shoulder taps": "plank-shoulder-taps", "Kettlebell halo": "kettlebell-halo", "Kettlebell push press": "kettlebell-push-press", "Hollow body hold": "hollow-body-hold", "Kettlebell dead bug": "dead-bug", "Dead bug": "dead-bug", "Lying leg raises": "lying-leg-raise", "Russian twist with kettlebell": "russian-twist", "Russian twist": "russian-twist", "Chest-to-wall walk-up": "wall-walk", "Chest-to-wall handstand": "wall-walk", "Incline push-up": "incline-push-up", "Full push-up": "push-up", "Slow push-ups": "push-up", "Dead hang": "dead-hang", "Scapular pull-ups": "scapular-pull-up", "Slow negatives": "pull-up", "Pull-ups": "pull-up", "Foot-supported L-sit": "l-sit", "Tuck L-sit": "l-sit", "One-leg L-sit": "l-sit", "Full L-sit": "l-sit", "Side plank": "side-plank", "Bridge": "glute-bridge", "Step-back lunges": "reverse-lunges", "Soft burpees": "burpees"};
 /* a YouTube search for the move, for every exercise (walking moves get a walking-workout search) */
-const howLink=e=>`<a class="howto" href="https://www.youtube.com/results?search_query=${encodeURIComponent(e.name.replace(/\(.*?\)/g,"").replace(/,.*$/,"").trim()+(e.sec==="walk"?" indoor walking workout":" exercise form tutorial"))}" target="_blank" rel="noopener">Watch how ↗</a>`;
+const howLink=e=>`<a class="howto" href="https://www.youtube.com/results?search_query=${encodeURIComponent(e.name.replace(/\(.*?\)/g,"").replace(/,.*$/,"").trim()+(e.sec==="walk"?" indoor walking workout":" exercise form tutorial"))}" target="_blank" rel="noopener">Watch how ↗</a>${RC_GUIDE[e.name]?` <a class="howto" href="https://www.repcountapp.com/exercises/${RC_GUIDE[e.name]}" target="_blank" rel="noopener" title="Illustrated guide on RepCount">Guide ↗</a>`:""}`;
 function hwDayView(k){
   const tk=today(),d=getDay(k),w=d.workout||{},type=hwType(k),f=SESS[type],{ex}=workoutFor(k,w.shift||0),dn=hwDoneOn(k),past=k<tk,away=hwAway(k);
   const runs=actsOf(bodyOf(d)).filter(a=>a.k==="run");
