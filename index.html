@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261115104003"></script>
-<script type="module" src="boot.js?v=20261115104003"></script>
+<script src="shim.js?v=20261115110419"></script>
+<script type="module" src="boot.js?v=20261115110419"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -58,7 +58,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;font-weight:700}
 h1{font-size:clamp(1.7rem,5vw,2.3rem);letter-spacing:-.01em;line-height:1.1}
 h2{font-size:1.15rem;font-weight:700}
-.eyebrow{font-family:var(--f-mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.eyebrow{font-family:var(--f-mono);font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .muted{color:var(--muted)}
 .mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 
@@ -74,9 +74,10 @@ h2{font-size:1.15rem;font-weight:700}
 .treeline{position:absolute;left:-16px;width:calc(100% + 32px);top:4px;height:80px;pointer-events:none}
 .tl-back{fill:var(--accent);opacity:.07}.tl-front{fill:var(--accent);opacity:.11}.tl-ground{fill:var(--accent);opacity:.10}
 .forest-top{position:relative;padding-top:78px;margin-top:-12px}
-header.top{position:relative;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+body.slim .forest-top{padding-top:10px}body.slim .forest-top .treeline,body.slim #mytree{display:none}body.slim h1{font-size:1.25rem}body.slim header.top{margin-bottom:8px}
+header.top{position:relative;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:nowrap;margin-bottom:14px}header.top>div:first-child{min-width:0}#dateline{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.72rem}
 .status{font-size:.78rem;color:var(--muted);font-family:var(--f-mono)}
-.hright{display:flex;align-items:center;gap:10px}
+.hright{display:flex;align-items:center;gap:10px;flex:none}
 .gear{background:none;border:0;color:var(--muted);cursor:pointer;padding:6px;border-radius:10px;display:grid;place-items:center}
 .gear:hover,.gear[aria-expanded="true"]{color:var(--accent);background:var(--accent-soft)}
 .setrow{display:flex;align-items:center;justify-content:space-between;gap:16px}
@@ -135,7 +136,7 @@ ul.list .grow{flex:1;min-width:0;overflow-wrap:anywhere}
 .check:checked{background:var(--accent);border-color:var(--accent)}
 .check:checked::after{content:"";width:6px;height:11px;border:solid var(--accent-ink);border-width:0 2px 2px 0;transform:rotate(45deg) translate(-1px,-1px)}
 li.done .grow{color:var(--muted);text-decoration:line-through}
-.pill{font-family:var(--f-mono);font-size:.72rem;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--ink);white-space:nowrap}
+.pill{font-family:var(--f-mono);font-size:.76rem;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--ink);white-space:nowrap}
 .pill.want{background:var(--warm-soft)}
 .streak{font-family:var(--f-mono);font-size:.78rem;color:var(--muted);white-space:nowrap}
 .streak b{color:var(--warm);font-weight:500}
@@ -145,7 +146,7 @@ li.done .grow{color:var(--muted);text-decoration:line-through}
 
 .pointer{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:grid;gap:10px}
 .pointer .ptext{margin:0;font-family:var(--f-display);font-size:1.22rem;font-weight:500;line-height:1.35;text-wrap:pretty;max-width:60ch}
-.src{font-family:var(--f-mono);font-size:.74rem;color:var(--muted)}
+.src{font-family:var(--f-mono);font-size:.78rem;color:var(--muted)}
 .try{display:grid;gap:2px;background:var(--warm-soft);border-radius:10px;padding:10px 12px}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
 .chip{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 12px;cursor:pointer;font-size:.88rem;color:var(--muted)}
@@ -160,12 +161,19 @@ li.done .grow{color:var(--muted);text-decoration:line-through}
 .small{font-size:.85rem;margin:0}
 .pill.soft{background:var(--bg);border:1px solid var(--line);color:var(--muted)}
 .pill.late{background:var(--warm-soft);color:var(--warm)}
-.routines li.rtdone label{color:var(--muted)}.rtauto{font-size:.68rem;padding:1px 6px;border-radius:999px;background:var(--soft,rgba(127,127,127,.12));color:var(--muted);vertical-align:middle;margin-left:4px}
+.routines li.rtdone label{color:var(--muted)}.rtauto{font-size:.74rem;padding:1px 6px;border-radius:999px;background:var(--soft,rgba(127,127,127,.12));color:var(--muted);vertical-align:middle;margin-left:4px}
 .rtlater{margin:4px 0 0}.rtedit{flex-direction:column;align-items:stretch!important;gap:8px}.rtetop{display:flex;gap:8px;align-items:center}.rtetop input{flex:1;min-width:0}
 .rtdays{flex-wrap:wrap;gap:4px}.rtdays .chip{padding:4px 7px;font-size:.76rem;min-width:0}.rtedit select{max-width:100%}
 .hwnav{display:flex;align-items:center;gap:4px;margin:6px 0}.hwnav .hwstrip{flex:1;margin:0}.hwarr{border:0;background:none;font:inherit;font-size:1.1rem;color:var(--muted);padding:6px 4px;cursor:pointer}.hwarr:disabled{opacity:.3;cursor:default}
-button.hwd{font:inherit;font-size:.72rem;color:inherit;background:none;cursor:pointer}.hwd.sel{border-color:var(--accent,currentColor);box-shadow:0 0 0 2px var(--accent,currentColor) inset}
+button.hwd{font:inherit;font-size:.76rem;color:inherit;background:none;cursor:pointer}.hwd.sel{border-color:var(--accent,currentColor);box-shadow:0 0 0 2px var(--accent,currentColor) inset}
 .hwaway{border:1px solid var(--line);background:none;border-radius:8px;padding:3px 6px;opacity:.45;cursor:pointer;font-size:.9rem}.hwaway[aria-pressed="true"]{opacity:1;background:var(--soft,rgba(127,127,127,.12))}
+.pointer.small{padding-bottom:12px}.ptoggle{display:block;width:100%;text-align:left;background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer}.pointer.small .ptext{display:block;font-size:1.05rem;margin:4px 0 6px}
+.pmore{font-size:.8rem;color:var(--muted)}.pfoot{display:flex;justify-content:space-between;align-items:center}.jpmore{margin-top:6px}
+/* ergonomics: tap areas of ~44 px around small controls, without making them look bigger */
+.linkbtn,.subnav button,.favbtn,.starbtn,.maybebtn,.chip,.btn.sm,.hwarr,.x,.plink,.tdiscard{position:relative}
+.linkbtn::after,.subnav button::after,.favbtn::after,.starbtn::after,.maybebtn::after,.chip::after,.btn.sm::after,.hwarr::after,.x::after,.plink::after{content:"";position:absolute;inset:-7px -3px}
+.starbtn,.maybebtn{min-width:36px;min-height:34px;padding:6px 9px}.subnav button{min-height:36px}.chip{min-height:34px}.favbtn{min-width:36px;min-height:36px}
+.btn.sm{min-height:34px}.linkbtn{min-height:30px}
 .wease{display:flex;gap:8px;align-items:center;margin-top:2px}
 .hwstrip{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:6px 0}.hwd{display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 0;border-radius:10px;border:1px solid var(--line);font-size:.72rem}
 .hwd b{font-weight:600;color:var(--muted)}.hwd i{font-style:normal;font-size:.95rem}.hwd.now{border-color:var(--accent,currentColor);box-shadow:0 0 0 1px var(--accent,currentColor) inset}.hwd.done{background:var(--soft,rgba(127,127,127,.12))}.hwd.rest{opacity:.65}.hwd.miss i{opacity:.4}
@@ -177,7 +185,7 @@ h3.wsec{font-size:.86rem;margin:12px 0 4px;font-weight:600}h3.wsec .muted{font-w
 .hwdays li{display:flex;align-items:center;gap:10px}.hwdl{display:flex;flex-direction:column;width:52px;flex:none}.hwdays select{flex:1;min-width:0}.hwdm{width:62px;flex:none;text-align:right;color:var(--muted)}.hwdm.ok{color:var(--accent,inherit)}.hwnotes{margin:4px 0 0}
 .inl{cursor:text;border-radius:6px;padding:1px 2px;margin:-1px -2px}.inl:hover{background:var(--soft,rgba(127,127,127,.1))}.inl:focus-visible{outline:2px solid var(--accent,currentColor)}
 input.inlin{padding:4px 8px;font:inherit;min-width:0}span:not(.grow)>input.inlin{width:100%}
-.trcm{min-width:120px;text-align:center;font-weight:600}.trgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px 0}.trwd{text-align:center;font-size:.72rem;color:var(--muted);padding:2px 0}
+.trcm{min-width:120px;text-align:center;font-weight:600}.trgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px 0}.trwd{text-align:center;font-size:.76rem;color:var(--muted);padding:2px 0}
 .trc{min-height:46px;display:flex;flex-direction:column;align-items:stretch;gap:2px;padding:3px 0 4px;border-radius:8px;border:0;background:none;font:inherit;color:inherit;text-align:left}.trc.empty{visibility:hidden}button.trc{cursor:pointer}button.trc:hover{background:var(--soft,rgba(127,127,127,.08))}
 .trn{font-size:.75rem;padding:0 5px;color:var(--muted)}.trc.now .trn{color:var(--accent);font-weight:700}
 .trb{display:block;height:16px;font-style:normal;font-size:.68rem;line-height:16px;padding-left:3px;overflow:hidden;white-space:nowrap;background:var(--c)}.trb.s{border-radius:6px 0 0 6px;margin-left:3px}.trb.e{border-radius:0 6px 6px 0;margin-right:3px}.trb.s.e{border-radius:6px}
@@ -284,7 +292,7 @@ body.modal-open{overflow:hidden}
 .sunbtn{border:1px solid var(--line);background:var(--bg);color:var(--muted);border-radius:999px;width:34px;height:34px;flex:none;cursor:pointer;font-size:1rem}
 .sunbtn[aria-pressed=true]{background:var(--warm-soft);border-color:var(--warm);color:var(--warm)}
 .pactions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0 18px}.pweek{margin-bottom:4px}
-form[data-form="tttoday"]{flex-wrap:nowrap}form[data-form="tttoday"] input{min-width:0;flex:1}.projpick{width:112px;flex:none;min-width:0}
+form[data-form="tttoday"]{flex-wrap:nowrap}form[data-form="tttoday"] input{min-width:0;flex:1}.addproj{margin:-4px 0 6px}
 .pkind{color:var(--muted);margin-right:6px;font-weight:600}
 .pbar{display:inline-block;vertical-align:middle;width:46px;height:5px;border-radius:3px;background:var(--line);margin-left:8px;overflow:hidden}.pbar i{display:block;height:100%;background:var(--accent,#3d6b4f)}
 .pbar.big{width:120px;height:7px;margin:0}
@@ -395,7 +403,7 @@ form[data-form="wishadd"] select,form[data-form="bladd"] select{flex:0 0 auto;wi
 .linkbtn.subtle{color:var(--muted);font-weight:500}
 .wtimer{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .wtimer .mono{font-size:1.6rem;font-variant-numeric:tabular-nums;color:var(--ink)}
-.grp{font-family:var(--f-mono);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:6px 2px -8px}
+.grp{font-family:var(--f-mono);font-size:.76rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:6px 2px -8px}
 .foldrow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;cursor:pointer;font:inherit;color:inherit;padding:12px 16px;flex-wrap:wrap}
 .foldrow .fl{font-weight:600}
 .foldrow .fv{display:inline-flex;align-items:center;gap:6px;min-width:0;overflow-wrap:anywhere}
@@ -422,7 +430,7 @@ form[data-form="ate"] > input[type=text]{flex:1 1 60px}
 .extras a{font-weight:600;text-decoration:none;font-size:.88rem}
 .proglist{padding:0 2px}
 .dayline{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:0 2px 8px}
-.subnav{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:10px}
+.subnav{display:flex;gap:4px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;border-bottom:1px solid var(--line);padding-bottom:10px}.subnav::-webkit-scrollbar{display:none}.subnav button{flex:none;white-space:nowrap}
 .subnav button{background:none;border:0;padding:6px 10px;border-radius:8px;cursor:pointer;color:var(--muted);font:500 .9rem var(--f-body)}
 .subnav button[aria-selected="true"]{color:var(--ink);background:var(--accent-soft)}
 .wknav{display:flex;align-items:center;gap:6px}
@@ -470,6 +478,7 @@ ul.list li.trow .check{margin-top:1px}
 .tmain .ttitle .prio,.tmain label .prio{display:inline-block;margin-right:6px;vertical-align:middle}
 .tmeta{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .tmeta .tdiscard{margin-left:auto}
+.tacts{display:flex;align-items:center;gap:4px;flex:none;margin-top:-4px}.tacts .tdiscard{margin-left:4px}
 .favbtn{background:none;border:0;cursor:pointer;font-size:1.25rem;line-height:1;color:var(--muted);padding:2px 6px;border-radius:6px}
 .favbtn[aria-pressed="true"]{color:var(--warm)}
 .remline{display:grid;gap:2px;border-top:1px solid var(--line);padding-top:10px}
@@ -539,11 +548,11 @@ body.has-undo .toast{bottom:calc(76px + env(safe-area-inset-bottom,0px))}
 (function(){
 /* STANDALONE: running as the Steady Days app (Firebase), not inside Claude */
 const STANDALONE=!!window.__sdStandalone;
-const TABS=[["today","Today"],["tasks","Tasks"],["journal","Journal"],["vision","Vision"],["lists","Lists"],["learn","Learn"]];
+const TABS=[["today","Today"],["tasks","Tasks"],["journal","Journal"],["vision","Plan"],["lists","Lists"],["learn","Learn"]];
 /* each merged tab has a small switch at the top */
-const SUBS={tasks:[["todo","To-do"],["projects","Projects"]],journal:[["days","Days"],["week","Week"],["checkins","Check-ins"],["cooking","Cooking"],["dreams","Dreams"]],vision:[["year","This year"],["long","Long term"],["bucket","Bucket list"]],lists:[["lists","Lists"],["notes","Notes"],["wishlist","Wishlist"],["backlog","Backlog"],["trips","Trips & visits"],["dates","Dates"],["apps","Apps"],["spending","Spending"]],learn:[["pointers","Pointers"],["japanese","Japanese"],["reminders","Reminders"]]};
+const SUBS={tasks:[["todo","To-do"],["projects","Projects"]],journal:[["days","Days"],["week","Week"],["checkins","Check-ins"],["cooking","Cooking"],["dreams","Dreams"]],vision:[["year","This year"],["long","Long term"],["bucket","Bucket list"],["trips","Trips"],["dates","Dates"]],lists:[["lists","Lists"],["notes","Notes"],["wishlist","Wishlist"],["backlog","Shelf"],["apps","Apps"],["spending","Spending"]],learn:[["pointers","Pointers"],["japanese","Japanese"],["reminders","Reminders"]]};
 /* old tab names still work (saved tab, links, buttons) */
-const ROUTE={notes:["lists","notes"],trips:["lists","trips"],dates:["lists","dates"],apps:["lists","apps"],vision:["vision"],bucket:["vision","bucket"],dreams:["journal","dreams"],today:["today"],tasks:["tasks"],journal:["journal"],lists:["lists"],learn:["learn"],todo:["tasks","todo"],projects:["tasks","projects"],habits:["journal","checkins"],cooked:["journal","cooking"],purchases:["lists","spending"],wishlist:["lists","wishlist"],backlog:["lists","backlog"],reminders:["learn","reminders"],days:["journal","days"],week:["journal","week"],spending:["lists","spending"],pointers:["learn","pointers"],japanese:["learn","japanese"],checkins:["journal","checkins"],cooking:["journal","cooking"]};
+const ROUTE={notes:["lists","notes"],trips:["vision","trips"],dates:["vision","dates"],apps:["lists","apps"],vision:["vision"],bucket:["vision","bucket"],dreams:["journal","dreams"],today:["today"],tasks:["tasks"],journal:["journal"],lists:["lists"],learn:["learn"],todo:["tasks","todo"],projects:["tasks","projects"],habits:["journal","checkins"],cooked:["journal","cooking"],purchases:["lists","spending"],wishlist:["lists","wishlist"],backlog:["lists","backlog"],reminders:["learn","reminders"],days:["journal","days"],week:["journal","week"],spending:["lists","spending"],pointers:["learn","pointers"],japanese:["learn","japanese"],checkins:["journal","checkins"],cooking:["journal","cooking"]};
 /* Pointers are paraphrased in plain words; source names the passage they draw on */
 const THEMES=[["tao","Taoism"],["stoic","Stoicism"],["focus","Focus"],["waste","Waste less"]];
 const POINTERS={
@@ -902,12 +911,15 @@ function pnoteBlock(t,where){
 }
 function pointerCard(p,withNav){
   const rem=withNav?reminderOfDay():null;
+  /* on Today it starts small: just the line; tap to see "try today", notes and another */
+  if(withNav&&!S.ptrOpen)return `<section class="pointer small"><div class="head"><span class="eyebrow">Today's pointer · ${p.tname}</span>${favBtn(p.text)}</div>
+  <button type="button" class="ptoggle" data-act="ptropen" aria-expanded="false"><span class="ptext">${esc(p.text)}</span><span class="pmore">Try today${rem?" · reminder":""} ▾</span></button></section>`;
   return `<section class="pointer"><div class="head"><span class="eyebrow">Today's pointer · ${p.tname}</span>${favBtn(p.text)}</div>
   <p class="ptext">${esc(p.text)}</p><span class="src">${esc(p.src)}</span>
   <div class="try"><span class="eyebrow">Try today</span><span>${esc(p.act)}</span></div>
   ${rem?`<div class="remline"><span class="eyebrow">Reminder</span><span>${esc(rem.text)}</span></div>`:""}
   ${pnoteBlock(p.text,withNav?"card":"today")}
-  ${withNav?`<div><button class="linkbtn" data-act="nextptr">Another</button></div>`:""}</section>`;
+  ${withNav?`<div class="pfoot"><button class="linkbtn" data-act="nextptr">Another</button><button class="linkbtn subtle" data-act="ptropen" aria-expanded="true">Less ▴</button></div>`:""}</section>`;
 }
 
 /* ---------- local db writes: one at a time per document ---------- */
@@ -1005,7 +1017,18 @@ async function ttLoadAll(){
   catch(e){S.tt.state="error";S.tt.err=e;setStatus();render(true);return}
   S.tt.loadedAt=Date.now();setStatus();render();
   await Promise.all([ttLoadLists(),ttLoadToday()]);
-  rollover();
+  rollover();mergeLocalTodos();
+}
+/* one to-do list: the old "Saved here" to-dos move into your first to-do list, once */
+async function mergeLocalTodos(){
+  if(S.todoMerging||!S.settingsLoaded)return;const open=(S.settings.todos||[]).filter(t=>!t.done);const dest=(deckLists()[0])||"inbox";
+  if(!open.length){if((S.settings.todos||[]).length)editSettings(st=>{st.todos=[]},{silent:true});return}
+  S.todoMerging=true;
+  /* take them out first, so another device doesn't copy them twice */
+  editSettings(st=>{st.todos=[]},{silent:true});let n=0;
+  for(const t of open){try{await call("create_task",{task:{title:t.text,projectId:dest==="inbox"?undefined:dest,timeZone:TZ},client_timezone:TZ});n++}
+    catch(e){editSettings(st=>{st.todos=[...(st.todos||[]),t]},{silent:true})}}
+  S.todoMerging=false;if(n){toast(`${n} to-do${n>1?"s":""} moved into ${projName(dest)}`);ttLoadLists()}
 }
 async function ttLoadList(id){
   const L=S.tt.lists[id]||(S.tt.lists[id]={tasks:[],columns:[],err:null,loading:true});L.loading=true;
@@ -1396,7 +1419,7 @@ function dueLabel(t){
   return `<span class="pill soft">${fmtDay(k,{day:"numeric",month:"short"})}</span>`;
 }
 const prioDot=t=>t.priority>=5?`<i class="prio p5" title="High priority"></i>`:t.priority>=3?`<i class="prio p3" title="Medium priority"></i>`:t.priority>=1?`<i class="prio p1" title="Low priority"></i>`:"";
-const ttTaskLi=(t,extra="",hideToday=false)=>{
+const ttTaskLi=(t,extra="",hideToday=false,sub="")=>{
   const dk=t.due&&key(new Date(t.due));const due=hideToday&&dk&&(dk===today()||dk===key())?"":dueLabel(t);
   const rem=STANDALONE&&t.remindAt&&Date.parse(t.remindAt)>Date.now()-864e5?`<button type="button" class="pill soft remp plink" data-act="remopen" data-id="${t.id}" title="Change reminder">⏰ ${new Date(t.remindAt).toLocaleString("en-GB",{weekday:Date.parse(t.remindAt)-Date.now()>864e5?"short":undefined,hour:"2-digit",minute:"2-digit"})}</button>`:"";
   /* reminder and project link live in the task's details (tap the title); the row only shows them once set */
@@ -1413,7 +1436,8 @@ const ttTaskLi=(t,extra="",hideToday=false)=>{
       <div class="chips">${tr.map(p=>`<button type="button" class="chip" aria-pressed="${p.id===lp}" data-act="tlinkset" data-id="${t.id}" data-p="${esc(p.id)}">${esc(p.name)}</button>`).join("")}</div>
       <p class="muted small" style="margin:0">When you tick it off, you'll get a quick chance to note what it moved forward.</p>
       <div class="btnrow">${lp?`<button type="button" class="btn ghost sm" data-act="tlinkset" data-id="${t.id}" data-p="">Unlink</button>`:""}<button type="button" class="btn ghost sm" data-act="tlink" data-id="">Cancel</button></div></div></li>`}
-  const meta=due+rem+linkBits+extra+projBits;
+  /* ◇ ☆ Discard sit on the title line; dates, reminders and links go underneath */
+  const meta=due+rem+linkBits+sub+projBits;
   if(S.tNoteOpen===t.id)return `<li class="trow editing"><form class="eform" data-form="tnote" data-id="${t.id}" data-pid="${esc(t.pid)}">
       <input type="text" id="tn-title" value="${esc((S.tNoteKeep&&S.tNoteKeep.title)??t.title)}" aria-label="Task title" autocomplete="off">
       <textarea id="tn-body" rows="${Math.min(14,Math.max(5,String((S.tNoteKeep&&S.tNoteKeep.content)||t.content||"").split("\n").length+1))}" placeholder="Notes, links, details…" aria-label="Notes" data-act="tnlen">${esc((S.tNoteKeep&&S.tNoteKeep.content)??t.content??"")}</textarea><span class="muted small tnlen" id="tn-len"></span>${STANDALONE?mStrip("task",t.id,true,plainTitle(t.title)):""}
@@ -1424,7 +1448,7 @@ const ttTaskLi=(t,extra="",hideToday=false)=>{
     return `<li class="trow editing"><form class="eform" data-form="remind" data-id="${t.id}" data-pid="${esc(t.pid)}"><span class="small"><b>${esc(plainTitle(t.title))}</b> · remind me at</span><div class="addrow"><input type="datetime-local" id="rem-at" value="${v}" aria-label="Reminder time"><button class="btn sm">Save</button></div>
       <div class="btnrow">${t.remindAt?`<button type="button" class="btn ghost sm" data-act="remclear" data-id="${t.id}" data-pid="${esc(t.pid)}">Remove reminder</button>`:""}<button type="button" class="btn ghost sm" data-act="remopen" data-id="">Cancel</button></div>
       ${window.__sdPush&&!window.__sdPush.isOn()?`<p class="muted small" style="margin:0">Turn on notifications in ⚙️ Settings so this reaches you.</p>`:""}</form></li>`}
-  return `<li class="trow"><input type="checkbox" class="check" id="tt-${t.id}" data-act="ttdone" data-id="${t.id}" data-pid="${esc(t.pid)}" aria-label="Complete ${esc(plainTitle(t.title))}"><div class="tmain"><button type="button" class="ttitle" data-act="tnote" data-id="${t.id}" title="Notes and details">${prioDot(t)}${esc(plainTitle(t.title))}</button>${note?`<button type="button" class="tnote" data-act="tnote" data-id="${t.id}" title="Edit notes">${esc(note.length>140?note.slice(0,139)+"…":note)}</button>`:""}${STANDALONE?mStrip("task",t.id,false):""}${isProj&&pes[0]?`<span class="muted small plast">${updToday?"✓ updated today":"Last update "+ago(pes[0].date)}: ${esc(pes[0].text.length>80?pes[0].text.slice(0,79)+"…":pes[0].text)}</span>`:""}${meta?`<div class="tmeta">${meta}</div>`:""}</div></li>`};
+  return `<li class="trow"><input type="checkbox" class="check" id="tt-${t.id}" data-act="ttdone" data-id="${t.id}" data-pid="${esc(t.pid)}" aria-label="Complete ${esc(plainTitle(t.title))}"><div class="tmain"><button type="button" class="ttitle" data-act="tnote" data-id="${t.id}" title="Notes and details">${prioDot(t)}${esc(plainTitle(t.title))}</button>${note?`<button type="button" class="tnote" data-act="tnote" data-id="${t.id}" title="Edit notes">${esc(note.length>140?note.slice(0,139)+"…":note)}</button>`:""}${STANDALONE?mStrip("task",t.id,false):""}${isProj&&pes[0]?`<span class="muted small plast">${updToday?"✓ updated today":"Last update "+ago(pes[0].date)}: ${esc(pes[0].text.length>80?pes[0].text.slice(0,79)+"…":pes[0].text)}</span>`:""}${meta?`<div class="tmeta">${meta}</div>`:""}</div>${extra?`<div class="tacts">${extra}</div>`:""}</li>`};
 
 /* ---------- render ---------- */
 function renderTabs(){$("#tabs").innerHTML=TABS.map(([id,l])=>`<button role="tab" id="tab-${id}" aria-selected="${S.tab===id}" data-tab="${id}">${l}</button>`).join("")}
@@ -1446,10 +1470,12 @@ function render(force){
   const drafts=[...document.querySelectorAll("#view textarea[id],#view input[id]")].filter(el=>(el.tagName==="TEXTAREA"||["text","number","url","search",""].includes(el.type))&&el.value!==el.defaultValue).map(el=>[el.id,el.value,el.selectionStart,el.selectionEnd]);
   const keepScroll=[...document.querySelectorAll("#view .modal, #view .modal-in")].map(m=>m.scrollTop);
   renderTabs();header();setStatus();
+  /* the forest banner and big greeting belong to Today; other tabs get a slim header */
+  document.body.classList.toggle("slim",S.tab!=="today");
   $("#view").innerHTML=pageHtml()+(S.settingsOpen?`<div class="modal" role="dialog" aria-modal="true" aria-label="Settings"><button type="button" class="modal-bg" data-act="settings" aria-label="Close settings" tabindex="-1"></button><div class="modal-in">${settingsPanel()}</div></div>`:"")
     +mViewer()+mReviewSheet()+treeSheet()+recapSheet()+useSheet()
     +(S.grocOpen?`<div class="modal" role="dialog" aria-modal="true" aria-label="Groceries"><button type="button" class="modal-bg" data-act="groc" aria-label="Close groceries" tabindex="-1"></button><div class="modal-in">${grocPanel()}</div></div>`:"");
-  document.body.classList.toggle("modal-open",!!(S.useOpen||S.settingsOpen||S.grocOpen||S.mView||S.mReview||S.treeOpen||S.recapYear||S.nOpen&&S.tab==="lists"||S.vOpen&&S.tab==="vision"&&curSub("vision")==="year"||S.bOpen&&S.tab==="vision"||S.pOpen&&S.tab==="vision"||S.ye||S.pastView));
+  document.body.classList.toggle("modal-open",!!(S.useOpen||S.settingsOpen||S.grocOpen||S.mView||S.mReview||S.treeOpen||S.recapYear||S.nOpen&&S.tab==="lists"||S.vOpen&&S.tab==="vision"&&curSub("vision")==="year"||S.bOpen&&S.tab==="vision"&&curSub("vision")==="bucket"||S.pOpen&&S.tab==="vision"&&curSub("vision")==="long"||S.ye||S.pastView));
   const g=document.getElementById("gear");if(g)g.setAttribute("aria-expanded",String(!!S.settingsOpen));
   {const gc=document.getElementById("gcount"),n=gItems().filter(x=>!x.done).length;if(gc){gc.hidden=!n;gc.textContent=n}}
   document.querySelectorAll("#view .modal, #view .modal-in").forEach((m,i)=>{if(keepScroll[i])m.scrollTop=keepScroll[i]});
@@ -1473,8 +1499,9 @@ function moodCard(d,past){
 }
 function exPicker(b){
   const acts=actsOf(b);const on=k=>acts.some(a=>a.k===k);
-  return `<div class="field expick"><span class="small muted">Exercise <span class="muted">· tap what you did; nothing ticked is a rest day</span></span>
-    <div class="chips">${exKinds().map(([k,n])=>`<button type="button" class="chip" data-act="exk" data-k="${esc(k)}" aria-pressed="${on(k)}">${esc(n)}</button>`).join("")}${on("other")?`<button type="button" class="chip" data-act="exk" data-k="other" aria-pressed="true">Other</button>`:""}<button type="button" class="chip addchip" data-act="exaddopen" aria-label="Add your own activity" title="Add your own activity">+</button></div>
+  /* Heartwood sessions and runs are logged from the Heartwood card; here they only show once they're in */
+  return `<div class="field expick"><span class="small muted">Other exercise <span class="muted">· Heartwood and runs are logged from their card</span></span>
+    <div class="chips">${exKinds().filter(([k])=>!["steady10","run"].includes(k)||on(k)).map(([k,n])=>`<button type="button" class="chip" data-act="exk" data-k="${esc(k)}" aria-pressed="${on(k)}">${esc(n)}</button>`).join("")}${on("other")?`<button type="button" class="chip" data-act="exk" data-k="other" aria-pressed="true">Other</button>`:""}<button type="button" class="chip addchip" data-act="exaddopen" aria-label="Add your own activity" title="Add your own activity">+</button></div>
     ${S.exAdd?`<form class="addrow" data-form="exadd"><input type="text" id="exadd-name" placeholder="Your activity, e.g. Swim or Football" autocomplete="off"><button class="btn sm">Add</button></form>`:""}
     ${acts.map((a,i)=>`<label class="exnote"><span class="small">${esc(exName(a.k))}</span><input type="text" id="exn-${i}" data-act="exnote" data-k="${esc(a.k)}" value="${esc(a.note||"")}" placeholder="${esc(EX_HINT[a.k]||"Add a detail (optional)")}" autocomplete="off"></label>`).join("")}
   </div>`;
@@ -1518,9 +1545,14 @@ function weightSection(){
     <label class="homemade"><input type="checkbox" id="weigh-off" data-act="weighoff" ${S.settings.weighOff?"checked":""}> Hide the Monday reminder on Today</label>
   </section>`;
 }
+/* Today follows the day: evening things (check-in, what I ate, reflection) sit as one line until 5 pm */
+const EVENING_HOUR=17;
+const isEvening=()=>new Date().getHours()>=EVENING_HOUR;
+const dayFold=k=>!isPastView()&&!isEvening()&&!isOpen(k);
 function checkinCard(){
   const b=bodyOf(getDay(vday()));const past=isPastView();
   const yn=v=>v===true?"✓":v===false?"not yet":"–";
+  if(dayFold("checkin"))return foldRow("checkin","Check-in",b.ex?esc(exLabel(b.ex)):"Tonight",`Water ${yn(b.water)} · Fruit ${yn(b.fruit)}`,"Open");
   if(b.water!=null&&b.fruit!=null&&!isOpen("checkin"))return foldRow("checkin","Check-in",esc(exLabel(b.ex)),`Water ${yn(b.water)} · Fruit ${yn(b.fruit)}`);
   return `<section class="block card"><h2>Check-in</h2>
     ${exPicker(b)}
@@ -1562,6 +1594,7 @@ function editForm(k,date,e){
 function ateCard(){
   const ate=getDay(vday()).ate||[];const cur=isPastView()?"dinner":slotNow();
   const slotName=k=>(SLOTS.find(x=>x[0]===k)||["","Meal"])[1];
+  if(dayFold("ate"))return foldRow("ate","What I ate",ate.length?esc(ate.map(e=>e.text).slice(-2).join(", ")):"Nothing yet",ate.length>2?`${ate.length} logged`:"","Add");
   return `<section class="block card"><h2>What I ate</h2>
     ${ate.length?`<ul class="atelist">${ate.map(e=>isEd("ate",e.id)?editForm("ate",vday(),e):`<li><span class="muted small">${slotName(e.slot)}</span>${etx("ate",vday(),e.id,`${esc(e.text)}${e.home?` <span class="muted small">· homemade</span>`:""}`)}<button class="x" aria-label="Delete" data-act="delate" data-id="${e.id}">×</button></li>`).join("")}</ul>`:""}
     <form class="addrow" data-form="ate"><select id="ate-slot" aria-label="Meal">${SLOTS.map(([k,n])=>`<option value="${k}" ${k===cur?"selected":""}>${n}</option>`).join("")}</select><input type="text" id="ate-new" placeholder="What did you eat?" autocomplete="off"><button class="btn">Add</button></form>
@@ -1570,6 +1603,7 @@ function ateCard(){
   </section>`;
 }
 function reflectCard(d,past){
+  if(!past&&dayFold("reflect")){const g=(d.gratitude||[]).filter(x=>x&&x.trim()).length,done=g||d.proud||d.next||d.better;return foldRow("reflect","Reflect",done?"Started ✓":"Tonight: grateful, proud, next time","","Open")}
   const g=d.gratitude||["","",""];const last=g.reduce((m,x,i)=>x&&x.trim()?i:m,-1);
   const shown=Math.min(3,Math.max(1,last+1,S.gratShow||1));
   return `<section class="block card reflect">
@@ -1670,7 +1704,7 @@ function todayTasks(){
     const maybe=getDay(today()).maybe||[];const maybeIds=maybe.map(x=>x.id).filter(id=>!topIds.includes(id));
     const openMaybe=maybeIds.map(id=>ts.find(t=>t.id===id)).filter(Boolean),doneMaybe=maybe.filter(x=>x.done&&!topIds.includes(x.id));
     const rest=ts.filter(t=>!topIds.includes(t.id)&&!maybeIds.includes(t.id));
-    const row=t=>ttTaskLi(t,`${top.some(x=>x.id===t.id&&x.bonus)?`<span class="pill soft">bonus</span>`:""}${S.rolled.ids.includes(t.id)||top.some(x=>x.id===t.id&&x.carried)||maybe.some(x=>x.id===t.id&&x.carried)?`<span class="pill soft">from yesterday</span>`:""}${maybeBtn(t.id,maybeIds.includes(t.id),"maybe")}<button class="starbtn" data-act="top3" data-id="${t.id}" aria-pressed="${topIds.includes(t.id)}" aria-label="${topIds.includes(t.id)?"Remove from Top 3":S.bonusPick?"Add as a bonus":"Add to Top 3"}" title="${topIds.includes(t.id)?"In your Top 3":"Add to Top 3"}">${topIds.includes(t.id)?"★":"☆"}</button><button class="btn ghost sm tdiscard" data-act="discard" data-id="${t.id}" data-pid="${esc(t.pid)}" title="Mark as won't do">Discard</button>`,true);
+    const row=t=>ttTaskLi(t,`${maybeBtn(t.id,maybeIds.includes(t.id),"maybe")}<button class="starbtn" data-act="top3" data-id="${t.id}" aria-pressed="${topIds.includes(t.id)}" aria-label="${topIds.includes(t.id)?"Remove from Top 3":S.bonusPick?"Add as a bonus":"Add to Top 3"}" title="${topIds.includes(t.id)?"In your Top 3":"Add to Top 3"}">${topIds.includes(t.id)?"★":"☆"}</button><button class="btn ghost sm tdiscard" data-act="discard" data-id="${t.id}" data-pid="${esc(t.pid)}" title="Mark as won't do">Discard</button>`,true,`${top.some(x=>x.id===t.id&&x.bonus)?`<span class="pill soft">bonus</span>`:""}${S.rolled.ids.includes(t.id)||top.some(x=>x.id===t.id&&x.carried)||maybe.some(x=>x.id===t.id&&x.carried)?`<span class="pill soft">from yesterday</span>`:""}`);
     const dayD=getDay(today());const picking=!top.length;const mx=topMax(today());const choosing=top.length>0&&top.length<mx&&!dayD.topDone;const showRest=picking||choosing||S.showMoreToday||(allDone&&S.bonusPick);
     return `<section class="block card">
       <div class="head"><h2>${picking?"Today":topLabel(today())}</h2>${picking?`<button class="btn ghost" data-go="todo">All to-dos</button>`:`<span class="topmeta"><span class="mono muted">${coreDone.length}/${core.length} done${bonusDone?` · +${bonusDone} bonus`:""}</span>${top.some(x=>x.bonus)?"":sizeBtn(today())}</span>`}</div>${projAskCard()}
@@ -1682,9 +1716,13 @@ function todayTasks(){
         <ul class="list">${openMaybe.map(row).join("")}${doneMaybe.map(x=>`<li class="trow donerow"><span class="check donechk" aria-hidden="true"></span><div class="tmain"><span>${esc(plainTitle(x.title))}</span></div></li>`).join("")}</ul></div>`:""}
       ${S.tt.state==="error"?ttErrBox(S.tt.err):S.tt.todayErr?ttErrBox(S.tt.todayErr):S.tt.state==="loading"&&!ts.length?`<p class="empty">Loading today's tasks…</p>`:
         !ts.length&&!top.length&&!deckItems().length?`<p class="empty">Nothing on today. Enjoy the space, or pick one thing that matters.</p>`:""}
-      <form class="addrow" data-form="tttoday"><input type="text" id="tttoday-new" placeholder="Add a task for today" autocomplete="off">${(()=>{const tr=trackable();return tr.length?`<select id="tttoday-proj" class="projpick" aria-label="Part of a project?"><option value="">No project</option>${tr.map(x=>`<option value="${esc(x.id)}">↳ ${esc(x.name)}</option>`).join("")}</select>`:""})()}<button class="btn">Add</button></form>
+      <form class="addrow" data-form="tttoday"><input type="text" id="tttoday-new" placeholder="Add a task for today" autocomplete="off"><button class="btn">Add</button></form>
+      ${(()=>{const tr=trackable();if(!tr.length)return "";const cur=tr.find(x=>x.id===S.addProj);
+        /* the project picker stays out of the way: one small link under the box */
+        if(S.addProjOpen)return `<div class="chips addproj">${tr.map(x=>`<button type="button" class="chip" data-act="addproj" data-p="${esc(x.id)}" aria-pressed="${x.id===S.addProj}">↳ ${esc(x.name)}</button>`).join("")}<button type="button" class="chip" data-act="addproj" data-p="">No project</button></div>`;
+        return `<div class="addproj">${cur?`<button type="button" class="pill soft plink" data-act="addprojopen" title="Change project">↳ ${esc(cur.name)} · change</button>`:`<button type="button" class="linkbtn subtle tiny" data-act="addprojopen">↳ Part of a project?</button>`}</div>`})()}
       ${(()=>{const dk=deckItems();const n=rest.length+dk.length;if(!n)return "";const open=S.deckOpen||picking||choosing||(allDone&&S.bonusPick);
-        const drow=t=>{const age=deckAgeDays(t);return ttTaskLi(t,`${age>=30?`<span class="pill soft deckold" title="Waiting for ${age} days">${age>=60?Math.floor(age/30)+" months":"a month"} · still want it?</span>`:""}${maybeBtn(t.id,false,"maybe")}<button class="starbtn" data-act="top3" data-id="${t.id}" aria-pressed="false" aria-label="${S.bonusPick?"Add as a bonus":"Add to Top 3"}" title="Today's the day: add to Top 3">☆</button><button class="btn ghost sm tdiscard" data-act="discard" data-id="${t.id}" data-pid="${esc(t.pid)}" title="Mark as won't do">Discard</button>`)};
+        const drow=t=>{const age=deckAgeDays(t);return ttTaskLi(t,`${maybeBtn(t.id,false,"maybe")}<button class="starbtn" data-act="top3" data-id="${t.id}" aria-pressed="false" aria-label="${S.bonusPick?"Add as a bonus":"Add to Top 3"}" title="Today's the day: add to Top 3">☆</button><button class="btn ghost sm tdiscard" data-act="discard" data-id="${t.id}" data-pid="${esc(t.pid)}" title="Mark as won't do">Discard</button>`,false,age>=30?`<span class="pill soft deckold" title="Waiting for ${age} days">${age>=60?Math.floor(age/30)+" months":"a month"} · still want it?</span>`:"")};
         return `<div class="deckgrp">${open?`<div class="head"><span class="eyebrow">Ready when you are · ${n}</span>${picking||choosing?"":`<button class="btn ghost sm" data-act="deckopen">Hide</button>`}</div>
           ${picking||choosing?"":`<p class="muted small" style="margin:0 0 4px">Star ★ or mark ◆ the ones you'll do today.</p>`}<ul class="list">${rest.map(row).join("")}${dk.map(drow).join("")}</ul>`:
           `<button class="btn ghost" data-act="deckopen">Ready when you are · ${n}${dk.some(t=>deckAgeDays(t)>=30)?` <span class="muted small">· some waiting a while</span>`:""}</button>`}</div>`})()}
@@ -2369,7 +2407,7 @@ V.backlog=()=>{
   const moreD=!S.showAll.bldone&&done.length>5,openF=!!S.showAll.blfollow,openS=!!S.showAll.blshelf;
   const count=k=>all.filter(x=>x.type===k&&(x.status==="now"||x.status==="someday"||x.status==="following")).length;
   return blImportPanel()+prettyPanel("backlog")+recentBox(u=>(u.kind==="doc"||u.kind==="docall")&&u.doc==="backlog")+`<section class="block card">
-    <div class="head"><h2>Backlog</h2><span class="topmeta">${prettyBtn("backlog")}<label class="linkbtn filebtn" title="Import from Goodreads (CSV) or a manga list (MyAnimeList XML)">⤓ Import<input type="file" id="bl-import" accept=".csv,.xml,.json,text/csv,text/xml,application/json" hidden></label><span class="mono muted">${all.filter(x=>x.status==="now"||x.status==="someday").length}</span></span></div>
+    <div class="head"><h2>Shelf</h2><span class="topmeta">${prettyBtn("backlog")}<label class="linkbtn filebtn" title="Import from Goodreads (CSV) or a manga list (MyAnimeList XML)">⤓ Import<input type="file" id="bl-import" accept=".csv,.xml,.json,text/csv,text/xml,application/json" hidden></label><span class="mono muted">${all.filter(x=>x.status==="now"||x.status==="someday").length}</span></span></div>
     <div class="chips"><button class="chip" data-act="bltype" data-t="all" aria-pressed="${f==="all"}">All</button>${BL.map(([k,e,n])=>`<button class="chip" data-act="bltype" data-t="${k}" aria-pressed="${f===k}" ${k==="series"?`title="Series, films and anime"`:""}>${e} ${n} · ${count(k)}</button>`).join("")}</div>
     <form class="addrow" data-form="bladd"><select id="bl-type" aria-label="Kind">${BL.map(([k,e,n])=>`<option value="${k}" ${(f===k||f==="all"&&k==="book")?"selected":""}>${e} ${BL.find(x=>x[0]===k)[3]}</option>`).join("")}</select><input type="text" id="bl-new" placeholder="Title" autocomplete="off"><button class="btn">Add</button></form>
   </section>
@@ -2382,7 +2420,7 @@ V.backlog=()=>{
     ${next.length?`<ul class="list">${next.map(blRow).join("")}</ul>`:`<p class="empty">Pick what comes next: tap “↑ Up next” on anything in your shelf.</p>`}
   </section>
   <section class="block card">
-    <div class="head"><h2>Shelf</h2><span class="topmeta"><span class="mono muted">${some.length}</span>${some.length?`<button type="button" class="linkbtn" data-act="showall" data-id="blshelf" aria-expanded="${openS}">${openS?"Hide":"Show"}</button>`:""}</span></div>
+    <div class="head"><h2>Later</h2><span class="topmeta"><span class="mono muted">${some.length}</span>${some.length?`<button type="button" class="linkbtn" data-act="showall" data-id="blshelf" aria-expanded="${openS}">${openS?"Hide":"Show"}</button>`:""}</span></div>
     ${!some.length?`<p class="empty">Add books, games or series you'd like to get to someday.</p>`
       :!openS?`<p class="muted small" style="margin:0">${shelfG.map(([n,a])=>n?`${n} ${a.length}`:`${a.length} waiting`).join(" · ")}</p>`
       :`${some.length>20?`<input type="search" id="bl-q" data-act="blq" placeholder="Search your shelf" autocomplete="off" aria-label="Search your shelf">`:""}<div id="bl-shelf">${shelfG.map(([n,a])=>sub(n,a.slice().sort((x,y)=>(y.added||"").localeCompare(x.added||"")))).join("")}</div>`}
@@ -2517,7 +2555,7 @@ let PUSH_OK=null;
 async function loadUsage(){if(!S.live||!S.db)return;try{const snap=await S.db.collection("data/users/"+S.uid).doc("usage").get();S.usage=snap.exists?snap.data():{}}catch(_){S.usage={err:true}}render(true)}
 const MB_ERR={"no-token":"Not connected yet. Add your MangaBaka token as a GitHub secret named MANGABAKA_TOKEN, then run the server deploy.","bad-token":"MangaBaka didn't accept the token. Make a new one in MangaBaka settings and update the GitHub secret.","unavailable":"MangaBaka didn't answer. It'll try again at the next sync."};
 function mbRow(){if(!window.__sdMangaBaka)return "";const M=S.backlog.mbSync||{};
-  const body=S.mbBusy?"Syncing…":!M.at?"Copies the manga and webtoons you follow on MangaBaka into Backlog → Following, Monday and Thursday mornings.":M.error?MB_ERR[M.error]||"Last sync didn't work.":`Last synced ${fmtDay(M.at.slice(0,10),{weekday:"short",day:"numeric",month:"short"})} · ${M.count} in your library · ${M.added||0} new, ${M.updated||0} chapter update${M.updated===1?"":"s"}, ${M.moved||0} moved`;
+  const body=S.mbBusy?"Syncing…":!M.at?"Copies the manga and webtoons you follow on MangaBaka into Shelf → Following, Monday and Thursday mornings.":M.error?MB_ERR[M.error]||"Last sync didn't work.":`Last synced ${fmtDay(M.at.slice(0,10),{weekday:"short",day:"numeric",month:"short"})} · ${M.count} in your library · ${M.added||0} new, ${M.updated||0} chapter update${M.updated===1?"":"s"}, ${M.moved||0} moved`;
   return `<div class="setrow"><div><b>MangaBaka</b><div class="muted small">${body}</div></div><button type="button" class="btn ghost sm" data-act="mbsync" ${S.mbBusy?"disabled":""}>Sync now</button></div>`}
 function usageRow(){
   if(!window.__sdClaude)return "";const U=S.usage;const usd=x=>"$"+(Math.round((+x||0)*100)/100).toFixed(2);
@@ -2967,9 +3005,10 @@ function jpReadBody(r,where){const o=(S.jpReadOpen||{})[where+r[0]]||{};const tg
   return `<p class="jpread" lang="ja">${body}</p>
     ${o.kana?`<p class="jpread kana muted" lang="ja">${esc(r[3])}</p>`:""}${o.en?`<p class="small" style="margin:0">${esc(r[4])}</p>`:""}
     ${o.words?`<ul class="jpwords">${r[5].map(w=>`<li><span lang="ja">${esc(w[0])}</span> <span class="muted small" lang="ja">${esc(w[1])}</span> <span class="small">${esc(w[2])}</span></li>`).join("")}</ul>`:""}
+    ${where==="t"&&!o.more?`<button type="button" class="linkbtn subtle jpmore" data-act="jpreadtg" data-k="${where+r[0]}" data-w="more" aria-expanded="false">Help & ${r[6].length} questions ▾</button>`:`
     <div class="chips">${jpKnown()?tg("allfuri","All furigana"):""}${tg("kana","Reading")}${tg("words","Words")}${tg("en","Translation")}</div>
     ${jpKnown()?`<p class="muted small" style="margin:0">Furigana only on kanji you haven't reached Guru on in WaniKani.</p>`:""}
-    ${jpQuiz(r,where,A,o)}`}
+    ${jpQuiz(r,where,A,o)}${where==="t"?`<button type="button" class="linkbtn subtle jpmore" data-act="jpreadtg" data-k="${where+r[0]}" data-w="more" aria-expanded="true">Hide help & questions ▴</button>`:""}`}`}
 /* three questions in Japanese; options shuffled the same way every time */
 /* answer order: truly random each time a passage is shown (kept steady while you answer, reshuffled on retry) */
 function jpShuffle(k,qi){S.jpOrd=S.jpOrd||{};const id=k+"/"+qi;if(!S.jpOrd[id]){const ix=[0,1,2];for(let i=2;i>0;i--){const j=Math.floor(Math.random()*(i+1));[ix[i],ix[j]]=[ix[j],ix[i]]}S.jpOrd[id]=ix}return S.jpOrd[id]}
@@ -2996,7 +3035,8 @@ V.japanese=()=>{const f=S.jpFilter||"todo";const L=JP_N5.filter(g=>f==="all"?tru
   </section>
   <section class="block card"><div class="head"><h2>N5 grammar</h2><span class="eyebrow">One shows on Today each day</span></div>
     <div class="chips">${[["todo",`To learn · ${n("todo")}`],["fav",`★ Favourites · ${n("fav")}`],["learned",`✓ Learned · ${n("learned")}`],["all",`All · ${JP_N5.length}`]].map(([k,t])=>`<button class="chip" data-act="jpfilter" data-t="${k}" aria-pressed="${f===k}">${t}</button>`).join("")}</div>
-    <ul class="list">${L.map(g=>`<li style="align-items:flex-start" class="${jpLearned(g[0])?"jpdone":""}"><div class="grow">${jpPoint(g)}${jpDeepPanel(g)}<div>${jpDeepBtn(g)}</div></div>${jpButtons(g)}</li>`).join("")||`<li class="empty">${f==="fav"?"Tap ☆ on a grammar point to keep it here.":f==="learned"?"Points you mark as learned collect here.":"Nothing left to learn at N5. Well done."}</li>`}</ul>
+    <ul class="list">${(S.jpShowAll?L:L.slice(0,5)).map(g=>`<li style="align-items:flex-start" class="${jpLearned(g[0])?"jpdone":""}"><div class="grow">${jpPoint(g)}${jpDeepPanel(g)}<div>${jpDeepBtn(g)}</div></div>${jpButtons(g)}</li>`).join("")||`<li class="empty">${f==="fav"?"Tap ☆ on a grammar point to keep it here.":f==="learned"?"Points you mark as learned collect here.":"Nothing left to learn at N5. Well done."}</li>`}</ul>
+    ${L.length>5?`<button type="button" class="btn ghost" data-act="jpshowall">${S.jpShowAll?"Show the next 5 only":`Show all ${L.length}`}</button>`:""}
   </section>`};
 /* ---------- Japanese study: counts come from the server (WaniKani + Bunpro), refreshed every 30 minutes ---------- */
 const studyOn=()=>!!(S.study&&S.study.at&&(S.study.wk||S.study.bp));
@@ -3224,7 +3264,7 @@ function useStart(){if(!useOn()||U.started)return;U.started=true;U.since=Date.no
   addEventListener("pagehide",useFlush)}
 /* the review page */
 async function loadUse(){S.useData={loading:true};render(true);try{S.useData={rows:await window.__sdUse.read()}}catch(_){S.useData={err:true}}render(true)}
-const ACT_NAMES={top3:"Star a task into Top 3",maybe:"Mark Maybe today",ttdone:"Complete a task",mood:"Pick a mood",tnote:"Task notes",remopen:"Set a reminder",groc:"Open groceries",settings:"Open settings",tree:"Open your tree",recap:"Open a year recap",jpdeep:"Grammar: go deeper",jpnext:"Grammar: another",jplearn:"Grammar: mark learned",jpreadtg:"Reading: show reading/words/translation",jpreaddone:"Reading: mark read",jpreadnext:"Reading: another",nextptr:"Pointer: another",fav:"Favourite a pointer",mview:"Open a photo",mreview:"Photo review",pretty:"Prettify",bltype:"Backlog filter",blstart:"Start a backlog item",blnext:"Backlog: up next",tropen:"Open a trip",nnew:"New note",arrange:"Arrange Today",showall:"Show all / fold",tab:"Switch tab"};
+const ACT_NAMES={top3:"Star a task into Top 3",maybe:"Mark Maybe today",ttdone:"Complete a task",mood:"Pick a mood",tnote:"Task notes",remopen:"Set a reminder",groc:"Open groceries",settings:"Open settings",tree:"Open your tree",recap:"Open a year recap",jpdeep:"Grammar: go deeper",jpnext:"Grammar: another",jplearn:"Grammar: mark learned",jpreadtg:"Reading: show reading/words/translation",jpreaddone:"Reading: mark read",jpreadnext:"Reading: another",nextptr:"Pointer: another",fav:"Favourite a pointer",mview:"Open a photo",mreview:"Photo review",pretty:"Prettify",bltype:"Shelf filter",blstart:"Start a backlog item",blnext:"Shelf: up next",tropen:"Open a trip",nnew:"New note",arrange:"Arrange Today",showall:"Show all / fold",tab:"Switch tab"};
 const SERVER_NAMES={nudge_sent:"Morning nudges sent",reminder_sent:"Task reminders sent",mangabaka_sync:"MangaBaka syncs",mangabaka_added:"MangaBaka: new entries",mangabaka_updated:"MangaBaka: chapter updates",mangabaka_moved:"MangaBaka: moved (done, dropped…)",mangabaka_error:"MangaBaka: failed syncs",study_refresh:"Japanese counts refreshed",study_error:"Japanese: failed refreshes",known_kanji:"Known kanji refreshed",claude_call:"Claude calls",claude_quick:"Claude calls (quick model)",claude_error:"Claude: failed calls",dates_sent:"Date reminders sent"};
 function useSheet(){if(!S.useOpen)return "";const D=S.useData||{};const days=30,from=addDays(today(),-(days-1));
   const rows=(D.rows||[]).filter(r=>r.date>=from);
@@ -3318,7 +3358,7 @@ V.dates=()=>{const L=dItems().map(x=>({x,n:dNext(x)})).sort((a,b)=>a.n.days-b.n.
   ${L.length?`<section class="block card"><div class="head"><h2>Coming up</h2></div>${dGroups(L).map(g=>`<div class="dlgroup${g.days===0?" now":""}"><div class="dlhead"><span>${fmtDay(g.k,{day:"numeric",month:"long"})}</span><span class="muted small">${dWhen(g)}${g.items.length>1?` · ${g.items.length} together`:""}</span></div><ul class="list">${g.items.map(row).join("")}</ul></div>`).join("")}</section>`:""}`};
 const NOTE_MAX=20000;
 function tnLen(){const b=document.getElementById("tn-body"),el=document.getElementById("tn-len");if(!b||!el)return;const n=b.value.length;el.textContent=n>NOTE_MAX*.75?`${n.toLocaleString()} / ${NOTE_MAX.toLocaleString()} characters`:"";el.classList.toggle("over",n>NOTE_MAX)}
-function grocToday(){if(isPastView())return "";const n=gItems().filter(x=>!x.done).length;return `<button type="button" class="card foldrow" data-act="groc"><span class="fl">🛒 Groceries</span><span class="fv">${n?`${n} to buy`:"List is empty"}</span><span class="fa">Open</span></button>`}
+function grocToday(){if(isPastView())return "";const n=gItems().filter(x=>!x.done).length;if(!n&&!S.grocOpen)return "";return `<button type="button" class="card foldrow" data-act="groc"><span class="fl">🛒 Groceries</span><span class="fv">${n?`${n} to buy`:"List is empty"}</span><span class="fa">Open</span></button>`}
 
 /* ---------- Trips: packing and planning, with to-dos that land on Today before you go ---------- */
 /* visits: people coming to stay with you */
@@ -3560,7 +3600,7 @@ V.journal=()=>{
 S.sub={};
 function go(id){const r=ROUTE[id]||["today"];S.tab=r[0];if(r[1])S.sub[r[0]]=r[1];try{localStorage.setItem("sd-tab",r[1]?r[1]:r[0])}catch(_){}}
 const curSub=t=>{const subs=SUBS[t];if(!subs)return null;const v=S.sub[t];return subs.some(x=>x[0]===v)?v:subs[0][0]};
-const PAGES={"lists:notes":()=>V.notes(),"lists:trips":()=>V.trips(),"lists:dates":()=>V.dates(),"lists:apps":()=>V.apps(),"vision:year":()=>V.vision(),"vision:long":()=>V.longterm(),"vision:bucket":()=>V.bucket(),"journal:dreams":()=>V.dreams(),"tasks:todo":()=>V.todo(),"tasks:projects":()=>V.projects(),"journal:days":()=>V.journal(),"journal:week":()=>recapCard()+hwPlanCard()+(backupNudge()?`<section class="block card">${backupNudge()}</section>`:"")+highlightsCard(),"journal:checkins":()=>V.habits(),"journal:cooking":()=>V.cooked(),"lists:lists":()=>V.lists(),"lists:wishlist":()=>V.wishlist(),"lists:backlog":()=>V.backlog(),"lists:spending":()=>V.purchases(),"learn:pointers":()=>V.learn(),"learn:japanese":()=>V.japanese(),"learn:reminders":()=>V.reminders()};
+const PAGES={"lists:notes":()=>V.notes(),"vision:trips":()=>V.trips(),"vision:dates":()=>V.dates(),"lists:apps":()=>V.apps(),"vision:year":()=>V.vision(),"vision:long":()=>V.longterm(),"vision:bucket":()=>V.bucket(),"journal:dreams":()=>V.dreams(),"tasks:todo":()=>V.todo(),"tasks:projects":()=>V.projects(),"journal:days":()=>V.journal(),"journal:week":()=>recapCard()+hwPlanCard()+(backupNudge()?`<section class="block card">${backupNudge()}</section>`:"")+highlightsCard(),"journal:checkins":()=>V.habits(),"journal:cooking":()=>V.cooked(),"lists:lists":()=>V.lists(),"lists:wishlist":()=>V.wishlist(),"lists:backlog":()=>V.backlog(),"lists:spending":()=>V.purchases(),"learn:pointers":()=>V.learn(),"learn:japanese":()=>V.japanese(),"learn:reminders":()=>V.reminders()};
 /* ---------- settings: the morning reminder lives in Claude as a scheduled task; Steady Days pauses/resumes it ---------- */
 const NUDGE_TASK="trig_01WNVxsADqavGjR9DpeSyvho";const CCR="Claude Code Remote";
 S.nudge={state:"idle",enabled:null,err:null};
@@ -3842,6 +3882,10 @@ document.addEventListener("click",e=>{
   if(a==="hwmoverun"){const i=+b.dataset.i,t=b.dataset.t,ws=weekStart(today());editSettings(st=>{const hw=st.hw={...(st.hw||{})};hw.plans={...(hw.plans||{})};const pl=planFor(ws);pl[i]=t;hw.plans[ws]=pl});toast(`Run moved to ${RT_DAYS[i]}`);return}
   if(a==="hwrunundo"){setActs(today(),acts=>{for(let i=acts.length-1;i>=0;i--)if(acts[i].k==="run")acts.splice(i,1)});editDay(today(),d=>{const w={...(d.workout||{})};w.done=false;delete w.secs;d.workout=w});return}
   if(a==="hwvar"){editDay(today(),d=>{const w={...(d.workout||{})};w.var=(w.var||0)+1;d.workout=w});toast(`Today: ${speedFor(today()).name}`);return}
+  if(a==="jpshowall"){S.jpShowAll=!S.jpShowAll;render(true);return}
+  if(a==="addprojopen"){S.addProjOpen=true;render(true);return}
+  if(a==="addproj"){S.addProj=b.dataset.p||null;S.addProjOpen=false;render(true);const i=document.getElementById("tttoday-new");if(i)i.focus();return}
+  if(a==="ptropen"){S.ptrOpen=!S.ptrOpen;render(true);return}
   if(a==="hwease"){const n=b.dataset.n,on=hwEased(n);editSettings(st=>{const E={...(st.hwEase||{})};if(on)delete E[n];else E[n]=1;st.hwEase=E});
     toast(on?`${n}: back to the normal version`:EASIER[n]?`Easier: ${EASIER[n][0]}. Tap “Back to normal” when it feels OK`:`Fewer sets and reps for ${n}. Tap “Back to normal” when it feels OK`);return}
   if(a==="hwview"){const k=b.dataset.k;S.hwView=k===today()?null:k;S.open=S.open||{};S.open.workout=true;render(true);return}
@@ -4092,7 +4136,7 @@ document.addEventListener("submit",e=>{
   }
   if(f==="ttadd"){const list=form.dataset.list;const inp=form.querySelector("input[type=text]");const t=(inp.value||"").trim();if(!t)return;inp.value="";addTask(list,t)}
   if(f==="tmadd"){const t=v("tmadd-new");if(!t)return;clear("tmadd-new");addTomorrowTask(t)}
-  if(f==="tttoday"){const t=v("tttoday-new");if(!t)return;clear("tttoday-new");const pj=v("tttoday-proj");const sel=document.getElementById("tttoday-proj");if(sel)sel.value="";
+  if(f==="tttoday"){const t=v("tttoday-new");if(!t)return;clear("tttoday-new");const pj=S.addProj&&trackable().some(x=>x.id===S.addProj)?S.addProj:"";S.addProj=null;S.addProjOpen=false;
     const tr=pj&&trackable().find(x=>x.id===pj);
     if(tr&&tr.tt){const bd=projBoard();if(!pMeta(pj).kind)editSettings(st=>{st.projMeta=st.projMeta||{};st.projMeta[pj]={...(st.projMeta[pj]||{}),kind:"end"}},{silent:true});
       call("create_task",{task:{title:t,projectId:bd.listId,parentId:pj,columnId:tr.tt.columnId||undefined,isAllDay:true,dueDate:dueTodayISO(),startDate:dueTodayISO(),timeZone:TZ},client_timezone:TZ})
@@ -4292,7 +4336,7 @@ async function connectDb(){
       if(!pending.settings&&!inflight.settings){const d=snap.exists?snap.data():null;
         S.settings={...(d||{}),habits:d?.habits||[],reminders:d?.reminders||[],todos:d?.todos||[],projects:d?.projects||[],ttMap:d?.ttMap||null,favs:d?.favs||[],pnotes:d?.pnotes||{},lastBackup:d?.lastBackup||null,claudeCredit:d?.claudeCredit??null,nudgeOn:d?.nudgeOn,nudgeTime:d?.nudgeTime||"07:22",timeZone:d?.timeZone||TZ,todayOrder:d?.todayOrder||[],todayHidden:d?.todayHidden||[],exKinds:d?.exKinds||[],weighOff:!!d?.weighOff,skills:d?.skills||{},highlights:d?.highlights||{}};
         if(ttOn())ttLoadListsMissing();}
-      if(!S.settingsLoaded&&(!snap.fromCache||trustCache())){S.settingsLoaded=true;try{useStart()}catch(_){}if(S.setQ.length){const b=JSON.parse(JSON.stringify(S.settings));S.setQ.forEach(f=>{try{f(b)}catch(_){}});S.setQ=[];S.settings=b;queueWrite("settings",b)}}
+      if(!S.settingsLoaded&&(!snap.fromCache||trustCache())){S.settingsLoaded=true;try{useStart()}catch(_){}if(S.tt.state==="ok")setTimeout(mergeLocalTodos,0);if(S.setQ.length){const b=JSON.parse(JSON.stringify(S.settings));S.setQ.forEach(f=>{try{f(b)}catch(_){}});S.setQ=[];S.settings=b;queueWrite("settings",b)}}
       S.settingsReady=true;render();
     },()=>{S.settingsReady=true;render()});
     col.doc("study").onSnapshot(snap=>{S.study=snap.exists?snap.data():{};render()},()=>{});
