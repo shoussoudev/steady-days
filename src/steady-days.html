@@ -265,7 +265,8 @@ body.modal-open{overflow:hidden}
 .sunbtn{border:1px solid var(--line);background:var(--bg);color:var(--muted);border-radius:999px;width:34px;height:34px;flex:none;cursor:pointer;font-size:1rem}
 .sunbtn[aria-pressed=true]{background:var(--warm-soft);border-color:var(--warm);color:var(--warm)}
 .pactions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0 18px}.pweek{margin-bottom:4px}
-form[data-form="tttoday"]{flex-wrap:nowrap}form[data-form="tttoday"] input{min-width:0;flex:1}.addproj{margin:-4px 0 6px;display:flex;gap:14px;flex-wrap:wrap;align-items:center}.rtpill{color:var(--accent)}.rtgrp{margin-top:10px}
+form[data-form="tttoday"]{flex-wrap:nowrap}form[data-form="tttoday"] input{min-width:0;flex:1}.addproj{margin:-4px 0 6px;display:flex;gap:14px;flex-wrap:wrap;align-items:center}.rtpill{color:var(--accent)}.runsteps{margin:4px 0 2px;padding-left:20px;display:flex;flex-direction:column;gap:8px}.runsteps li{padding-left:2px}.runsteps b{display:block;font-size:.88rem}.runsteps .small{color:var(--muted)}
+.runtips{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:10px;background:var(--soft,rgba(127,127,127,.08))}.runtips ul{margin:0}.rtgrp{margin-top:10px}
 .pkind{color:var(--muted);margin-right:6px;font-weight:600}
 .pbar{display:inline-block;vertical-align:middle;width:46px;height:5px;border-radius:3px;background:var(--line);margin-left:8px;overflow:hidden}.pbar i{display:block;height:100%;background:var(--accent,#3d6b4f)}
 .pbar.big{width:120px;height:7px;margin:0}
@@ -685,7 +686,7 @@ const SESS={
   fixed:[],picks:[],pool:[]},
  speed:{id:"speed",name:"Speed run",emoji:"⚡",mins:35,km:5,run:true,speed:true,intro:"One faster session a week makes you quicker over 5K and 10K. Everything else stays easy."},
  run:{id:"run",name:"Easy run",emoji:"🏃",mins:30,km:4.5,run:true,
-  intro:"Easy pace: you could chat in full sentences. Walk breaks are completely fine. Start with 3 minutes of brisk walking. Feeling good? Finish with 4 × 20 s strides: quick and smooth, walk back between."},
+  intro:"Easy pace: you could chat in full sentences. Walk breaks are completely fine."},
  long:{id:"long",name:"Longer run",emoji:"🏃",mins:45,km:5.5,run:true,
   intro:"40–45 minutes at an easy, steady pace. Slower than you think is right. If you're not done in 45 minutes, stop there anyway."},
  rest:{id:"rest",name:"Rest",emoji:"🌿",mins:0,rest:true,intro:"Your muscles grow on rest days. A walk outside or some stretching is plenty."}
@@ -790,6 +791,37 @@ function hwBeep(long){try{const A=window.__hwAC;if(A){const o=A.createOscillator
 const runPace=note=>{const k=/(\d+(?:[.,]\d+)?)\s*km/i.exec(note||""),m=/(\d+)\s*min/i.exec(note||"");if(!k||!m)return null;const km=parseFloat(k[1].replace(",","."));return km>0?(+m[1]*60)/km:null};
 const paceTxt=s=>s?mmss(Math.round(s))+" /km":"";
 function recentPaces(){const out=[];Object.keys(S.days).sort().reverse().slice(0,90).forEach(k=>actsOf(bodyOf(getDay(k))).forEach(a=>{if(a.k==="run"){const p=runPace(a.note);if(p&&p>=150&&p<=900)out.push({k,p})}}));return out}
+/* how to run each session: warm-up, the run, cool-down, plus form tips; paces come from your own logged runs */
+const RUN_DRILLS="leg swings (10 each leg, front-back and side to side), 20 s high knees, 20 s butt kicks";
+const RUN_STRETCH="calves against a wall, standing quad, hamstring (heel on a low step), low-lunge hip flexor: 30 s each side";
+const RUN_FORM=["Short, quick steps: land with your foot under your hips, not out in front.","Relaxed shoulders and hands; arms swing forward and back, not across your body.","Tall posture, a slight lean from the ankles, eyes ahead.","Breathe in a steady rhythm. If you can't talk on an easy run, slow down: walking is fine."];
+const SPEED_TIPS={fartlek:"Fast bits are strong but relaxed. Pick a landmark (a lamp post, a corner) and go until it.",
+ tempo15:"Steady from the first to the last minute: if the end feels much harder than the start, you started too fast.",
+ i3:"Run every rep at the same pace. The first one should feel a bit too easy.",
+ hills:"Short steps, drive your arms, lean into the hill from your ankles. Jog or walk down slowly: the rest is part of it.",
+ prog:"Each block a little quicker than the last. Only the last block should feel hard.",
+ s30:"Fast but smooth, like you're gliding. Stop a rep if your form falls apart.",
+ i6:"Your 10K effort: strong, controlled breathing, a few words at a time.",
+ cruise:"Tempo effort, not a race. The 2-minute jog lets you hold it the second time.",
+ tt5:"Start a little slower than you want to, settle after the first km, push the last one. Note your time to compare in a few weeks."};
+function runPaces(){const P=recentPaces();if(P.length<2)return null;const easy=P.slice(0,5).reduce((n,x)=>n+x.p,0)/Math.min(5,P.length);
+  const r=x=>mmss(Math.round(x));return {easy:`${r(easy)}–${r(easy+20)}`,long:`${r(easy+10)}–${r(easy+40)}`,tempo:`${r(easy-45)}–${r(easy-30)}`,hard:`${r(easy-75)}–${r(easy-60)}`,fast:`${r(easy-95)}–${r(easy-80)}`}}
+function runGuide(f,sp){const pc=runPaces(),pace=t=>pc&&pc[t]?` <span class="mono">≈ ${pc[t]} /km</span>`:"";
+  const steps=f.speed?[["Warm up · 10 min",`Easy jog, then ${RUN_DRILLS}. Finish with 3 relaxed 15-second pick-ups.`],
+      ["How to run it",esc(SPEED_TIPS[sp.id]||"")+(pc?` Your paces: ${[...new Set(segFlat(sp).map(x=>x.e))].filter(e=>e!=="walk").map(e=>({easy:"easy",steady:"tempo / 10K effort",hard:"5K effort",fast:"fast reps"}[e]+pace(e==="steady"?"tempo":e))).join(" · ")}.`:"")],
+      ["Cool down · 5–10 min",`Easy jog or walk until your breathing settles, then stretch: ${RUN_STRETCH}.`]]:
+    f.id==="long"?[["Before",`Eat something light 1–2 hours before, drink a glass of water. Warm up: 3 min brisk walk, ${RUN_DRILLS}.`],
+      ["The run · 40–45 min",`Slower than your easy runs${pace("long")}. The goal is time on your feet, not speed. Walk breaks are fine; keep moving.`],
+      ["If it feels good","Run the last 5 minutes a little quicker, at a strong-but-comfortable pace. Never a sprint."],
+      ["Cool down",`Walk 5 min, then stretch: ${RUN_STRETCH}. Drink water and eat within the hour.`]]:
+    [["Warm up · 3–5 min",`Brisk walk, then ${RUN_DRILLS}.`],
+      ["The run · ~25 min",`Conversational pace${pace("easy")}: you could talk in full sentences. If you can't, slow down.`],
+      ["Strides (optional)","Feeling good? 4 × 20 s quick and smooth, walking back between. They teach your legs to run fast without tiring you."],
+      ["Cool down",`Walk 3 min, then stretch: ${RUN_STRETCH}.`]];
+  return `<ol class="runsteps">${steps.map(([h,t])=>`<li><b>${h}</b><span class="small">${t}</span></li>`).join("")}</ol>
+    ${S.runTips?`<div class="runtips"><b class="small">Running form</b><ul class="plainlist">${RUN_FORM.map(x=>`<li class="small">${x}</li>`).join("")}</ul>
+      ${pc?"":`<p class="muted small" style="margin:0">Log a couple of runs with km and minutes and paces will appear here.</p>`}
+      <button type="button" class="linkbtn subtle tiny" data-act="runtips">Hide form tips ▴</button></div>`:`<button type="button" class="linkbtn subtle tiny" data-act="runtips">Running form tips ▾</button>`}`}
 function workoutFor(k,shift=0,raw=false){
   const type=hwType(k),f=SESS[type]||SESS.back;const n=dayNum(k);const rnd=seeded(n*7+HW_TYPES.indexOf(type));
   if(f.run||f.rest)return {focus:f,ex:[]};
@@ -1841,7 +1873,7 @@ function hwDayView(k){
     <p class="small" style="margin:0"><b>${fmtDay(k,{weekday:"long",day:"numeric",month:"short"})}</b> · ${f.emoji} ${esc(f.name)}${status?` · <span class="${dn?"ok":"muted"}">${status}</span>`:""}</p>
     ${awayBtn?`<div class="chips">${awayBtn}</div>`:""}
     ${f.rest?`<p class="muted small" style="margin:0">${esc(f.intro)}</p>`:
-      f.run?`${runs.length?`<p class="small" style="margin:0">Logged: ${runs.map(a=>esc(a.note||"run")+(runPace(a.note)?" · "+paceTxt(runPace(a.note)):"")).join(" · ")}</p>`:past||k===tk?`<form class="addrow hwrunform" data-form="hwrun" data-k="${k}"><input id="hw-km" type="number" step="0.1" min="0" inputmode="decimal" placeholder="km" aria-label="Distance in km"><input id="hw-min" type="number" min="0" step="1" inputmode="numeric" placeholder="min" aria-label="Minutes"><button class="btn" type="submit">Log run</button></form>`:`<p class="muted small" style="margin:0">${esc(f.intro)}</p>`}`:
+      f.run?`${runs.length?`<p class="small" style="margin:0">Logged: ${runs.map(a=>esc(a.note||"run")+(runPace(a.note)?" · "+paceTxt(runPace(a.note)):"")).join(" · ")}</p>`:past||k===tk?`<form class="addrow hwrunform" data-form="hwrun" data-k="${k}"><input id="hw-km" type="number" step="0.1" min="0" inputmode="decimal" placeholder="km" aria-label="Distance in km"><input id="hw-min" type="number" min="0" step="1" inputmode="numeric" placeholder="min" aria-label="Minutes"><button class="btn" type="submit">Log run</button></form>`:`<p class="muted small" style="margin:0">${esc(f.intro)}</p>${runGuide(f,f.speed?speedFor(k):null)}`}`:
       secs.map(g=>`<h3 class="wsec">${hwSecTitle(g.s,f)}</h3><ol class="wlist">${g.items.map(e=>`<li><div class="whead"><b>${esc(e.name)}</b><span class="mono">${esc(e.dose)}</span></div><div class="muted small">${esc(e.how)} ${howLink(e)}</div></li>`).join("")}</ol>`).join("")}
     ${past&&!f.rest&&!f.run?`<div class="addrow"><button type="button" class="btn ${dn?"ghost":""}" data-act="hwpast" data-k="${k}">${dn?"Undo: not done":"Mark as done"}</button></div>`:""}
   </section>`}
@@ -1871,10 +1903,11 @@ function workoutCard(){
     const efforts=sp?[...new Set(segFlat(sp).map(x=>x.e))]:[];
     return `<section class="block card workout">${head}${hwRunMove()}
     <p class="muted small" style="margin:0">${esc(f.intro)}${sp?"":` Aim for about ${f.km} km.`}</p>
+    ${ran.length||sp?"":runGuide(f,sp)}
     ${sp?`<div class="hwspeed"><div class="hwsph"><b>⚡ ${esc(sp.name)}</b><span class="mono muted">${Math.round(segTot(sp)/60)} min</span></div>
       <p class="small muted" style="margin:0">${esc(sp.why)}</p><p class="small" style="margin:0">${esc(segSummary(sp))}</p>
       <ul class="plainlist hweff">${efforts.map(e=>`<li class="small"><span class="hwdot e-${e}"></span>${esc(EFFORT[e])}</li>`).join("")}</ul>
-      ${ran.length?"":`${timerRow(w)}<div class="hwphase" data-hwphase>${speedPhaseHtml(sp,w)}</div>${w.startedAt?"":`<div><button type="button" class="linkbtn subtle" data-act="hwvar">⇄ A different session</button></div>`}`}</div>`:""}
+      ${ran.length?"":`${timerRow(w)}<div class="hwphase" data-hwphase>${speedPhaseHtml(sp,w)}</div>${w.startedAt?"":`<div><button type="button" class="linkbtn subtle" data-act="hwvar">⇄ A different session</button></div>`}`}</div>${ran.length?"":runGuide(f,sp)}`:""}
     <div class="hwkm"><span class="eyebrow">This week</span><span class="mono">${st.km} / 10 km</span><span class="hwbar"><i style="width:${Math.min(100,st.km*10)}%"></i></span></div>
     ${P.length?`<p class="small muted" style="margin:0">Pace lately: ${paceTxt(avg)}${P.length>1?` · best ${paceTxt(best)}`:""}</p>`:""}
     ${ran.length?`<p class="small" style="margin:0">✓ Logged: ${ran.map(a=>esc(a.note||"run")+(runPace(a.note)?" · "+paceTxt(runPace(a.note)):"")).join(" · ")} <button type="button" class="linkbtn subtle" data-act="hwrunundo">Remove</button></p>`:
@@ -3884,6 +3917,7 @@ document.addEventListener("click",e=>{
   if(a==="jpshowall"){S.jpShowAll=!S.jpShowAll;render(true);return}
   if(a==="addprojopen"){S.addProjOpen=true;render(true);return}
   if(a==="addproj"){S.addProj=b.dataset.p||null;S.addProjOpen=false;render(true);const i=document.getElementById("tttoday-new");if(i)i.focus();return}
+  if(a==="runtips"){S.runTips=!S.runTips;render(true);return}
   if(a==="ptropen"){S.ptrOpen=!S.ptrOpen;render(true);return}
   if(a==="hwease"){const n=b.dataset.n,on=hwEased(n);editSettings(st=>{const E={...(st.hwEase||{})};if(on)delete E[n];else E[n]=1;st.hwEase=E});
     toast(on?`${n}: back to the normal version`:EASIER[n]?`Easier: ${EASIER[n][0]}. Tap “Back to normal” when it feels OK`:`Fewer sets and reps for ${n}. Tap “Back to normal” when it feels OK`);return}
