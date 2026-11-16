@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261116215009"></script>
-<script type="module" src="boot.js?v=20261116215009"></script>
+<script src="shim.js?v=20261116215250"></script>
+<script type="module" src="boot.js?v=20261116215250"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -1933,6 +1933,7 @@ function workoutCard(){
     ${ran.length||sp?"":runGuide(f,sp)}
     ${sp?`<div class="hwspeed"><div class="hwsph"><b>⚡ ${esc(sp.name)}</b><span class="mono muted">${Math.round(segTot(sp)/60)} min</span></div>
       <p class="small muted" style="margin:0">${esc(sp.why)}</p><p class="small" style="margin:0">${esc(segSummary(sp))}</p>
+      <p class="small muted" style="margin:0">Week ${SPEED.indexOf(sp)+1} of ${SPEED.length} · next week: ${esc(SPEED[(SPEED.indexOf(sp)+1)%SPEED.length].name)}</p>
       <ul class="plainlist hweff">${efforts.map(e=>`<li class="small"><span class="hwdot e-${e}"></span>${esc(EFFORT[e])}</li>`).join("")}</ul>
       ${ran.length?"":`${timerRow(w)}<div class="hwphase" data-hwphase>${speedPhaseHtml(sp,w)}</div>${w.startedAt?"":`<div><button type="button" class="linkbtn subtle" data-act="hwvar">⇄ A different session</button></div>`}`}</div>${ran.length?"":runGuide(f,sp)}`:""}
     <div class="hwkm"><span class="eyebrow">This week</span><span class="mono">${st.km} / 10 km</span><span class="hwbar"><i style="width:${Math.min(100,st.km*10)}%"></i></span></div>
