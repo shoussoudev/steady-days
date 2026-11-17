@@ -265,7 +265,8 @@ body.modal-open{overflow:hidden}
 .sunbtn{border:1px solid var(--line);background:var(--bg);color:var(--muted);border-radius:999px;width:34px;height:34px;flex:none;cursor:pointer;font-size:1rem}
 .sunbtn[aria-pressed=true]{background:var(--warm-soft);border-color:var(--warm);color:var(--warm)}
 .pactions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0 18px}.pweek{margin-bottom:4px}
-form[data-form="tttoday"]{flex-wrap:nowrap}form[data-form="tttoday"] input{min-width:0;flex:1}.addproj{margin:-4px 0 6px;display:flex;gap:14px;flex-wrap:wrap;align-items:center}.rtpill{color:var(--accent)}.runsteps{margin:4px 0 2px;padding-left:20px;display:flex;flex-direction:column;gap:8px}.runsteps li{padding-left:2px}.runsteps b{display:block;font-size:.88rem}.runsteps .small{color:var(--muted)}
+form[data-form="tttoday"]{flex-wrap:nowrap}form[data-form="tttoday"] input{min-width:0;flex:1}.addsec{margin:-2px 0 4px;align-items:center;gap:6px}.addsec .chip{padding:4px 10px;font-size:.8rem}
+.addproj{margin:-4px 0 6px;display:flex;gap:14px;flex-wrap:wrap;align-items:center}.rtpill{color:var(--accent)}.runsteps{margin:4px 0 2px;padding-left:20px;display:flex;flex-direction:column;gap:8px}.runsteps li{padding-left:2px}.runsteps b{display:block;font-size:.88rem}.runsteps .small{color:var(--muted)}
 .runtips{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:10px;background:var(--soft,rgba(127,127,127,.08))}.runtips ul{margin:0}.rtgrp{margin-top:10px}
 .pkind{color:var(--muted);margin-right:6px;font-weight:600}
 .pbar{display:inline-block;vertical-align:middle;width:46px;height:5px;border-radius:3px;background:var(--line);margin-left:8px;overflow:hidden}.pbar i{display:block;height:100%;background:var(--accent,#3d6b4f)}
@@ -1736,8 +1737,9 @@ function todayTasks(){
         <ul class="list">${openMaybe.map(row).join("")}${doneMaybe.map(x=>`<li class="trow donerow"><span class="check donechk" aria-hidden="true"></span><div class="tmain"><span>${esc(plainTitle(x.title))}</span></div></li>`).join("")}</ul></div>`:""}
       ${S.tt.state==="error"?ttErrBox(S.tt.err):S.tt.todayErr?ttErrBox(S.tt.todayErr):S.tt.state==="loading"&&!ts.length?`<p class="empty">Loading today's tasks…</p>`:
         !ts.length&&!top.length&&!deckItems().length&&!rtList().length?`<p class="empty">Nothing on today. Enjoy the space, or pick one thing that matters.</p>`:""}
-      <form class="addrow" data-form="tttoday"><input type="text" id="tttoday-new" placeholder="Add a task for today" autocomplete="off"><button class="btn">Add</button></form>
-      ${(()=>{const tr=trackable();if(!tr.length)return `<div class="addproj"><button type="button" class="linkbtn subtle tiny" data-go="todo" title="Add or change routines">↻ Routines</button></div>`;const cur=tr.find(x=>x.id===S.addProj);
+      <form class="addrow" data-form="tttoday"><input type="text" id="tttoday-new" placeholder="${{top:"Add to your Top 3",maybe:"Add as a maybe for today",rt:"New routine, e.g. Stretch 10 min"}[S.addSec]||"Add a task for today"}" autocomplete="off"><button class="btn">Add</button></form>
+      <div class="chips addsec" role="group" aria-label="Add to"><span class="muted small">Add to</span>${[["","Ready"],["top","★ Top 3"],["maybe","◆ Maybe"],["rt","↻ Routine"]].map(([k,l])=>`<button type="button" class="chip" data-act="addsec" data-s="${k}" aria-pressed="${(S.addSec||"")===k}">${l}</button>`).join("")}</div>
+      ${S.addSec==="rt"?"":(()=>{const tr=trackable();if(!tr.length)return `<div class="addproj"><button type="button" class="linkbtn subtle tiny" data-go="todo" title="Add or change routines">↻ Routines</button></div>`;const cur=tr.find(x=>x.id===S.addProj);
         /* the project picker stays out of the way: one small link under the box */
         if(S.addProjOpen)return `<div class="chips addproj">${tr.map(x=>`<button type="button" class="chip" data-act="addproj" data-p="${esc(x.id)}" aria-pressed="${x.id===S.addProj}">↳ ${esc(x.name)}</button>`).join("")}<button type="button" class="chip" data-act="addproj" data-p="">No project</button></div>`;
         return `<div class="addproj">${cur?`<button type="button" class="pill soft plink" data-act="addprojopen" title="Change project">↳ ${esc(cur.name)} · change</button>`:`<button type="button" class="linkbtn subtle tiny" data-act="addprojopen">↳ Part of a project?</button>`}<button type="button" class="linkbtn subtle tiny" data-go="todo" title="Add or change routines">↻ Routines</button></div>`})()}
@@ -3922,6 +3924,7 @@ document.addEventListener("click",e=>{
   if(a==="hwrunundo"){setActs(today(),acts=>{for(let i=acts.length-1;i>=0;i--)if(acts[i].k==="run")acts.splice(i,1)});editDay(today(),d=>{const w={...(d.workout||{})};w.done=false;delete w.secs;d.workout=w});return}
   if(a==="hwvar"){editDay(today(),d=>{const w={...(d.workout||{})};w.var=(w.var||0)+1;d.workout=w});toast(`Today: ${speedFor(today()).name}`);return}
   if(a==="jpshowall"){S.jpShowAll=!S.jpShowAll;render(true);return}
+  if(a==="addsec"){S.addSec=b.dataset.s||"";render(true);const i=document.getElementById("tttoday-new");if(i)i.focus();return}
   if(a==="addprojopen"){S.addProjOpen=true;render(true);return}
   if(a==="addproj"){S.addProj=b.dataset.p||null;S.addProjOpen=false;render(true);const i=document.getElementById("tttoday-new");if(i)i.focus();return}
   if(a==="runtips"){S.runTips=!S.runTips;render(true);return}
@@ -4179,11 +4182,17 @@ document.addEventListener("submit",e=>{
   if(f==="ttadd"){const list=form.dataset.list;const inp=form.querySelector("input[type=text]");const t=(inp.value||"").trim();if(!t)return;inp.value="";addTask(list,t)}
   if(f==="tmadd"){const t=v("tmadd-new");if(!t)return;clear("tmadd-new");addTomorrowTask(t)}
   if(f==="tttoday"){const t=v("tttoday-new");if(!t)return;clear("tttoday-new");const pj=S.addProj&&trackable().some(x=>x.id===S.addProj)?S.addProj:"";S.addProj=null;S.addProjOpen=false;
+    const sec=S.addSec||"";S.addSec="";
+    if(sec==="rt"){editSettings(st=>{st.routines=[...(st.routines||[]),{id:uid(),title:t,days:[],auto:/japan|nihongo|kanji|wanikani|bunpro/i.test(t)?"jp":/\brun\b|running|jog/i.test(t)?"run":""}]});toast(`New routine “${t}”, every day. Change its days in Tasks → To-do`);return}
+    /* the chosen section: ★ Top 3 (or maybe if it's full), ◆ maybe, or nothing (Ready when you are) */
+    const place=r=>{const nid=r&&(r.id||(r.result&&r.result.id));if(!nid||!sec)return;const cur=getDay(today()).top3||[];
+      const toTop=sec==="top"&&cur.length<topMax(today());if(sec==="top"&&!toTop)toast("Top 3 is full, so it went into Maybe today");
+      editDay(today(),d=>{if(toTop)d.top3=[...(d.top3||[]),{id:nid,title:t}];else d.maybe=[...(d.maybe||[]),{id:nid,title:t}]})};
     const tr=pj&&trackable().find(x=>x.id===pj);
     if(tr&&tr.tt){const bd=projBoard();if(!pMeta(pj).kind)editSettings(st=>{st.projMeta=st.projMeta||{};st.projMeta[pj]={...(st.projMeta[pj]||{}),kind:"end"}},{silent:true});
       call("create_task",{task:{title:t,projectId:bd.listId,parentId:pj,columnId:tr.tt.columnId||undefined,isAllDay:true,dueDate:dueTodayISO(),startDate:dueTodayISO(),timeZone:TZ},client_timezone:TZ})
-        .then(()=>{toast(`Added to Today as a step of ${tr.name}`);ttLoadToday().then(()=>render(true));ttLoadList(bd.listId)}).catch(e=>toast(ttErrToast(e)))}
-    else{addTask("inbox",t,{dueToday:true}).then(r=>{if(tr){const nid=r&&(r.id||(r.result&&r.result.id));if(nid)editSettings(st=>{st.taskProj=st.taskProj||{};st.taskProj[nid]=pj},{silent:true})}})}}
+        .then(r=>{place(r);toast(`Added to Today as a step of ${tr.name}`);ttLoadToday().then(()=>render(true));ttLoadList(bd.listId)}).catch(e=>toast(ttErrToast(e)))}
+    else{addTask("inbox",t,{dueToday:true}).then(r=>{place(r);if(tr){const nid=r&&(r.id||(r.result&&r.result.id));if(nid)editSettings(st=>{st.taskProj=st.taskProj||{};st.taskProj[nid]=pj},{silent:true})}})}}
   if(f==="buy"){
     const it=findWish(form.dataset.id);if(!it)return;const early=wState(it)==="cooling";const why=v("wb-why");
     if(early&&!why){toast("Add a line on why now first");const el=document.getElementById("wb-why");if(el)el.focus();return}
