@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261119084519"></script>
-<script type="module" src="boot.js?v=20261119084519"></script>
+<script src="shim.js?v=20261119161016"></script>
+<script type="module" src="boot.js?v=20261119161016"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -1793,18 +1793,21 @@ function habitRowTT(h){
   return `<li><button class="hbtn ${done?"on":""}" data-act="tthabit" data-id="${h.id}" aria-pressed="${done}" aria-label="${esc(h.name)}${real?`, ${hVal(h,today())} of ${h.goal}`:""}">${real?`<span class="mono">${hVal(h,today())}/${h.goal}</span>`:""}</button><span class="grow">${esc(h.name)}</span><span class="streak">${s?`<b>${s}</b> day${s>1?"s":""} in a row`:""}</span></li>`;
 }
 /* ---------- Routines: real tasks that come back on set days (Japanese, daily sport…). Habits stay the tiny checkboxes. ---------- */
-const RT_AUTO=[["","I tick it myself"],["workout","Ticks when I finish the workout"],["move","Ticks when I log any exercise"],["run","Ticks when I log a run"],["jp","Ticks when I study Japanese"]];
+const RT_AUTO=[["manual","I tick it myself"],["workout","Ticks when I finish the workout"],["move","Ticks when I log any exercise"],["run","Ticks when I log a run"],["jp","Ticks when I study Japanese"]];
 const RT_DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 const RT_SUGGEST=[["Japanese study","jp"],["Workout","workout"],["Move 20 minutes","move"]];
 const dowMon=k=>(new Date(k+"T12:00:00").getDay()+6)%7;
 const rtList=()=>S.settings.routines||[];
-const rtOn=(r,k)=>(!r.days||!r.days.length||r.days.includes(dowMon(k)))&&!(r.auto==="workout"&&SESS[hwType(k)].rest&&!((getDay(k).workout||{}).done));
-function rtAuto(r,k){const d=getDay(k);if(!r.auto)return false;
-  if(r.auto==="workout")return !!(d.workout&&d.workout.done);
+/* how a routine ticks itself: what you chose, or a guess from its name (a routine called "Heartwood" or "Workout" follows the workout) */
+const RT_GUESS=t=>/japan|nihongo|kanji|wanikani|bunpro|日本/i.test(t)?"jp":/\brun\b|running|jog/i.test(t)?"run":/heartwood|steady 10|work ?out|exercise|sport|training|entra[iî]nement|s[ée]ance|gym/i.test(t)?"workout":"";
+const rtAutoOf=r=>r.auto==="manual"?"":(r.auto||RT_GUESS(r.title||""));
+const rtOn=(r,k)=>(!r.days||!r.days.length||r.days.includes(dowMon(k)))&&!(rtAutoOf(r)==="workout"&&SESS[hwType(k)].rest&&!((getDay(k).workout||{}).done));
+function rtAuto(r,k){const d=getDay(k);const au=rtAutoOf(r);if(!au)return false;
+  if(au==="workout")return hwDoneOn(k);
   const acts=actsOf(bodyOf(d));
-  if(r.auto==="move")return !!(d.workout&&d.workout.done)||acts.length>0;
-  if(r.auto==="run")return acts.some(a=>a.k==="run");
-  if(r.auto==="jp"){const st=d.study||{};return (st.wk||0)+(st.bp||0)>0||Object.values(S.settings.jpReadDone||{}).includes(k)}
+  if(au==="move")return hwDoneOn(k)||acts.length>0;
+  if(au==="run")return acts.some(a=>a.k==="run");
+  if(au==="jp"){const st=d.study||{};return (st.wk||0)+(st.bp||0)>0||Object.values(S.settings.jpReadDone||{}).includes(k)}
   return false}
 const rtDone=(r,k)=>!!((getDay(k).routines||{})[r.id])||rtAuto(r,k);
 /* days in a row, counting only the days it's planned for; today only counts once it's done */
@@ -1815,7 +1818,7 @@ function routineEditRow(r){
   return `<li class="rtedit"><div class="rtetop"><input type="text" value="${esc(r.title)}" data-act="rtfield" data-id="${r.id}" aria-label="Routine name" maxlength="80">
     <button type="button" class="linkbtn subtle danger" data-act="rtdel" data-id="${r.id}">Remove</button></div>
     <div class="chips rtdays" role="group" aria-label="Days">${RT_DAYS.map((n,i)=>`<button type="button" class="chip" data-act="rtday" data-id="${r.id}" data-d="${i}" aria-pressed="${!r.days||!r.days.length||r.days.includes(i)}">${n}</button>`).join("")}</div>
-    <select data-act="rtauto" data-id="${r.id}" aria-label="How it gets ticked">${RT_AUTO.map(([v,l])=>`<option value="${v}" ${(r.auto||"")===v?"selected":""}>${l}</option>`).join("")}</select></li>`}
+    <select data-act="rtauto" data-id="${r.id}" aria-label="How it gets ticked">${RT_AUTO.map(([v,l])=>`<option value="${v}" ${(rtAutoOf(r)||"manual")===v?"selected":""}>${l}</option>`).join("")}</select></li>`}
 /* routines live in Today's task lists as their own kind of task (↻): they can be starred, marked maybe, ticked or skipped */
 const isRt=id=>String(id||"").startsWith("rt:");
 const rtSkipped=(r,k)=>!!((getDay(k).rtSkip||{})[r.id]);
@@ -1823,7 +1826,7 @@ function rtTasks(){if(isPastView())return [];const k=today();return rtList().fil
 const todayTs=()=>[...rtTasks(),...(S.tt.today||[])];
 function rtTaskLi(t,actions){const r=t.routine,st=rtStreak(r);
   return `<li class="trow rtrow"><input type="checkbox" class="check" id="rtc-${r.id}" data-act="rtdone" data-id="${r.id}" aria-label="Done: ${esc(r.title)}"><div class="tmain"><label class="ttitle" for="rtc-${r.id}">${esc(r.title)}</label>
-    <div class="tmeta"><span class="pill soft rtpill" title="Routine: comes back on its days">↻ ${esc(rtDaysLabel(r))}${st>1?` · ${st} in a row`:""}</span>${r.auto?`<span class="rtauto" title="${esc((RT_AUTO.find(x=>x[0]===r.auto)||[])[1]||"")}">ticks itself</span>`:""}</div></div><div class="tacts">${actions}</div></li>`}
+    <div class="tmeta"><span class="pill soft rtpill" title="Routine: comes back on its days">↻ ${esc(rtDaysLabel(r))}${st>1?` · ${st} in a row`:""}</span>${rtAutoOf(r)?`<span class="rtauto" title="${esc((RT_AUTO.find(x=>x[0]===rtAutoOf(r))||[])[1]||"")}">ticks itself</span>`:""}</div></div><div class="tacts">${actions}</div></li>`}
 function routinesManage(){const was=S.rtEdit;S.rtEdit=S.rtEdit||rtList().length>0;let h=routinesCard();S.rtEdit=was;
   return h.replace('<button type="button" class="btn sm" data-act="rtedit">Done</button>','<span class="mono muted">↻ '+rtList().length+'</span>')}
 function routinesCard(){
@@ -1840,7 +1843,7 @@ function routinesCard(){
   return `<section class="block card routines"><div class="head"><h2>Routines</h2><span class="topmeta"><span class="mono muted">${n}/${on.length} today</span><button type="button" class="linkbtn subtle" data-act="rtedit">Edit</button></span></div>
     ${on.length?`<ul class="list">${on.map(r=>{const auto=rtAuto(r,k),done=rtDone(r,k),st=rtStreak(r);
       return `<li class="${done?"rtdone":""}"><input type="checkbox" class="check" id="rt-${r.id}" data-act="rtdone" data-id="${r.id}" ${done?"checked":""} ${auto?`disabled title="Ticked for you"`:""}>
-      <label class="grow" for="rt-${r.id}">${esc(r.title)}${r.auto?` <span class="rtauto" title="${esc((RT_AUTO.find(x=>x[0]===r.auto)||[])[1]||"")}">${auto?"✓ auto":"auto"}</span>`:""}</label>
+      <label class="grow" for="rt-${r.id}">${esc(r.title)}${rtAutoOf(r)?` <span class="rtauto" title="${esc((RT_AUTO.find(x=>x[0]===rtAutoOf(r))||[])[1]||"")}">${auto?"✓ auto":"auto"}</span>`:""}</label>
       <span class="streak">${st>1?`<b>${st}</b> in a row`:""}</span></li>`}).join("")}</ul>`:`<p class="muted small" style="margin:0">Nothing planned today.</p>`}
     ${later.length?`<p class="muted small rtlater">Not today: ${later.map(r=>esc(r.title)).join(", ")}</p>`:""}</section>`;
 }
@@ -4164,7 +4167,7 @@ document.addEventListener("submit",e=>{
     const note=[km>0?`${Math.round(km*10)/10} km`:"",mn>0?`${mn} min`:""].filter(Boolean).join(" · ");const t=hwType(k0);
     setActs(k0,acts=>{acts.push({k:"run",note:t==="speed"?note+" · "+speedFor(k0).name:note})});editDay(k0,d=>{d.workout={...(d.workout||{}),done:true,focus:t,...(t==="speed"?{speed:speedFor(k0).id}:{}),...(mn>0?{secs:mn*60}:{})}});
     keepAwake(false);const km2=hwWeekStats(weekStart(k0)).km,pc=runPace(note);toast(`Run logged: ${note}${pc?" · "+paceTxt(pc):""}. ${km2} / 10 km this week`);return}
-  if(f==="routine"){const t=v("rt-new");if(!t)return;editSettings(st=>{st.routines=[...(st.routines||[]),{id:uid(),title:t,days:[],auto:/japan|nihongo|kanji|wanikani|bunpro/i.test(t)?"jp":/\brun\b|running|jog/i.test(t)?"run":""}]});clear("rt-new");setTimeout(()=>{const i=document.getElementById("rt-new");if(i)i.focus()},0);return}
+  if(f==="routine"){const t=v("rt-new");if(!t)return;editSettings(st=>{st.routines=[...(st.routines||[]),{id:uid(),title:t,days:[],auto:RT_GUESS(t)}]});clear("rt-new");setTimeout(()=>{const i=document.getElementById("rt-new");if(i)i.focus()},0);return}
   if(f==="habit"){const t=v("habit-new");if(!t)return;editSettings(s=>{s.habits.push({id:uid(),name:t})})}
   if(f==="reminder"){const t=v("rem-new");if(!t)return;editSettings(s=>{s.reminders.push({id:uid(),text:t})})}
   if(f==="meal"){const t=v("meal-new"),dt=v("meal-date")||today();if(!t)return;const bk=!!(document.getElementById("meal-baked")||{}).checked;editDay(dt,d=>{d.meals.unshift({id:uid(),name:t,...(bk?{baked:true}:{})})});toast(bk?"Baked! Added to your kitchen log 🥐":"Added to your kitchen log")}
@@ -4224,7 +4227,7 @@ document.addEventListener("submit",e=>{
   if(f==="tmadd"){const t=v("tmadd-new");if(!t)return;clear("tmadd-new");addTomorrowTask(t)}
   if(f==="tttoday"){const t=v("tttoday-new");if(!t)return;clear("tttoday-new");const pj=S.addProj&&trackable().some(x=>x.id===S.addProj)?S.addProj:"";S.addProj=null;S.addProjOpen=false;
     const sec=S.addSec||"";S.addSec="";
-    if(sec==="rt"){editSettings(st=>{st.routines=[...(st.routines||[]),{id:uid(),title:t,days:[],auto:/japan|nihongo|kanji|wanikani|bunpro/i.test(t)?"jp":/\brun\b|running|jog/i.test(t)?"run":""}]});toast(`New routine “${t}”, every day. Change its days in Tasks → To-do`);return}
+    if(sec==="rt"){editSettings(st=>{st.routines=[...(st.routines||[]),{id:uid(),title:t,days:[],auto:RT_GUESS(t)}]});toast(`New routine “${t}”, every day. Change its days in Tasks → To-do`);return}
     /* the chosen section: ★ Top 3 (or maybe if it's full), ◆ maybe, or nothing (Ready when you are) */
     const place=r=>{const nid=r&&(r.id||(r.result&&r.result.id));if(!nid||!sec)return;const cur=getDay(today()).top3||[];
       const toTop=sec==="top"&&cur.length<topMax(today());if(sec==="top"&&!toTop)toast("Top 3 is full, so it went into Maybe today");
