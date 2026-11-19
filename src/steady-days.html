@@ -265,7 +265,8 @@ body.modal-open{overflow:hidden}
 .sunbtn{border:1px solid var(--line);background:var(--bg);color:var(--muted);border-radius:999px;width:34px;height:34px;flex:none;cursor:pointer;font-size:1rem}
 .sunbtn[aria-pressed=true]{background:var(--warm-soft);border-color:var(--warm);color:var(--warm)}
 .pactions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0 18px}.pweek{margin-bottom:4px}
-form[data-form="tttoday"]{flex-wrap:nowrap}form[data-form="tttoday"] input{min-width:0;flex:1}.addsec{margin:-2px 0 4px;align-items:center;gap:6px}.addsec .chip{padding:4px 10px;font-size:.8rem}
+form[data-form="tttoday"]{flex-wrap:nowrap}form[data-form="tttoday"] input{min-width:0;flex:1}.gimport{display:flex;flex-direction:column;gap:6px}.gimport textarea{width:100%;font:inherit;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--card,transparent);color:inherit;resize:vertical}
+.addsec{margin:-2px 0 4px;align-items:center;gap:6px}.addsec .chip{padding:4px 10px;font-size:.8rem}
 .addproj{margin:-4px 0 6px;display:flex;gap:14px;flex-wrap:wrap;align-items:center}.rtpill{color:var(--accent)}.runsteps{margin:4px 0 2px;padding-left:20px;display:flex;flex-direction:column;gap:8px}.runsteps li{padding-left:2px}.runsteps b{display:block;font-size:.88rem}.runsteps .small{color:var(--muted)}
 .runtips{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:10px;background:var(--soft,rgba(127,127,127,.08))}.runtips ul{margin:0}.rtgrp{margin-top:10px}
 .pkind{color:var(--muted);margin-right:6px;font-weight:600}
@@ -2961,6 +2962,14 @@ function gParse(t){t=String(t).trim();let m=/^(\d+(?:[.,]\d+)?\s*(?:x|×|kg|g|l|
 function gAdd(text){const {qty,name}=gParse(text);if(!name)return;const nn=gNorm(name);
   if(gItems().some(x=>!x.done&&gNorm(x.name)===nn)){toast(`${name} is already on the list`);return}
   const h=(S.groceries.history||{})[nn];editDoc("groceries",d=>{d.items=[...(d.items||[]),{id:uid(),name:h?h.name:name,qty,aisle:h&&h.aisle||gGuess(name),added:today(),done:false}]})}
+/* paste a whole list: one item per line or comma-separated (a comma between digits, as in "1,5 kg", stays) */
+function gSplit(text){return String(text||"").split(/\r?\n|;|,(?!\d)/).map(t=>t.replace(/^\s*(?:[-*•·▪◦–]|\[[ xX]?\]|☐|☑|✓|\d+[.)](?=\s))\s*/,"").trim()).filter(t=>t&&t.length<=80)}
+function gAddMany(text){const parts=gSplit(text);if(!parts.length)return 0;
+  const on=new Set(gItems().filter(x=>!x.done).map(x=>gNorm(x.name)));const H=S.groceries.history||{};const add=[];let dup=0;
+  parts.forEach(t=>{const {qty,name}=gParse(t);if(!name)return;const nn=gNorm(name);if(on.has(nn)){dup++;return}on.add(nn);const h=H[nn];
+    add.push({id:uid(),name:h?h.name:name,qty,aisle:h&&h.aisle||gGuess(name),added:today(),done:false})});
+  if(add.length)editDoc("groceries",d=>{d.items=[...(d.items||[]),...add]});
+  toast(add.length?`Added ${add.length} item${add.length>1?"s":""}${dup?` · ${dup} already on the list`:""}`:dup?"All of those are already on the list":"Nothing to add");return add.length}
 function gUsuals(){const h=S.groceries.history||{};const on=new Set(gItems().filter(x=>!x.done).map(x=>gNorm(x.name)));return Object.entries(h).filter(([k])=>!on.has(k)).sort((a,b)=>b[1].count-a[1].count||(a[1].last<b[1].last?1:-1)).slice(0,10).map(([k,v])=>v)}
 function gSource(){if(!ttOn()||S.groceries.imported)return null;const p=S.tt.projects.find(x=>/shop|course|grocer/i.test(x.name||""));if(!p)return null;return {p,L:S.tt.lists[p.id]||null}}
 function grocPanel(){
@@ -2971,6 +2980,10 @@ function grocPanel(){
   const groups=AISLES.map(([k,n,e])=>{const xs=open.filter(x=>(x.aisle||"other")===k);return xs.length?`<div class="gaisle"><span class="eyebrow">${e} ${n}</span><ul class="list glist">${xs.map(row).join("")}</ul></div>`:""}).join("");
   return `<section class="block card groc ${mode?"shopmode":""}"><div class="head"><h2>🛒 Groceries</h2><span class="btnrow"><button type="button" class="btn ${mode?"":"ghost "}sm" data-act="gshop" aria-pressed="${mode}">${mode?"Shopping ✓":"Shopping mode"}</button><button type="button" class="linkbtn" data-act="groc">Close</button></span></div>
     ${mode?"":`<form class="addrow" data-form="gadd"><input type="text" id="gadd" list="g-hist" placeholder="Add an item, e.g. 2 avocados" autocomplete="off"><datalist id="g-hist">${Object.values(S.groceries.history||{}).map(h=>`<option value="${esc(h.name)}"></option>`).join("")}</datalist><button class="btn">Add</button></form>
+    ${S.gImport?`<form class="gimport" data-form="gimport"><label class="small muted" for="gimp">Paste your list: one item per line, or separated by commas</label>
+      <textarea id="gimp" rows="5" placeholder="milk&#10;2 avocados&#10;bread, eggs, 500g rice"></textarea>
+      <div class="btnrow"><button class="btn">Add all</button><button type="button" class="linkbtn subtle" data-act="gimport">Cancel</button></div></form>`:
+      `<button type="button" class="linkbtn subtle tiny" data-act="gimport">📋 Paste a list</button>`}
     ${gUsuals().length?`<div class="chips"><span class="muted small">Usuals</span>${gUsuals().map(h=>`<button type="button" class="chip" data-act="gusual" data-t="${esc(h.name)}">+ ${esc(h.name)}</button>`).join("")}</div>`:""}
     ${plan.length?`<p class="muted small" style="margin:0">Planned meals: ${plan.map(x=>`${esc(x.t)} <span class="muted">(${fmtDay(x.k,{weekday:"short"})})</span>`).join(" · ")}</p>`:""}
     ${src?`<div class="impbox"><p class="small" style="margin:0">Bring over your “${esc(src.p.name)}” list${src.L?` (${src.L.tasks.length})`:""}?</p><div><button type="button" class="btn ghost sm" data-act="${src.L?"gimport":"gload"}">${src.L?"Bring them over":"Look for it"}</button></div></div>`:""}`}
@@ -3836,6 +3849,7 @@ document.addEventListener("click",e=>{
   if(a==="groc"){S.grocOpen=!S.grocOpen;S.gEdit=null;if(!S.grocOpen&&S.gShop){S.gShop=false;keepAwake(false)}render(true);if(S.grocOpen){const el=document.getElementById("gadd");if(el&&!(window.matchMedia&&matchMedia("(pointer:coarse)").matches))el.focus()}}
   if(a==="gshop"){S.gShop=!S.gShop;keepAwake(S.gShop);render(true)}
   if(a==="gusual")gAdd(b.dataset.t);
+  if(a==="gimport"){S.gImport=!S.gImport;render(true);if(S.gImport)setTimeout(()=>{const t=document.getElementById("gimp");if(t)t.focus()},0);return}
   if(a==="gedit"){S.gEdit=id||null;render(true)}
   if(a==="gdel"){const i=gItems().findIndex(x=>x.id===id);if(i<0)return;S.gEdit=null;editDoc("groceries",d=>{d.items.splice(i,1)})}
   if(a==="gfinish"){editDoc("groceries",d=>{const h=d.history||{};(d.items||[]).filter(x=>x.done).forEach(x=>{const k=gNorm(x.name);h[k]={name:x.name,aisle:x.aisle,count:((h[k]||{}).count||0)+1,last:today()}});d.history=h;d.items=(d.items||[]).filter(x=>!x.done)});toast("Shopping done. 🌿")}
@@ -4225,7 +4239,8 @@ document.addEventListener("submit",e=>{
   if(f==="bladd"){const t=v("bl-new"),ty=v("bl-type")||"book";if(!t)return;clear("bl-new");editDoc("backlog",d=>{d.items.unshift({id:uid(),type:ty,title:t,status:"someday",added:today()})});toast("Added to your backlog")}
   if(f==="remind"){const tid=form.dataset.id,pid=form.dataset.pid,val=v("rem-at");if(!val)return;const at=new Date(val);if(isNaN(at)){toast("Pick a date and time");return}S.remOpen=null;if(S.backNote){S.tNoteOpen=S.backNote;S.backNote=null}
     call("update_task",{task_id:tid,task:{id:tid,projectId:pid,remindAt:at.toISOString()},client_timezone:TZ}).then(()=>{toast(`Reminder set for ${at.toLocaleString("en-GB",{weekday:"short",hour:"2-digit",minute:"2-digit"})}`);ttLoadAll()}).catch(e=>toast(ttErrToast(e)));return}
-  if(f==="gadd"){const t=v("gadd");if(!t)return;clear("gadd");gAdd(t);setTimeout(()=>{const el=document.getElementById("gadd");if(el)el.focus()},0);return}
+  if(f==="gimport"){const el=document.getElementById("gimp");const t=el?el.value:"";if(!t.trim()){toast("Paste or type a few items first");return}if(gAddMany(t)){S.gImport=false;render(true)}return}
+  if(f==="gadd"){const t=v("gadd");if(!t)return;clear("gadd");if(gSplit(t).length>1)gAddMany(t);else gAdd(t);setTimeout(()=>{const el=document.getElementById("gadd");if(el)el.focus()},0);return}
   if(f==="tradd"){const t=v("tradd");if(!t)return;clear("tradd");const id=uid();editDoc("trips",d=>{d.items=[...(d.items||[]),{id,title:t,status:"idea",place:"",emoji:S.trKind==="visit"?"🏡":"🧳",...(S.trKind==="visit"?{kind:"visit"}:{}),todos:[],pack:[],plan:[],added:today()}]});S.tripOpen=id;render(true);return}
   if(f==="trtodo"){const tid=form.dataset.id,t=v("trt-new"),n=Math.max(0,parseInt(v("trt-days"))||0);if(!t)return;clear("trt-new");editTrip(tid,x=>{x.todos=[...(x.todos||[]),{id:uid(),title:t,daysBefore:n,done:false}]});trSyncTasks(tid);return}
   if(f==="trpack"){const tid=form.dataset.id,t=v("pk-new");if(!t)return;clear("pk-new");editTrip(tid,x=>{x.pack=[...(x.pack||[]),{id:uid(),text:t,done:false}]});setTimeout(()=>{const el=document.getElementById("pk-new");if(el)el.focus()},0);return}
