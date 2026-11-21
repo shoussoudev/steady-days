@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="shim.js?v=20261119161016"></script>
-<script type="module" src="boot.js?v=20261119161016"></script>
+<script src="shim.js?v=20261121105838"></script>
+<script type="module" src="boot.js?v=20261121105838"></script>
 <style>
 #sd-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--bg,#EEF1EA)}
 #sd-gate[hidden]{display:none}
@@ -723,22 +723,26 @@ const SESS={
 /* days before Heartwood existed are never "missed" */
 const HW_START="2026-11-05";
 /* away from home: every kettlebell move has a bodyweight (or backpack) stand-in */
-const NOKB={"Staggered-stance row, slow lowering":["Backpack row, slow lowering","Fill a backpack with books or water bottles. Step one foot forward, free forearm on that thigh, hinge, row the bag to your hip and lower it over 3 seconds.","3 × 10 each arm"],
- "Kettlebell pullover":["Towel floor slides","Kneel with your hands on a towel on a smooth floor. Slide your arms forward as far as you can control, then pull the towel back to your knees with straight arms. Works your lats.","3 × 8"],
- "Kettlebell curls":["Towel curls","Stand on the middle of a towel, hold both ends and curl hard against it, holding 3 seconds at the bottom, middle and top.","3 × 6"],
- "Hammer curls":["Backpack hammer curls","Hold a loaded backpack by its top handle, thumb up, and curl slowly.","3 × 12 each arm"],
+const NOKB={"Staggered-stance row, slow lowering":["Superman pulls","Face down, arms stretched overhead and just off the floor. Pull your elbows down to your ribs, squeeze your shoulder blades for 2 s, reach back out.","3 × 12"],
+ "Kettlebell pullover":["Prone lat lift-offs","Face down, arms by your sides, palms up. Lift your arms and chest and press your hands back toward your feet, squeezing under your armpits.","3 × 10, 2 s hold"],
+ "Kettlebell curls":["Self-resisted curls","Curl one arm slowly while your other hand pushes down hard on that wrist. Resist on the way down too.","3 × 8 each arm"],
+ "Hammer curls":["Self-resisted hammer curls","Thumb up, curl slowly while your other hand pushes down on your fist. Fight it both ways.","3 × 8 each arm"],
  "Kettlebell high pull":["Prone W pulls","Face down, arms reaching overhead. Pull your elbows down into a W, squeeze your shoulder blades for 2 seconds, reach back out.","3 × 10"],
- "Gorilla row":["Door-frame rows","Hold both sides of an open door frame, feet close to it, lean back with straight arms and pull your chest toward the frame.","3 × 10"],
+ "Gorilla row":["Reverse plank","Sit with your legs straight, hands behind you, fingers toward your feet. Lift your hips into a straight line and squeeze your shoulder blades together.","3 × 20–30 s"],
  "Rear-delt fly":["Prone T raises","Face down, arms out to the sides, thumbs up. Lift your arms and squeeze your shoulder blades.","3 × 12"],
- "Two-hand bent-over row":["Two-hand backpack row","Hold a loaded backpack by its straps, hinge forward and row it to your belly.","3 × 12"],
+ "Two-hand bent-over row":["Back widows","On your back, knees bent, elbows bent and on the floor. Press your elbows down to lift your upper back off the floor, squeeze, lower slowly.","3 × 10, 2 s hold"],
  "One-arm suitcase hold":["Side plank","On one forearm, body in a straight line, hips high.","3 × 30 s each side"],
+ "Towel floor pulls":["Swimmers","Face down, arms overhead and lifted. Sweep your arms round to your lower back and back again, chest off the floor the whole time.","3 × 10"],
+ "Chair dips":["Floor dips","Sit, hands on the floor behind you with fingers forward, knees bent. Lift your hips a little and bend and straighten your elbows.","3 × 12"],
  "Kettlebell floor press":["Slow push-ups","3 seconds down, a short pause, then press up. Knees down if you need to.","3 × 8"],
  "Kettlebell overhead press":["Pike push-up hold","Lower into a pike push-up, hold with your head just off the floor, then press up.","3 × 5, 5 s hold"],
  "Kettlebell halo":["Arm circles with a pause","Arms straight out to the sides, slow big circles forward then back, pausing at the top.","3 × 30 s"],
  "Kettlebell push press":["Plank to down dog","From a high plank, push your hips up into a down dog, then lower back to plank.","3 × 10"],
  "Kettlebell dead bug":["Dead bug","On your back, arms up, knees over hips. Lower the opposite arm and leg slowly, back flat.","3 × 8 each side"],
  "Plank kettlebell drag":["Plank shoulder taps","High plank, feet wide. Tap each shoulder without your hips rocking.","3 × 10 each side"],
- "Russian twist with kettlebell":["Russian twist","Lean back slightly, feet down, hands together, and rotate side to side.","3 × 16"]};
+ "Russian twist with kettlebell":["Russian twist","Lean back slightly, feet down, hands together, and rotate side to side.","3 × 16"],
+ "Incline push-up":["Knee push-up","Knees down, body straight from head to knees. Lower your chest to the floor and press away.","3 × 10"],
+ "Towel shoulder pass-throughs":["Arm swings and chest openers","Swing your arms across your body, then wide open, squeezing your shoulder blades.","10 slow reps"]};
 /* away: set on the day, or automatically while a trip (not a visit) is on */
 function hwAway(k){const w=getDay(k).workout||{};if(w.nokb!=null)return !!w.nokb;
   try{return trItems().some(t=>!isVisit(t)&&t.start&&t.status!=="idea"&&k>=t.start&&k<=(t.end||t.start))}catch(_){return false}}
@@ -771,7 +775,7 @@ const hwBar=()=>!!hwSet().bar;
 function planFor(ws){const P=hwSet().plans||{};if(P[ws])return P[ws].slice();
   const prev=Object.keys(P).filter(k=>k<ws).sort().pop();return (prev?P[prev]:HW_DEFAULT).slice()}
 const hwPlanned=k=>planFor(weekStart(k))[dowMon(k)];
-const hwType=k=>{const w=getDay(k).workout||{};return SESS[w.type]?w.type:hwPlanned(k)};
+const hwType=k=>{const w=getDay(k).workout||{};if(w.moved&&!w.done)return "rest";return SESS[w.type]?w.type:hwPlanned(k)};
 const hwRunKm=k=>actsOf(bodyOf(getDay(k))).filter(a=>a.k==="run").reduce((n,a)=>{const m=/(\d+(?:[.,]\d+)?)\s*km/i.exec(a.note||"");return n+(m?parseFloat(m[1].replace(",",".")):0)},0);
 const hwDoneOn=k=>{const d=getDay(k);if(d.workout&&d.workout.done)return true;return SESS[hwType(k)].run&&actsOf(bodyOf(d)).some(a=>a.k==="run")};
 function hwWeekStats(ws){const days=[...Array(7)].map((_,i)=>addDays(ws,i)),tk=today();const plan=planFor(ws);
@@ -1140,6 +1144,8 @@ async function runUndo(uidv){
       editDay(today(),d=>{if(u.kind==="rtskip"){d.rtSkip={...(d.rtSkip||{})};delete d.rtSkip[u.rid];if(u.top)d.top3=[...(d.top3||[]),u.top];if(u.may)d.maybe=[...(d.maybe||[]),u.may]}
         else{d.routines={...(d.routines||{})};delete d.routines[u.rid];const rid="rt:"+u.rid;d.top3=(d.top3||[]).map(x=>x.id===rid?{...x,done:false}:x);d.maybe=(d.maybe||[]).map(x=>x.id===rid?{...x,done:false}:x)}});
       toast("Back on today");
+    }else if(u.kind==="hwcatch"){
+      editSettings(st=>{st.hw={...(st.hw||{}),plans:u.plans}});editDay(u.k,d=>{d.workout=u.wPrev});editDay(today(),d=>{d.workout=u.wToday});toast("Week back as it was");
     }else if(u.kind==="tmr"){
       await call("update_task",{task_id:u.tid,task:{id:u.tid,projectId:u.pid,dueDate:u.due||null,startDate:u.due||null,isAllDay:true,timeZone:TZ},client_timezone:TZ});
       if(u.top||u.may){editDay(today(),d=>{if(u.top)d.top3=[...(d.top3||[]),u.top];if(u.may)d.maybe=[...(d.maybe||[]),u.may]},{silent:true});
@@ -1895,7 +1901,7 @@ function timerRow(w){
 /* this week at a glance: what's planned each day and what's done */
 function hwStrip(sel){const tk=today();sel=sel||tk;const ws=weekStart(sel);const canNext=ws<weekStart(tk);
   return `<div class="hwnav"><button type="button" class="hwarr" data-act="hwwk" data-d="-7" aria-label="Previous week">‹</button><div class="hwstrip" aria-label="Week of ${fmtDay(ws,{day:"numeric",month:"short"})}">${[...Array(7)].map((_,i)=>{const k=addDays(ws,i),t=hwType(k),f=SESS[t],dn=hwDoneOn(k);
-    return `<button type="button" class="hwd ${k===tk?"now":""} ${k===sel&&sel!==tk?"sel":""} ${dn?"done":""} ${f.rest?"rest":""} ${k<tk&&k>=HW_START&&!dn&&!f.rest?"miss":""}" data-act="hwview" data-k="${k}" aria-pressed="${k===sel}" title="${fmtDay(k,{weekday:"long",day:"numeric",month:"short"})}: ${esc(f.name)}${dn?" ✓":""}"><b>${RT_DAYS[i][0]}</b><i>${dn?"✓":hwAway(k)&&!f.run&&!f.rest?"🧳":f.emoji}</i></button>`}).join("")}</div><button type="button" class="hwarr" data-act="hwwk" data-d="7" aria-label="Next week" ${canNext?"":"disabled"}>›</button></div>`}
+    return `<button type="button" class="hwd ${k===tk?"now":""} ${k===sel&&sel!==tk?"sel":""} ${dn?"done":""} ${f.rest?"rest":""} ${k<tk&&k>=HW_START&&!dn&&!f.rest?"miss":""}" data-act="hwview" data-k="${k}" aria-pressed="${k===sel}" title="${fmtDay(k,{weekday:"long",day:"numeric",month:"short"})}: ${esc(f.name)}${dn?" ✓":""}"><b>${RT_DAYS[i][0]}</b><i>${dn?"✓":(getDay(k).workout||{}).moved?"↪":hwAway(k)&&!f.run&&!f.rest?"🧳":f.emoji}</i></button>`}).join("")}</div><button type="button" class="hwarr" data-act="hwwk" data-d="7" aria-label="Next week" ${canNext?"":"disabled"}>›</button></div>`}
 /* a past (or coming) day, to look back at or tick off late */
 /* illustrated guides on RepCount, only for moves with a matching page */
 const RC_GUIDE={"Staggered-stance row, slow lowering": "kettlebell-row", "Two-hand bent-over row": "kettlebell-row", "Kettlebell pullover": "dumbbell-pullover", "Hammer curls": "hammer-curl", "Kettlebell high pull": "kettlebell-high-pull", "Superman hold": "superman", "Rear-delt fly": "rear-delt-fly", "Chair dips": "triceps-dip", "Close-grip push-ups": "diamond-push-up", "Kettlebell floor press": "kettlebell-floor-press", "Kettlebell overhead press": "kettlebell-press", "Plank shoulder taps": "plank-shoulder-taps", "Kettlebell halo": "kettlebell-halo", "Kettlebell push press": "kettlebell-push-press", "Hollow body hold": "hollow-body-hold", "Kettlebell dead bug": "dead-bug", "Dead bug": "dead-bug", "Lying leg raises": "lying-leg-raise", "Russian twist with kettlebell": "russian-twist", "Russian twist": "russian-twist", "Chest-to-wall walk-up": "wall-walk", "Chest-to-wall handstand": "wall-walk", "Incline push-up": "incline-push-up", "Full push-up": "push-up", "Slow push-ups": "push-up", "Dead hang": "dead-hang", "Scapular pull-ups": "scapular-pull-up", "Slow negatives": "pull-up", "Pull-ups": "pull-up", "Foot-supported L-sit": "l-sit", "Tuck L-sit": "l-sit", "One-leg L-sit": "l-sit", "Full L-sit": "l-sit", "Side plank": "side-plank", "Bridge": "glute-bridge", "Step-back lunges": "reverse-lunges", "Soft burpees": "burpees"};
@@ -1904,8 +1910,8 @@ const howLink=e=>`<a class="howto" href="https://www.youtube.com/results?search_
 function hwDayView(k){
   const tk=today(),d=getDay(k),w=d.workout||{},type=hwType(k),f=SESS[type],{ex}=workoutFor(k,w.shift||0),dn=hwDoneOn(k),past=k<tk,away=hwAway(k);
   const runs=actsOf(bodyOf(d)).filter(a=>a.k==="run");
-  const status=dn?`✓ Done${w.secs&&!f.run?" in "+mmss(w.secs):""}`:f.rest?"Rest day":past?(k>=HW_START?"Not done":""):"Planned";
-  const awayBtn=!f.run&&!f.rest?`<button type="button" class="chip" data-act="hwnokb" data-k="${k}" aria-pressed="${away}">🧳 Away · no kettlebell${hwAwayAuto(k)?" (trip)":""}</button>`:"";
+  const status=w.moved&&!w.done?`Moved to ${fmtDay(w.moved,{weekday:"long"})}`:dn?`✓ Done${w.secs&&!f.run?" in "+mmss(w.secs):""}`:f.rest?"Rest day":past?(k>=HW_START?"Not done":""):"Planned";
+  const awayBtn=!f.run&&!f.rest?`<button type="button" class="chip" data-act="hwnokb" data-k="${k}" aria-pressed="${away}">🧳 Away · no equipment${hwAwayAuto(k)?" (trip)":""}</button>`:"";
   const secs=[];ex.forEach(e=>{const s=e.sec||"str";if(!secs.length||secs[secs.length-1].s!==s)secs.push({s,items:[]});secs[secs.length-1].items.push(e)});
   return `<section class="block card workout"><div class="head"><h2>Heartwood</h2><button type="button" class="btn ghost sm" data-act="hwview" data-k="${tk}">← Today</button></div>
     ${hwStrip(k)}
@@ -1914,7 +1920,7 @@ function hwDayView(k){
     ${f.rest?`<p class="muted small" style="margin:0">${esc(f.intro)}</p>`:
       f.run?`${runs.length?`<p class="small" style="margin:0">Logged: ${runs.map(a=>esc(a.note||"run")+(runPace(a.note)?" · "+paceTxt(runPace(a.note)):"")).join(" · ")}</p>`:past||k===tk?`<form class="addrow hwrunform" data-form="hwrun" data-k="${k}"><input id="hw-km" type="number" step="0.1" min="0" inputmode="decimal" placeholder="km" aria-label="Distance in km"><input id="hw-min" type="number" min="0" step="1" inputmode="numeric" placeholder="min" aria-label="Minutes"><button class="btn" type="submit">Log run</button></form>`:`<p class="muted small" style="margin:0">${esc(f.intro)}</p>${f.speed?speedBox(speedFor(k)):""}${runGuide(f,f.speed?speedFor(k):null)}`}`:
       secs.map(g=>`<h3 class="wsec">${hwSecTitle(g.s,f)}</h3><ol class="wlist">${g.items.map(e=>`<li><div class="whead"><b>${esc(e.name)}</b><span class="mono">${esc(e.dose)}</span></div><div class="muted small">${esc(e.how)} ${howLink(e)}</div></li>`).join("")}</ol>`).join("")}
-    ${past&&!f.rest&&!f.run?`<div class="addrow"><button type="button" class="btn ${dn?"ghost":""}" data-act="hwpast" data-k="${k}">${dn?"Undo: not done":"Mark as done"}</button></div>`:""}
+    ${past&&!f.rest&&(!f.run||hwMissed(k))?`<div class="addrow">${f.run?"":`<button type="button" class="btn ${dn?"ghost":""}" data-act="hwpast" data-k="${k}">${dn?"Undo: not done":"Mark as done"}</button>`}${hwMissed(k)&&!hwDoneOn(today())?`<button type="button" class="btn ghost" data-act="hwcatch" data-k="${k}">Do it today</button>`:""}</div>`:""}
   </section>`}
 const hwMinsTxt=f=>f.run?(f.id==="long"?"40–45 min":f.speed?"30–40 min":"~30 min"):f.rest?"":`~${f.mins} min`;
 function hwSecTitle(sec,f){return sec==="skill"?`Skill practice · ~4 min<span class="muted small"> · quality holds, rest 30–60 s between</span>`:
@@ -1923,6 +1929,25 @@ function hwSecTitle(sec,f){return sec==="skill"?`Skill practice · ~4 min<span c
 function hwSwapRow(type){if(!S.hwSwapOpen)return "";
   return `<div class="hwswap"><span class="muted small">Do instead:</span><div class="chips">${HW_TYPES.filter(t=>t!==type).map(t=>`<button type="button" class="chip" data-act="hwswap" data-t="${t}">${SESS[t].emoji} ${esc(SESS[t].name)}</button>`).join("")}</div></div>`}
 /* swapped a run away: offer to put it on a later easy day so the 10 km still happens */
+/* catch up: do a missed session today; today's session and the rest of the week move along by one day
+   (the first rest or Walk & move day after it absorbs the shift) */
+function hwMissed(k){const w=getDay(k).workout||{};if(k>=today()||k<HW_START||w.moved||w.done)return null;const t=hwType(k);return SESS[t].rest||hwDoneOn(k)?null:t}
+function hwCatchOffer(){const tk=today(),w=getDay(tk).workout||{};if(hwDoneOn(tk)||w.startedAt||w.catchFrom)return null;
+  for(const n of [1,2]){const k=addDays(tk,-n),t=hwMissed(k);if(t)return {k,t}}return null}
+function hwCatchUp(k){const t=hwMissed(k);if(!t)return;const tk=today(),ws=weekStart(tk),nw=addDays(ws,7),i0=dowMon(tk);
+  const P0=JSON.parse(JSON.stringify(hwSet().plans||{}));
+  const days=[...planFor(ws),...planFor(nw)];days[i0]=hwType(tk);
+  /* stay inside this week (its last session drops off if there's no easy day left); on a Sunday it spills into next week */
+  const end=i0===6?13:6;let j=days.findIndex((x,i)=>i>i0&&i<=end&&(SESS[x].rest||x==="walk"));if(j<0)j=end;
+  days.splice(j,1);days.splice(i0,0,t);
+  const wPrev={...(getDay(k).workout||{})},wToday={...(getDay(tk).workout||{})};
+  editSettings(st=>{const hw=st.hw={...(st.hw||{})};hw.plans={...(hw.plans||{}),[ws]:days.slice(0,7),[nw]:days.slice(7,14)}});
+  editDay(k,d=>{d.workout={...(d.workout||{}),moved:tk}});
+  editDay(tk,d=>{const w={...(d.workout||{})};delete w.type;w.swaps={};w.catchFrom=k;d.workout=w});
+  pushUndo({kind:"hwcatch",plans:P0,k,wPrev,wToday,label:`Caught up on ${fmtDay(k,{weekday:"long"})}'s session`});
+  toast(`Today: ${SESS[t].emoji} ${SESS[t].name} (from ${fmtDay(k,{weekday:"long"})}). The rest of the week moves along a day`)}
+function hwCatchHtml(){const o=hwCatchOffer();if(!o)return "";const tt=hwType(today());
+  return `<div class="hwnote"><span class="small">Missed ${o.k===addDays(today(),-1)?"yesterday's":fmtDay(o.k,{weekday:"long"})+"'s"} ${SESS[o.t].emoji} ${esc(SESS[o.t].name)}?${SESS[tt].rest?"":` Do it today and ${SESS[tt].emoji} ${esc(SESS[tt].name)} moves to tomorrow.`}</span><button type="button" class="btn ghost sm" data-act="hwcatch" data-k="${o.k}">Do it today</button></div>`}
 function hwRunMove(){const k=today(),w=getDay(k).workout||{};const was=hwPlanned(k);if(!SESS[was].run||!w.type||SESS[w.type].run)return "";
   const ws=weekStart(k),plan=planFor(ws),i0=dowMon(k);const j=plan.findIndex((t,i)=>i>i0&&(SESS[t].rest||t==="walk"));if(j<0)return "";
   return `<div class="hwnote"><span class="small">Swapped your run. Put it on ${RT_DAYS[j]} instead?</span><button type="button" class="btn ghost sm" data-act="hwmoverun" data-i="${j}" data-t="${was}">Move it to ${RT_DAYS[j]}</button></div>`}
@@ -1931,9 +1956,9 @@ function workoutCard(){
   if(S.hwView&&S.hwView!==today()&&isOpen("workout"))return hwDayView(S.hwView);
   const d=getDay(today());const w=d.workout||{};const type=hwType(today());const {focus:f,ex}=workoutFor(today(),w.shift||0);
   const ws=weekStart(today()),st=hwWeekStats(ws);const done=hwDoneOn(today());
-  if(!isOpen("workout"))return foldRow("workout",done?"✓ Heartwood":"Heartwood",`${f.emoji} ${esc(f.name)}`+(st.done?` <span class="muted small">· ${st.done} this week</span>`:""),
+  if(!isOpen("workout"))return foldRow("workout",done?"✓ Heartwood":"Heartwood",`${f.emoji} ${esc(f.name)}`+(hwCatchOffer()?` <span class="muted small">· missed one: catch up?</span>`:st.done?` <span class="muted small">· ${st.done} this week</span>`:""),
     done?(w.secs?"done in "+mmss(w.secs):"done"):w.startedAt&&!f.run?`<span data-wclock>${mmss(wElapsed(w))}</span>${w.pausedAt?" · paused":""}`:hwMinsTxt(f)||"rest day",done?"View":f.rest?"Open":w.startedAt?"Open":"Start");
-  const head=`<div class="head"><h2>Heartwood</h2><span class="muted small">${f.emoji} ${esc(f.name)}${hwMinsTxt(f)?" · "+hwMinsTxt(f):""}</span></div>${hwStrip()}${!f.run&&!f.rest&&!done?`<div class="chips"><button type="button" class="chip" data-act="hwnokb" data-k="${today()}" aria-pressed="${hwAway(today())}">🧳 Away · no kettlebell${hwAwayAuto(today())?" (trip)":""}</button></div>`:""}`;
+  const head=`<div class="head"><h2>Heartwood</h2><span class="muted small">${f.emoji} ${esc(f.name)}${hwMinsTxt(f)?" · "+hwMinsTxt(f):""}</span></div>${hwStrip()}${hwCatchHtml()}${!f.run&&!f.rest&&!done?`<div class="chips"><button type="button" class="chip" data-act="hwnokb" data-k="${today()}" aria-pressed="${hwAway(today())}">🧳 Away · no equipment${hwAwayAuto(today())?" (trip)":""}</button></div>`:""}`;
   const foot=extra=>`<div class="addrow">${extra}${done?"":`<button type="button" class="btn ghost" data-act="hwswapopen" aria-expanded="${!!S.hwSwapOpen}">⇄ Swap today</button>`}<button type="button" class="linkbtn" data-act="fold" data-k="workout">Close</button></div>${done?"":hwSwapRow(type)}`;
   if(f.rest)return `<section class="block card workout">${head}<p class="muted small" style="margin:0">${esc(f.intro)}</p>
     <div class="addrow"><button type="button" class="btn ghost" data-act="hwswap" data-t="walk">🚶 Do Walk & move instead</button><button type="button" class="linkbtn" data-act="fold" data-k="workout">Close</button></div></section>`;
@@ -1975,7 +2000,7 @@ function hwPlanCard(){
     <ul class="list hwdays">${plan.map((t,i)=>{const k=addDays(ws,i),dn=k<=tk&&hwDoneOn(k);
       return `<li><span class="hwdl"><b>${RT_DAYS[i]}</b><span class="muted small">${fmtDay(k,{day:"numeric",month:"short"})}</span></span>
       <select data-act="hwday" data-w="${ws}" data-i="${i}" aria-label="${RT_DAYS[i]}">${HW_TYPES.map(x=>`<option value="${x}" ${x===t?"selected":""}>${SESS[x].emoji} ${esc(SESS[x].name)}</option>`).join("")}</select>
-      <button type="button" class="hwaway" data-act="hwnokb" data-k="${k}" aria-pressed="${hwAway(k)}" title="Away that day: no kettlebell" aria-label="${RT_DAYS[i]}: away, no kettlebell" ${SESS[t].run||SESS[t].rest?"hidden":""}>🧳</button>
+      <button type="button" class="hwaway" data-act="hwnokb" data-k="${k}" aria-pressed="${hwAway(k)}" title="Away that day: no equipment" aria-label="${RT_DAYS[i]}: away, no equipment" ${SESS[t].run||SESS[t].rest?"hidden":""}>🧳</button>
       <span class="hwdm small ${dn?"ok":""}">${dn?"✓ done":k<tk&&k>=HW_START&&!SESS[t].rest?"missed":k<tk?"":hwMinsTxt(SESS[t])}</span></li>`}).join("")}</ul>
     <p class="small muted" style="margin:0">Runs planned: about ${km} km.</p>
     ${notes.length?`<ul class="plainlist hwnotes">${notes.map(n=>`<li class="small">${esc(n)}</li>`).join("")}</ul>`:""}
@@ -3975,9 +4000,10 @@ document.addEventListener("click",e=>{
   if(a==="ptropen"){S.ptrOpen=!S.ptrOpen;render(true);return}
   if(a==="hwease"){const n=b.dataset.n,on=hwEased(n);editSettings(st=>{const E={...(st.hwEase||{})};if(on)delete E[n];else E[n]=1;st.hwEase=E});
     toast(on?`${n}: back to the normal version`:EASIER[n]?`Easier: ${EASIER[n][0]}. Tap “Back to normal” when it feels OK`:`Fewer sets and reps for ${n}. Tap “Back to normal” when it feels OK`);return}
+  if(a==="hwcatch"){S.hwView=null;S.open=S.open||{};S.open.workout=true;hwCatchUp(b.dataset.k);return}
   if(a==="hwview"){const k=b.dataset.k;S.hwView=k===today()?null:k;S.open=S.open||{};S.open.workout=true;render(true);return}
   if(a==="hwwk"){const d=+b.dataset.d;let k=addDays(S.hwView||today(),d);if(k>today()&&weekStart(k)>weekStart(today()))return;if(weekStart(k)===weekStart(today())&&d>0)k=today();S.hwView=k===today()?null:k;render(true);return}
-  if(a==="hwnokb"){const k=b.dataset.k;const now=hwAway(k);editDay(k,d=>{d.workout={...(d.workout||{}),nokb:!now,swaps:{}}});toast(now?"Kettlebell's back":"Away: bodyweight swaps for the kettlebell moves");return}
+  if(a==="hwnokb"){const k=b.dataset.k;const now=hwAway(k);editDay(k,d=>{d.workout={...(d.workout||{}),nokb:!now,swaps:{}}});toast(now?"Back home: your usual moves":"Away: everything swapped for moves with no equipment");return}
   if(a==="hwpast"){const k=b.dataset.k,f=SESS[hwType(k)];const was=!!(getDay(k).workout||{}).done;
     editDay(k,d=>{d.workout={...(d.workout||{}),done:!was,focus:hwType(k)}});
     setActs(k,acts=>{for(let i=acts.length-1;i>=0;i--)if(acts[i].k==="steady10")acts.splice(i,1);if(!was)acts.unshift({k:"steady10",note:f.name})});
